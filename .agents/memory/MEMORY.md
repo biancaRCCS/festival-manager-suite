@@ -1,0 +1,2 @@
+- [Public vs protected API routes](public-api-pattern.md) — public apply forms must use /api/public/* endpoints; never call auth-protected routes (like /api/settings) from unauthenticated pages.
+- [DB schema rebuild after new tables](db-schema-rebuild.md) — after adding new schema files to lib/db, must run pnpm run typecheck:libs (tsc --build) before api-server typecheck succeeds.

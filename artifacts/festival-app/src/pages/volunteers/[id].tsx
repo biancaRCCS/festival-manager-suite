@@ -1,0 +1,166 @@
+import { useState, useRef } from "react"
+import { useLocation, useParams } from "wouter"
+import { useGetVolunteer, useReviewVolunteer, getGetVolunteerQueryKey } from "@workspace/api-client-react"
+import { useQueryClient } from "@tanstack/react-query"
+import { AdminLayout } from "@/components/layout/admin-layout"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { ArrowLeft, Mail, Phone, Clock, UserCog } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+
+export default function VolunteerDetailPage() {
+  const params = useParams()
+  const id = Number(params.id)
+  const [, setLocation] = useLocation()
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  const { data: volunteer, isLoading } = useGetVolunteer(id, { query: { enabled: !!id, queryKey: getGetVolunteerQueryKey(id) } })
+  const reviewMutation = useReviewVolunteer({ mutation: { mutationKey: ["reviewVolunteer", id] } })
+
+  const [reviewNote, setReviewNote] = useState("")
+  const [assignedRole, setAssignedRole] = useState("")
+  const [isReviewOpen, setIsReviewOpen] = useState(false)
+
+  const reviewMutateFnRef = useRef(reviewMutation.mutate)
+  reviewMutateFnRef.current = reviewMutation.mutate
+
+  const handleReview = (status: 'approved' | 'rejected') => {
+    reviewMutateFnRef.current(
+      { id, data: { status, note: reviewNote, assignedRole: status === 'approved' ? assignedRole : undefined } },
+      {
+        onSuccess: (data) => {
+          toast({ title: `Volunteer ${status} successfully` })
+          setIsReviewOpen(false)
+          queryClient.setQueryData(getGetVolunteerQueryKey(id), data)
+        },
+        onError: () => toast({ title: "Failed to review volunteer", variant: "destructive" })
+      }
+    )
+  }
+
+  if (isLoading) return <AdminLayout><div className="p-8">Loading...</div></AdminLayout>
+  if (!volunteer) return <AdminLayout><div className="p-8">Volunteer not found.</div></AdminLayout>
+
+  return (
+    <AdminLayout>
+      <div className="space-y-6 max-w-4xl mx-auto">
+        <button onClick={() => setLocation("/volunteers")} className="text-muted-foreground hover:text-primary text-sm flex items-center gap-2">
+          <ArrowLeft className="w-4 h-4" /> Back to Volunteers
+        </button>
+
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-serif text-primary mb-1">{volunteer.name}</h1>
+            <p className="text-muted-foreground flex items-center gap-2">
+              <Mail className="w-4 h-4" /> {volunteer.email}
+            </p>
+          </div>
+          <div className="flex gap-3 items-center">
+            {volunteer.status === 'pending' && (
+              <Dialog open={isReviewOpen} onOpenChange={setIsReviewOpen}>
+                <DialogTrigger asChild>
+                  <Button>Review Application</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Review Volunteer</DialogTitle>
+                    <DialogDescription>Approve and assign a role to this volunteer.</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Assign Role</Label>
+                      <Input value={assignedRole} onChange={e => setAssignedRole(e.target.value)} placeholder="e.g., Check-in Desk, Setup Crew" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Internal Note (Optional)</Label>
+                      <Input value={reviewNote} onChange={e => setReviewNote(e.target.value)} placeholder="e.g., Requested morning shift" />
+                    </div>
+                  </div>
+                  <DialogFooter className="gap-2 sm:gap-0">
+                    <Button variant="destructive" onClick={() => handleReview('rejected')}>Reject</Button>
+                    <Button onClick={() => handleReview('approved')} disabled={!assignedRole}>Approve & Assign</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <CardTitle className="text-xl">Application Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-2 gap-y-4 gap-x-6">
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1 flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> Phone</h4>
+                  <p className="text-sm">{volunteer.phone}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1 flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> Applied On</h4>
+                  <p className="text-sm">{new Date(volunteer.createdAt).toLocaleString()}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1 flex items-center gap-1.5">Availability</h4>
+                  <p className="text-sm">{volunteer.availability || "Not specified"}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1 flex items-center gap-1.5">Status</h4>
+                  <Badge variant="outline" className="capitalize">{volunteer.status}</Badge>
+                </div>
+              </div>
+
+              <div className="border-t pt-6 mt-6">
+                <h3 className="font-serif text-lg mb-4">Questionnaire Responses</h3>
+                <div className="space-y-4">
+                  {Object.entries(volunteer.applicationData || {}).map(([key, value]) => (
+                    <div key={key} className="bg-muted/30 p-3 rounded-md border-l-2 border-primary">
+                      <h4 className="text-sm font-medium text-foreground mb-1">{key}</h4>
+                      <p className="text-sm text-muted-foreground">{String(value)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl">Role Assignment</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {volunteer.assignedRole ? (
+                  <div className="flex items-center gap-4 bg-primary/5 p-4 rounded-lg border border-primary/20">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                      <UserCog className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">{volunteer.assignedRole}</p>
+                      <p className="text-xs text-muted-foreground">Assigned Role</p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">No role assigned yet.</p>
+                )}
+                
+                {volunteer.reviewNote && (
+                  <div className="mt-4 pt-4 border-t">
+                    <span className="text-xs font-medium text-muted-foreground block mb-1">Internal Note</span>
+                    <p className="text-sm bg-yellow-50 p-2 text-yellow-900 rounded">{volunteer.reviewNote}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </AdminLayout>
+  )
+}

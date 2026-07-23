@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "Romanian Festival Manager"
+version = "1.0.0"
+id = "artifacts/festival-app"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21589
+
+[services.development]
+run = "pnpm --filter @workspace/festival-app run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/festival-app", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/festival-app/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21589"
+BASE_PATH = "/"

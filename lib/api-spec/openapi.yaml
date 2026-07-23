@@ -3,20 +3,39 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Romanian Festival Management API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: public
+    description: Public endpoints (no auth)
+  - name: portal
+    description: Private vendor/sponsor portal (token-based)
+  - name: dashboard
+    description: Admin dashboard and stats
+  - name: festival-years
+    description: Festival year management
+  - name: settings
+    description: Festival configuration
+  - name: vendors
+    description: Vendor management
+  - name: sponsors
+    description: Sponsor management
+  - name: volunteers
+    description: Volunteer management
+  - name: staff
+    description: Staff management
+  - name: export
+    description: Data export
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +43,1239 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ─── PUBLIC ──────────────────────────────────────────────
+  /public/current-year:
+    get:
+      operationId: getCurrentYear
+      tags: [public]
+      summary: Get the active festival year info
+      responses:
+        "200":
+          description: Current year info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FestivalYear"
+
+  /public/apply/vendor:
+    post:
+      operationId: submitVendorApplication
+      tags: [public]
+      summary: Submit a public vendor application
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VendorApplicationInput"
+      responses:
+        "201":
+          description: Application submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationConfirmation"
+
+  /public/apply/sponsor:
+    post:
+      operationId: submitSponsorApplication
+      tags: [public]
+      summary: Submit a public sponsor application
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SponsorApplicationInput"
+      responses:
+        "201":
+          description: Application submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationConfirmation"
+
+  /public/apply/volunteer:
+    post:
+      operationId: submitVolunteerApplication
+      tags: [public]
+      summary: Submit a public volunteer application
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VolunteerApplicationInput"
+      responses:
+        "201":
+          description: Application submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationConfirmation"
+
+  # ─── PORTAL (token-based, no login) ──────────────────────
+  /portal/{token}:
+    get:
+      operationId: getPortalInfo
+      tags: [portal]
+      summary: Get vendor/sponsor portal info by token
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Portal info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortalInfo"
+        "404":
+          description: Not found
+
+  /portal/{token}/checkout:
+    post:
+      operationId: createPortalCheckout
+      tags: [portal]
+      summary: Create a Stripe checkout session for the portal
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Checkout session URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutSession"
+        "404":
+          description: Not found
+
+  /portal/{token}/sign-agreement:
+    post:
+      operationId: signPortalAgreement
+      tags: [portal]
+      summary: Mark agreement as signed in the portal
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgreementSignature"
+      responses:
+        "200":
+          description: Agreement signed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortalInfo"
+
+  # ─── DASHBOARD ───────────────────────────────────────────
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get current year dashboard summary
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/financials:
+    get:
+      operationId: getDashboardFinancials
+      tags: [dashboard]
+      summary: Get financial breakdown for current year
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: yearId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Financials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialSummary"
+
+  /dashboard/activity:
+    get:
+      operationId: getRecentActivity
+      tags: [dashboard]
+      summary: Get recent activity feed
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: Activity feed
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityItem"
+
+  # ─── FESTIVAL YEARS ──────────────────────────────────────
+  /festival-years:
+    get:
+      operationId: listFestivalYears
+      tags: [festival-years]
+      summary: List all festival years
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: Festival years
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FestivalYear"
+
+    post:
+      operationId: createFestivalYear
+      tags: [festival-years]
+      summary: Create a new festival year
+      security:
+        - clerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FestivalYearInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FestivalYear"
+
+  /festival-years/{id}:
+    patch:
+      operationId: updateFestivalYear
+      tags: [festival-years]
+      summary: Update a festival year
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FestivalYearUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FestivalYear"
+
+  # ─── SETTINGS ────────────────────────────────────────────
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get settings for a year (defaults to current)
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: yearId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FestivalSettings"
+
+    patch:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update settings
+      security:
+        - clerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FestivalSettingsUpdate"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FestivalSettings"
+
+  # ─── VENDORS ─────────────────────────────────────────────
+  /vendors:
+    get:
+      operationId: listVendors
+      tags: [vendors]
+      summary: List vendors (optionally filtered by year)
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: yearId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Vendors list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Vendor"
+
+  /vendors/{id}:
+    get:
+      operationId: getVendor
+      tags: [vendors]
+      summary: Get a vendor by ID
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Vendor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vendor"
+        "404":
+          description: Not found
+
+  /vendors/{id}/review:
+    patch:
+      operationId: reviewVendor
+      tags: [vendors]
+      summary: Approve or reject a vendor
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewDecision"
+      responses:
+        "200":
+          description: Updated vendor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vendor"
+
+  /vendors/{id}/final-approve:
+    patch:
+      operationId: finalApproveVendor
+      tags: [vendors]
+      summary: Final approve a vendor after payment
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Final approved vendor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vendor"
+
+  /vendors/{id}/assign:
+    patch:
+      operationId: assignVendorSpot
+      tags: [vendors]
+      summary: Assign spot number and location to a vendor
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpotAssignment"
+      responses:
+        "200":
+          description: Vendor with assignment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vendor"
+
+  # ─── SPONSORS ────────────────────────────────────────────
+  /sponsors:
+    get:
+      operationId: listSponsors
+      tags: [sponsors]
+      summary: List sponsors (optionally filtered by year)
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: yearId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Sponsors list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Sponsor"
+
+  /sponsors/{id}:
+    get:
+      operationId: getSponsor
+      tags: [sponsors]
+      summary: Get a sponsor by ID
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Sponsor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sponsor"
+        "404":
+          description: Not found
+
+  /sponsors/{id}/review:
+    patch:
+      operationId: reviewSponsor
+      tags: [sponsors]
+      summary: Approve or reject a sponsor
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewDecision"
+      responses:
+        "200":
+          description: Updated sponsor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sponsor"
+
+  /sponsors/{id}/final-approve:
+    patch:
+      operationId: finalApproveSponsor
+      tags: [sponsors]
+      summary: Final approve a sponsor after payment
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Final approved sponsor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sponsor"
+
+  /sponsors/{id}/assign:
+    patch:
+      operationId: assignSponsorSpot
+      tags: [sponsors]
+      summary: Assign spot to a sponsor
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpotAssignment"
+      responses:
+        "200":
+          description: Sponsor with assignment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sponsor"
+
+  # ─── VOLUNTEERS ──────────────────────────────────────────
+  /volunteers:
+    get:
+      operationId: listVolunteers
+      tags: [volunteers]
+      summary: List volunteers (optionally filtered by year)
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: yearId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Volunteers list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Volunteer"
+
+  /volunteers/{id}:
+    get:
+      operationId: getVolunteer
+      tags: [volunteers]
+      summary: Get a volunteer by ID
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Volunteer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Volunteer"
+        "404":
+          description: Not found
+
+  /volunteers/{id}/review:
+    patch:
+      operationId: reviewVolunteer
+      tags: [volunteers]
+      summary: Approve, reject, or assign a volunteer
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VolunteerReview"
+      responses:
+        "200":
+          description: Updated volunteer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Volunteer"
+
+  # ─── STAFF ───────────────────────────────────────────────
+  /staff:
+    get:
+      operationId: listStaff
+      tags: [staff]
+      summary: List staff members
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: Staff list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StaffMember"
+
+    post:
+      operationId: inviteStaff
+      tags: [staff]
+      summary: Invite a new staff member
+      security:
+        - clerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StaffInvite"
+      responses:
+        "201":
+          description: Staff member invited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffMember"
+
+  /staff/{id}:
+    delete:
+      operationId: removeStaff
+      tags: [staff]
+      summary: Remove a staff member
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Removed
+
+  # ─── EXPORT ──────────────────────────────────────────────
+  /export/vendors:
+    get:
+      operationId: exportVendors
+      tags: [export]
+      summary: Export vendors as Excel file
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: yearId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Excel file
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+
+  /export/sponsors:
+    get:
+      operationId: exportSponsors
+      tags: [export]
+      summary: Export sponsors as Excel file
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: yearId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Excel file
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+
+  /export/volunteers:
+    get:
+      operationId: exportVolunteers
+      tags: [export]
+      summary: Export volunteers as Excel file
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: yearId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Excel file
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+
 components:
+  securitySchemes:
+    clerkAuth:
+      type: http
+      scheme: bearer
+
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    FestivalYear:
+      type: object
+      required: [id, year, eventName, eventDate, isActive, createdAt]
+      properties:
+        id:
+          type: integer
+        year:
+          type: integer
+        eventName:
+          type: string
+        eventDate:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+
+    FestivalYearInput:
+      type: object
+      required: [year, eventName, eventDate]
+      properties:
+        year:
+          type: integer
+        eventName:
+          type: string
+        eventDate:
+          type: string
+        isActive:
+          type: boolean
+
+    FestivalYearUpdate:
+      type: object
+      properties:
+        eventName:
+          type: string
+        eventDate:
+          type: string
+        isActive:
+          type: boolean
+
+    FestivalSettings:
+      type: object
+      required: [id, yearId, vendorPrice, sponsorPrice, vendorSpotLimit, sponsorSpotLimit, vendorFormQuestions, sponsorFormQuestions, volunteerFormQuestions]
+      properties:
+        id:
+          type: integer
+        yearId:
+          type: integer
+        vendorPrice:
+          type: number
+        sponsorPrice:
+          type: number
+        vendorSpotLimit:
+          type: integer
+        sponsorSpotLimit:
+          type: integer
+        vendorFormQuestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormQuestion"
+        sponsorFormQuestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormQuestion"
+        volunteerFormQuestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormQuestion"
+
+    FestivalSettingsUpdate:
+      type: object
+      properties:
+        vendorPrice:
+          type: number
+        sponsorPrice:
+          type: number
+        vendorSpotLimit:
+          type: integer
+        sponsorSpotLimit:
+          type: integer
+        vendorFormQuestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormQuestion"
+        sponsorFormQuestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormQuestion"
+        volunteerFormQuestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormQuestion"
+
+    FormQuestion:
+      type: object
+      required: [id, label, type, required]
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        type:
+          type: string
+          enum: [text, textarea, select, checkbox]
+        required:
+          type: boolean
+        options:
+          type: ["array", "null"]
+          items:
+            type: string
+        placeholder:
+          type: ["string", "null"]
+
+    Vendor:
+      type: object
+      required: [id, yearId, name, businessName, email, phone, status, applicationData, createdAt]
+      properties:
+        id:
+          type: integer
+        yearId:
+          type: integer
+        name:
+          type: string
+        businessName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected, payment_pending, paid, final_approved]
+        applicationData:
+          type: object
+          additionalProperties: true
+        agreementSigned:
+          type: boolean
+        spotNumber:
+          type: ["string", "null"]
+        location:
+          type: ["string", "null"]
+        reviewNote:
+          type: ["string", "null"]
+        paidAt:
+          type: ["string", "null"]
+        approvedAt:
+          type: ["string", "null"]
+        finalApprovedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    Sponsor:
+      type: object
+      required: [id, yearId, name, orgName, email, phone, tier, status, applicationData, createdAt]
+      properties:
+        id:
+          type: integer
+        yearId:
+          type: integer
+        name:
+          type: string
+        orgName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        tier:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected, payment_pending, paid, final_approved]
+        applicationData:
+          type: object
+          additionalProperties: true
+        agreementSigned:
+          type: boolean
+        spotNumber:
+          type: ["string", "null"]
+        location:
+          type: ["string", "null"]
+        reviewNote:
+          type: ["string", "null"]
+        paidAt:
+          type: ["string", "null"]
+        approvedAt:
+          type: ["string", "null"]
+        finalApprovedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    Volunteer:
+      type: object
+      required: [id, yearId, name, email, phone, status, applicationData, createdAt]
+      properties:
+        id:
+          type: integer
+        yearId:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        availability:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        applicationData:
+          type: object
+          additionalProperties: true
+        assignedRole:
+          type: ["string", "null"]
+        reviewNote:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    StaffMember:
+      type: object
+      required: [id, email, role, createdAt]
+      properties:
+        id:
+          type: integer
+        clerkUserId:
+          type: ["string", "null"]
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [admin, staff]
+        createdAt:
+          type: string
+
+    DashboardSummary:
+      type: object
+      required: [festivalYear, countdown, vendorStats, sponsorStats, volunteerStats, totalRevenue, pendingActions]
+      properties:
+        festivalYear:
+          $ref: "#/components/schemas/FestivalYear"
+        countdown:
+          type: integer
+          description: Days until the festival
+        vendorStats:
+          $ref: "#/components/schemas/ApplicationStats"
+        sponsorStats:
+          $ref: "#/components/schemas/ApplicationStats"
+        volunteerStats:
+          $ref: "#/components/schemas/ApplicationStats"
+        totalRevenue:
+          type: number
+        pendingActions:
+          type: integer
+          description: Total applications needing attention
+
+    ApplicationStats:
+      type: object
+      required: [total, pending, approved, rejected, paid, finalApproved]
+      properties:
+        total:
+          type: integer
+        pending:
+          type: integer
+        approved:
+          type: integer
+        rejected:
+          type: integer
+        paid:
+          type: integer
+        finalApproved:
+          type: integer
+
+    FinancialSummary:
+      type: object
+      required: [vendorRevenue, sponsorRevenue, totalRevenue, vendorCount, sponsorCount]
+      properties:
+        vendorRevenue:
+          type: number
+        sponsorRevenue:
+          type: number
+        totalRevenue:
+          type: number
+        vendorCount:
+          type: integer
+        sponsorCount:
+          type: integer
+        recentPayments:
+          type: array
+          items:
+            $ref: "#/components/schemas/PaymentRecord"
+
+    PaymentRecord:
+      type: object
+      required: [type, name, amount, paidAt]
+      properties:
+        type:
+          type: string
+          enum: [vendor, sponsor]
+        name:
+          type: string
+        amount:
+          type: number
+        paidAt:
+          type: string
+
+    ActivityItem:
+      type: object
+      required: [id, type, message, entityType, createdAt]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [new_application, approved, rejected, paid, final_approved, assigned]
+        message:
+          type: string
+        entityType:
+          type: string
+          enum: [vendor, sponsor, volunteer]
+        entityId:
+          type: integer
+        createdAt:
+          type: string
+
+    VendorApplicationInput:
+      type: object
+      required: [name, businessName, email, phone, answers]
+      properties:
+        name:
+          type: string
+        businessName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        answers:
+          type: object
+          additionalProperties: true
+
+    SponsorApplicationInput:
+      type: object
+      required: [name, orgName, email, phone, tier, answers]
+      properties:
+        name:
+          type: string
+        orgName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        tier:
+          type: string
+        answers:
+          type: object
+          additionalProperties: true
+
+    VolunteerApplicationInput:
+      type: object
+      required: [name, email, phone, answers]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        availability:
+          type: string
+        answers:
+          type: object
+          additionalProperties: true
+
+    ApplicationConfirmation:
+      type: object
+      required: [message, id]
+      properties:
+        message:
+          type: string
+        id:
+          type: integer
+
+    PortalInfo:
+      type: object
+      required: [type, name, status, agreementSigned, festivalYear, eventDate]
+      properties:
+        type:
+          type: string
+          enum: [vendor, sponsor]
+        id:
+          type: integer
+        name:
+          type: string
+        businessName:
+          type: ["string", "null"]
+        orgName:
+          type: ["string", "null"]
+        status:
+          type: string
+        agreementSigned:
+          type: boolean
+        spotNumber:
+          type: ["string", "null"]
+        location:
+          type: ["string", "null"]
+        festivalYear:
+          type: string
+        eventDate:
+          type: string
+        vendorPrice:
+          type: ["number", "null"]
+        sponsorPrice:
+          type: ["number", "null"]
+
+    CheckoutSession:
+      type: object
+      required: [checkoutUrl]
+      properties:
+        checkoutUrl:
+          type: string
+
+    AgreementSignature:
+      type: object
+      required: [signedName]
+      properties:
+        signedName:
+          type: string
+
+    ReviewDecision:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [approved, rejected]
+        note:
+          type: ["string", "null"]
+
+    VolunteerReview:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [approved, rejected]
+        assignedRole:
+          type: ["string", "null"]
+        note:
+          type: ["string", "null"]
+
+    SpotAssignment:
+      type: object
+      required: [spotNumber, location]
+      properties:
+        spotNumber:
+          type: string
+        location:
+          type: string
+
+    StaffInvite:
+      type: object
+      required: [email, role]
+      properties:
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [admin, staff]

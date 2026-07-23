@@ -1,10 +1,17 @@
-import express, { type Express } from "express";
+import express from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
-import router from "./routes";
+import { clerkMiddleware } from "@clerk/express";
+import { publishableKeyFromHost } from "@clerk/shared/keys";
+import {
+  CLERK_PROXY_PATH,
+  clerkProxyMiddleware,
+  getClerkProxyHost,
+} from "./middlewares/clerkProxyMiddleware";
 import { logger } from "./lib/logger";
+import router from "./routes";
 
-const app: Express = express();
+const app = express();
 
 app.use(
   pinoHttp({
@@ -25,9 +32,31 @@ app.use(
     },
   }),
 );
-app.use(cors());
+
+// Clerk proxy must be mounted before body parsers
+app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
+
+app.use(cors({ credentials: true, origin: true }));
+
+// Stripe webhook route needs raw body — register before express.json()
+// (imported lazily to handle missing Stripe env gracefully)
+import("./routes/stripe").then(({ stripeWebhookRouter }) => {
+  app.use(stripeWebhookRouter);
+}).catch(() => {
+  // Stripe not configured yet
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.use(
+  clerkMiddleware((req) => ({
+    publishableKey: publishableKeyFromHost(
+      getClerkProxyHost(req) ?? "",
+      process.env.CLERK_PUBLISHABLE_KEY,
+    ),
+  })),
+);
 
 app.use("/api", router);
 
