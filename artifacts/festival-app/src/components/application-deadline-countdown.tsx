@@ -27,32 +27,35 @@ export function ApplicationDeadlineCountdown({ deadline }: Props) {
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(() => calcTimeLeft(deadline))
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft(calcTimeLeft(deadline))
-    }, 1000)
+    const timer = setInterval(() => setTimeLeft(calcTimeLeft(deadline)), 1000)
     return () => clearInterval(timer)
   }, [deadline])
 
   if (!timeLeft) {
     return (
-      <div className="mb-8 rounded-2xl border-2 border-destructive/40 bg-destructive/5 px-6 py-5 text-center">
-        <p className="text-lg font-semibold text-destructive">Applications are now closed.</p>
+      <div className="mb-8 rounded border-l-4 border-l-primary bg-primary/5 px-5 py-4">
+        <p className="text-base font-semibold text-primary uppercase tracking-wide">
+          Applications are now closed.
+        </p>
       </div>
     )
   }
 
   const pad = (n: number) => String(n).padStart(2, "0")
+  const urgent = timeLeft.days <= 3
 
   return (
-    <div className="mb-8 overflow-hidden rounded-2xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-background to-secondary/5 shadow-md">
-      <div className="flex items-center gap-2 border-b border-primary/10 bg-primary/5 px-5 py-3">
-        <Clock className="h-4 w-4 text-primary" />
-        <p className="text-sm font-semibold uppercase tracking-widest text-primary">
+    <div className={`mb-8 rounded border-l-4 ${urgent ? "border-l-primary bg-primary/5" : "border-l-secondary bg-secondary/5"}`}>
+      {/* Header bar */}
+      <div className={`flex items-center gap-2 px-5 py-3 border-b ${urgent ? "border-primary/15" : "border-secondary/15"}`}>
+        <Clock className={`h-4 w-4 ${urgent ? "text-primary" : "text-secondary"}`} />
+        <p className={`text-xs font-bold uppercase tracking-widest ${urgent ? "text-primary" : "text-secondary"}`}>
           Application Deadline
         </p>
       </div>
-      <div className="px-6 py-5">
-        <p className="mb-4 text-center text-sm text-muted-foreground">
+
+      <div className="px-5 py-5">
+        <p className="mb-4 text-sm text-muted-foreground">
           Applications close on{" "}
           <span className="font-semibold text-foreground">
             {new Date(deadline).toLocaleDateString("en-US", {
@@ -63,6 +66,7 @@ export function ApplicationDeadlineCountdown({ deadline }: Props) {
             })}
           </span>
         </p>
+
         <div className="grid grid-cols-4 gap-3">
           {[
             { label: "Days", value: timeLeft.days },
@@ -72,20 +76,21 @@ export function ApplicationDeadlineCountdown({ deadline }: Props) {
           ].map(({ label, value }) => (
             <div
               key={label}
-              className="flex flex-col items-center rounded-xl border border-primary/15 bg-background py-3 shadow-sm"
+              className={`flex flex-col items-center rounded border py-4 bg-white shadow-sm ${urgent ? "border-primary/20" : "border-secondary/20"}`}
             >
-              <span className="font-serif text-4xl font-bold leading-none tracking-tight text-primary">
+              <span className={`font-serif text-4xl font-bold leading-none ${urgent ? "text-primary" : "text-secondary"}`}>
                 {pad(value)}
               </span>
-              <span className="mt-1.5 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+              <span className="mt-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 {label}
               </span>
             </div>
           ))}
         </div>
-        {timeLeft.days <= 3 && (
-          <p className="mt-4 text-center text-sm font-medium text-destructive">
-            Deadline approaching — submit your application soon!
+
+        {urgent && (
+          <p className="mt-4 text-sm font-semibold text-primary uppercase tracking-wide">
+            Deadline approaching — submit your application soon.
           </p>
         )}
       </div>

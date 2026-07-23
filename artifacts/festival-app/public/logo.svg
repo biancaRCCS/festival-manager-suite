@@ -1,7 +1,17 @@
 <svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="256" height="256" rx="64" fill="#C91D33"/>
-<path d="M128 32L144 80H192L152 112L168 160L128 128L88 160L104 112L64 80H112L128 32Z" fill="#F2B705"/>
-<circle cx="128" cy="128" r="24" fill="#C91D33"/>
-<path d="M128 64C128 64 140 100 160 112C140 124 128 160 128 160C128 160 116 124 96 112C116 100 128 64 128 64Z" fill="#F2B705"/>
-<circle cx="128" cy="128" r="8" fill="#F2B705"/>
+  <rect width="256" height="256" rx="12" fill="#0C1B3F"/>
+  <!-- Romanian tricolor stripe accent at top -->
+  <rect x="0" y="0" width="256" height="8" rx="4" fill="#002B7F"/>
+  <rect x="0" y="4" width="256" height="4" fill="#FCD116"/>
+  <rect x="0" y="6" width="256" height="2" fill="#CE1126"/>
+  <!-- Shield shape -->
+  <path d="M128 44 L196 72 L196 148 Q196 200 128 220 Q60 200 60 148 L60 72 Z" fill="#0F2555" stroke="#1a3a7a" stroke-width="1.5"/>
+  <!-- Red center band (tricolor middle) -->
+  <path d="M83 108 L173 108 L173 148 Q173 180 128 196 Q83 180 83 148 Z" fill="#CE1126"/>
+  <!-- Gold band (tricolor right) -->
+  <path d="M140 68 L173 72 L173 148 Q173 180 128 196 L128 108 L140 108 Z" fill="#FCD116" opacity="0.9"/>
+  <!-- Blue band (tricolor left) -->
+  <path d="M116 68 L83 72 L83 148 Q83 180 128 196 L128 108 L116 108 Z" fill="#002B7F" opacity="0.9"/>
+  <!-- Star -->
+  <path d="M128 72 L133 87 L149 87 L136 97 L141 112 L128 102 L115 112 L120 97 L107 87 L123 87 Z" fill="#FCD116"/>
 </svg>
