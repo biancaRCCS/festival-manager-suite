@@ -15,7 +15,7 @@ export default function PortalPage() {
   const queryClient = useQueryClient()
   const { toast } = useToast()
 
-  const { data: portal, isLoading } = useGetPortalInfo(token || "", { query: { enabled: !!token } })
+  const { data: portal, isLoading } = useGetPortalInfo(token || "", { query: { enabled: !!token, queryKey: getGetPortalInfoQueryKey(token || "") } })
   const signMutation = useSignPortalAgreement()
   const checkoutMutation = useCreatePortalCheckout()
 

@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Save, Plus, Trash2, GripVertical } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { FestivalSettings, FormQuestion } from "@workspace/api-client-react/generated/api.schemas"
+import { FestivalSettings, FormQuestion } from "@workspace/api-client-react"
 
 export default function SettingsPage() {
   const queryClient = useQueryClient()
