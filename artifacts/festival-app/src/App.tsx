@@ -178,22 +178,7 @@ function LandingPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Link href="/apply/vendor">
-              <div className="bg-white border border-border rounded hover:shadow-md transition-all cursor-pointer group overflow-hidden">
-                <div className="h-1.5 bg-primary w-full" />
-                <div className="p-8">
-                  <Briefcase className="w-9 h-9 text-primary mb-5" />
-                  <h3 className="font-serif text-xl font-bold text-secondary mb-2">Vendors</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Book a booth to sell your goods and food at the festival.
-                  </p>
-                  <div className="mt-5 text-primary text-xs font-bold uppercase tracking-widest group-hover:underline">
-                    Apply Now →
-                  </div>
-                </div>
-              </div>
-            </Link>
-
+            {/* Sponsors — navy/blue */}
             <Link href="/apply/sponsor">
               <div className="bg-white border border-border rounded hover:shadow-md transition-all cursor-pointer group overflow-hidden">
                 <div className="h-1.5 bg-secondary w-full" />
@@ -210,11 +195,29 @@ function LandingPage() {
               </div>
             </Link>
 
+            {/* Vendors — golden yellow */}
+            <Link href="/apply/vendor">
+              <div className="bg-white border border-border rounded hover:shadow-md transition-all cursor-pointer group overflow-hidden">
+                <div className="h-1.5 w-full" style={{ backgroundColor: "#C89A2A" }} />
+                <div className="p-8">
+                  <Briefcase className="w-9 h-9 mb-5" style={{ color: "#C89A2A" }} />
+                  <h3 className="font-serif text-xl font-bold text-secondary mb-2">Vendors</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Book a booth to sell your goods and food at the festival.
+                  </p>
+                  <div className="mt-5 text-xs font-bold uppercase tracking-widest group-hover:underline" style={{ color: "#C89A2A" }}>
+                    Apply Now →
+                  </div>
+                </div>
+              </div>
+            </Link>
+
+            {/* Volunteers — crimson red */}
             <Link href="/apply/volunteer">
               <div className="bg-white border border-border rounded hover:shadow-md transition-all cursor-pointer group overflow-hidden">
-                <div className="h-1.5 bg-primary/60 w-full" />
+                <div className="h-1.5 bg-primary w-full" />
                 <div className="p-8">
-                  <CalendarDays className="w-9 h-9 text-primary/70 mb-5" />
+                  <CalendarDays className="w-9 h-9 text-primary mb-5" />
                   <h3 className="font-serif text-xl font-bold text-secondary mb-2">Volunteers</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     Help us run the festival and make it a success.
