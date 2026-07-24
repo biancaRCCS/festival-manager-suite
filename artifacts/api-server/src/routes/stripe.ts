@@ -1,11 +1,11 @@
-import { Router, type IRouter } from "express";
 import { db, vendorsTable, sponsorsTable, festivalYearsTable, festivalSettingsTable, activityLogTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { logger } from "../lib/logger";
+import { getUncachableStripeClient } from "../lib/stripeClient";
 
-export const stripeWebhookRouter: IRouter = Router();
-
-// Stripe checkout session creation (called from portal route)
+/**
+ * Creates a Stripe Checkout session for vendor or sponsor portal payment.
+ * Called from routes/portal.ts after the applicant signs their agreement.
+ */
 export async function createCheckoutSession(params: {
   token: string;
   entity: { id: number; name: string; yearId: number };
@@ -13,23 +13,27 @@ export async function createCheckoutSession(params: {
 }): Promise<string> {
   const { token, entity, entityType } = params;
 
-  // Get Stripe client
-  const stripeClient = await import("../lib/stripeClient").catch(() => null);
-  if (!stripeClient) {
-    throw new Error("Stripe not configured");
-  }
+  const stripe = await getUncachableStripeClient();
 
-  const stripe = await stripeClient.getUncachableStripeClient();
-  const settingsRows = await db.select().from(festivalSettingsTable).where(eq(festivalSettingsTable.yearId, entity.yearId)).limit(1);
-  const years = await db.select().from(festivalYearsTable).where(eq(festivalYearsTable.id, entity.yearId)).limit(1);
+  const [settingsRow] = await db
+    .select()
+    .from(festivalSettingsTable)
+    .where(eq(festivalSettingsTable.yearId, entity.yearId))
+    .limit(1);
+
+  const [year] = await db
+    .select()
+    .from(festivalYearsTable)
+    .where(eq(festivalYearsTable.id, entity.yearId))
+    .limit(1);
 
   const price = entityType === "vendor"
-    ? parseFloat(settingsRows[0]?.vendorPrice ?? "200")
-    : parseFloat(settingsRows[0]?.sponsorPrice ?? "500");
+    ? parseFloat(settingsRow?.vendorPrice ?? "200")
+    : parseFloat(settingsRow?.sponsorPrice ?? "500");
 
   const domain = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost";
   const successUrl = `https://${domain}/portal/${token}/success`;
-  const cancelUrl = `https://${domain}/portal/${token}`;
+  const cancelUrl  = `https://${domain}/portal/${token}`;
 
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ["card"],
@@ -39,8 +43,8 @@ export async function createCheckoutSession(params: {
           currency: "usd",
           unit_amount: Math.round(price * 100),
           product_data: {
-            name: `${entityType === "vendor" ? "Vendor" : "Sponsor"} Fee — ${years[0]?.eventName ?? "Romanian Festival"}`,
-            description: `${entity.name} — ${years[0]?.eventName ?? ""}`,
+            name: `${entityType === "vendor" ? "Vendor" : "Sponsor"} Fee — ${year?.eventName ?? "Romanian Festival"}`,
+            description: `${entity.name} — ${year?.eventName ?? ""}`,
           },
         },
         quantity: 1,
@@ -56,77 +60,69 @@ export async function createCheckoutSession(params: {
     },
   });
 
+  // Mark the entity as payment-pending and store the session ID
   if (entityType === "vendor") {
-    await db.update(vendorsTable).set({ stripeSessionId: session.id, status: "payment_pending" }).where(eq(vendorsTable.id, entity.id));
+    await db
+      .update(vendorsTable)
+      .set({ stripeSessionId: session.id, status: "payment_pending" })
+      .where(eq(vendorsTable.id, entity.id));
   } else {
-    await db.update(sponsorsTable).set({ stripeSessionId: session.id, status: "payment_pending" }).where(eq(sponsorsTable.id, entity.id));
+    await db
+      .update(sponsorsTable)
+      .set({ stripeSessionId: session.id, status: "payment_pending" })
+      .where(eq(sponsorsTable.id, entity.id));
   }
 
   return session.url ?? cancelUrl;
 }
 
-// Stripe webhook handler for payment completion
-stripeWebhookRouter.post("/api/stripe/webhook", async (req, res): Promise<void> => {
-  const stripeClient = await import("../lib/stripeClient").catch(() => null);
-  if (!stripeClient) {
-    res.status(503).json({ error: "Stripe not configured" });
-    return;
-  }
+/**
+ * Post-payment fulfillment: called from webhookHandlers after stripe-replit-sync
+ * processes a checkout.session.completed event.
+ *
+ * stripe-replit-sync handles signature verification and event parsing;
+ * this function performs the application-level state transitions.
+ */
+export async function handleCheckoutComplete(sessionMetadata: {
+  token?: string;
+  entityType?: string;
+  entityId?: string;
+}): Promise<void> {
+  const { entityType, entityId } = sessionMetadata;
+  if (!entityId || !entityType) return;
 
-  const signature = req.headers["stripe-signature"];
-  if (!signature) {
-    res.status(400).json({ error: "Missing signature" });
-    return;
-  }
+  const id = parseInt(entityId, 10);
+  if (isNaN(id)) return;
 
-  try {
-    const stripe = await stripeClient.getUncachableStripeClient();
-    const sig = Array.isArray(signature) ? signature[0] : signature;
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (entityType === "vendor") {
+    await db
+      .update(vendorsTable)
+      .set({ status: "paid", paidAt: new Date() })
+      .where(eq(vendorsTable.id, id));
 
-    let event: any;
-    if (webhookSecret) {
-      event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-    } else {
-      // Dev fallback: parse raw body
-      event = JSON.parse(req.body.toString());
+    const [v] = await db.select().from(vendorsTable).where(eq(vendorsTable.id, id));
+    if (v) {
+      await db.insert(activityLogTable).values({
+        type: "paid",
+        message: `Vendor ${v.name} completed payment`,
+        entityType: "vendor",
+        entityId: v.id,
+      });
     }
+  } else if (entityType === "sponsor") {
+    await db
+      .update(sponsorsTable)
+      .set({ status: "paid", paidAt: new Date() })
+      .where(eq(sponsorsTable.id, id));
 
-    if (event.type === "checkout.session.completed") {
-      const session = event.data.object;
-      const { token, entityType, entityId } = session.metadata ?? {};
-
-      if (entityId && entityType) {
-        const id = parseInt(entityId, 10);
-        if (entityType === "vendor") {
-          await db.update(vendorsTable).set({ status: "paid", paidAt: new Date() }).where(eq(vendorsTable.id, id));
-          const [v] = await db.select().from(vendorsTable).where(eq(vendorsTable.id, id));
-          if (v) {
-            await db.insert(activityLogTable).values({
-              type: "paid",
-              message: `Vendor ${v.name} completed payment`,
-              entityType: "vendor",
-              entityId: v.id,
-            });
-          }
-        } else if (entityType === "sponsor") {
-          await db.update(sponsorsTable).set({ status: "paid", paidAt: new Date() }).where(eq(sponsorsTable.id, id));
-          const [s] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, id));
-          if (s) {
-            await db.insert(activityLogTable).values({
-              type: "paid",
-              message: `Sponsor ${s.name} completed payment`,
-              entityType: "sponsor",
-              entityId: s.id,
-            });
-          }
-        }
-      }
+    const [s] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, id));
+    if (s) {
+      await db.insert(activityLogTable).values({
+        type: "paid",
+        message: `Sponsor ${s.name} completed payment`,
+        entityType: "sponsor",
+        entityId: s.id,
+      });
     }
-
-    res.json({ received: true });
-  } catch (err) {
-    logger.error({ err }, "Stripe webhook error");
-    res.status(400).json({ error: "Webhook error" });
   }
-});
+}
