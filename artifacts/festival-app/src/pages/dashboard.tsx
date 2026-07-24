@@ -3,7 +3,7 @@ import { AdminLayout } from "@/components/layout/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Link } from "wouter"
-import { Briefcase, HandHeart, Users, Calendar, ArrowRight, Activity, Clock } from "lucide-react"
+import { Briefcase, HandHeart, Users, Calendar, ArrowRight, Activity, Clock, DollarSign } from "lucide-react"
 
 export default function DashboardPage() {
   const { data: currentYear, isLoading: yearLoading } = useGetCurrentYear()
@@ -89,6 +89,10 @@ export default function DashboardPage() {
                        <span className="text-muted-foreground flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-green-500" /> Final Approved</span>
                        <span className="font-semibold text-green-600">{summary.vendorStats.finalApproved}</span>
                      </div>
+                     <div className="flex justify-between items-center text-sm pt-2 border-t mt-1">
+                       <span className="text-muted-foreground flex items-center gap-1.5"><DollarSign className="w-4 h-4 text-green-600" /> Revenue collected</span>
+                       <span className="font-semibold text-green-700">${summary.vendorRevenue.toLocaleString()}</span>
+                     </div>
                    </div>
                    <div className="mt-6">
                      <Link href="/vendors" className="text-primary text-sm font-medium flex items-center gap-1 hover:underline">
@@ -119,6 +123,10 @@ export default function DashboardPage() {
                      <div className="flex justify-between items-center text-sm">
                        <span className="text-muted-foreground flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-green-500" /> Final Approved</span>
                        <span className="font-semibold text-green-600">{summary.sponsorStats.finalApproved}</span>
+                     </div>
+                     <div className="flex justify-between items-center text-sm pt-2 border-t mt-1">
+                       <span className="text-muted-foreground flex items-center gap-1.5"><DollarSign className="w-4 h-4 text-green-600" /> Revenue collected</span>
+                       <span className="font-semibold text-green-700">${summary.sponsorRevenue.toLocaleString()}</span>
                      </div>
                    </div>
                    <div className="mt-6">

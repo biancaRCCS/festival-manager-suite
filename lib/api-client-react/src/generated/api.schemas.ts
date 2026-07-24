@@ -258,6 +258,8 @@ export interface DashboardSummary {
   vendorStats: ApplicationStats;
   sponsorStats: ApplicationStats;
   volunteerStats: ApplicationStats;
+  vendorRevenue: number;
+  sponsorRevenue: number;
   totalRevenue: number;
   /** Total applications needing attention */
   pendingActions: number;
