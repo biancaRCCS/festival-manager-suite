@@ -43,6 +43,7 @@ export async function createCheckoutSession(params: {
       silver:   settingsRow?.sponsorPriceSilver   ?? "500",
       gold:     settingsRow?.sponsorPriceGold     ?? "1000",
       platinum: settingsRow?.sponsorPricePlatinum ?? "2000",
+      diamond:  settingsRow?.sponsorPriceDiamond  ?? "5000",
     };
     price = parseFloat(tierPriceMap[tier] ?? "250");
   }

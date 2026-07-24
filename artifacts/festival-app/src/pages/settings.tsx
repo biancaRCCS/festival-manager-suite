@@ -178,8 +178,8 @@ export default function SettingsPage() {
                   </div>
                   <div className="space-y-2 md:col-span-2">
                     <Label className="text-base font-semibold">Sponsor Tier Prices ($)</Label>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-1">
-                      {(["Bronze", "Silver", "Gold", "Platinum"] as const).map(tier => {
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 pt-1">
+                      {(["Bronze", "Silver", "Gold", "Platinum", "Diamond"] as const).map(tier => {
                         const key = `sponsorPrice${tier}` as keyof typeof localSettings;
                         return (
                           <div key={tier} className="space-y-1">
@@ -194,13 +194,23 @@ export default function SettingsPage() {
                       })}
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Sponsor Spot Limit</Label>
-                    <Input 
-                      type="number" 
-                      value={localSettings.sponsorSpotLimit || 0} 
-                      onChange={e => setLocalSettings(p => ({ ...p, sponsorSpotLimit: Number(e.target.value) }))} 
-                    />
+                  <div className="space-y-2 md:col-span-2">
+                    <Label className="text-base font-semibold">Sponsor Spot Limits (per tier)</Label>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 pt-1">
+                      {(["Bronze", "Silver", "Gold", "Platinum", "Diamond"] as const).map(tier => {
+                        const key = `sponsorSpotLimit${tier}` as keyof typeof localSettings;
+                        return (
+                          <div key={tier} className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">{tier}</Label>
+                            <Input
+                              type="number"
+                              value={(localSettings[key] as number) || 0}
+                              onChange={e => setLocalSettings(p => ({ ...p, [key]: Number(e.target.value) }))}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </CardContent>
               </Card>

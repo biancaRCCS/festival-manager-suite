@@ -32,6 +32,7 @@ router.get("/portal/:token", async (req, res): Promise<void> => {
       sponsorPriceSilver: null,
       sponsorPriceGold: null,
       sponsorPricePlatinum: null,
+      sponsorPriceDiamond: null,
     });
     return;
   }
@@ -60,6 +61,7 @@ router.get("/portal/:token", async (req, res): Promise<void> => {
       sponsorPriceSilver: s ? parseFloat(s.sponsorPriceSilver) : null,
       sponsorPriceGold: s ? parseFloat(s.sponsorPriceGold) : null,
       sponsorPricePlatinum: s ? parseFloat(s.sponsorPricePlatinum) : null,
+      sponsorPriceDiamond: s ? parseFloat(s.sponsorPriceDiamond) : null,
     });
     return;
   }
@@ -101,6 +103,7 @@ router.post("/portal/:token/sign-agreement", async (req, res): Promise<void> => 
       sponsorPriceSilver: null,
       sponsorPriceGold: null,
       sponsorPricePlatinum: null,
+      sponsorPriceDiamond: null,
     });
     return;
   }
@@ -132,6 +135,7 @@ router.post("/portal/:token/sign-agreement", async (req, res): Promise<void> => 
       sponsorPriceSilver: s ? parseFloat(s.sponsorPriceSilver) : null,
       sponsorPriceGold: s ? parseFloat(s.sponsorPriceGold) : null,
       sponsorPricePlatinum: s ? parseFloat(s.sponsorPricePlatinum) : null,
+      sponsorPriceDiamond: s ? parseFloat(s.sponsorPriceDiamond) : null,
     });
     return;
   }

@@ -844,7 +844,7 @@ components:
 
     FestivalSettings:
       type: object
-      required: [id, yearId, vendorPrice, sponsorPriceBronze, sponsorPriceSilver, sponsorPriceGold, sponsorPricePlatinum, vendorSpotLimit, sponsorSpotLimit, vendorFormQuestions, sponsorFormQuestions, volunteerFormQuestions]
+      required: [id, yearId, vendorPrice, sponsorPriceBronze, sponsorPriceSilver, sponsorPriceGold, sponsorPricePlatinum, sponsorPriceDiamond, vendorSpotLimit, sponsorSpotLimitBronze, sponsorSpotLimitSilver, sponsorSpotLimitGold, sponsorSpotLimitPlatinum, sponsorSpotLimitDiamond, vendorFormQuestions, sponsorFormQuestions, volunteerFormQuestions]
       properties:
         id:
           type: integer
@@ -860,9 +860,19 @@ components:
           type: number
         sponsorPricePlatinum:
           type: number
+        sponsorPriceDiamond:
+          type: number
         vendorSpotLimit:
           type: integer
-        sponsorSpotLimit:
+        sponsorSpotLimitBronze:
+          type: integer
+        sponsorSpotLimitSilver:
+          type: integer
+        sponsorSpotLimitGold:
+          type: integer
+        sponsorSpotLimitPlatinum:
+          type: integer
+        sponsorSpotLimitDiamond:
           type: integer
         vendorFormQuestions:
           type: array
@@ -890,9 +900,19 @@ components:
           type: number
         sponsorPricePlatinum:
           type: number
+        sponsorPriceDiamond:
+          type: number
         vendorSpotLimit:
           type: integer
-        sponsorSpotLimit:
+        sponsorSpotLimitBronze:
+          type: integer
+        sponsorSpotLimitSilver:
+          type: integer
+        sponsorSpotLimitGold:
+          type: integer
+        sponsorSpotLimitPlatinum:
+          type: integer
+        sponsorSpotLimitDiamond:
           type: integer
         vendorFormQuestions:
           type: array

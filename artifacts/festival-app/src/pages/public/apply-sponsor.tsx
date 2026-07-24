@@ -124,6 +124,7 @@ export default function ApplySponsorPage() {
                         <SelectItem value="silver">Silver</SelectItem>
                         <SelectItem value="gold">Gold</SelectItem>
                         <SelectItem value="platinum">Platinum</SelectItem>
+                        <SelectItem value="diamond">Diamond</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

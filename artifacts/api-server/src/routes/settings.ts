@@ -30,8 +30,13 @@ router.get("/settings", requireStaff, async (req, res): Promise<void> => {
       sponsorPriceSilver: "500.00",
       sponsorPriceGold: "1000.00",
       sponsorPricePlatinum: "2000.00",
+      sponsorPriceDiamond: "5000.00",
       vendorSpotLimit: 50,
-      sponsorSpotLimit: 20,
+      sponsorSpotLimitBronze: 10,
+      sponsorSpotLimitSilver: 8,
+      sponsorSpotLimitGold: 5,
+      sponsorSpotLimitPlatinum: 3,
+      sponsorSpotLimitDiamond: 1,
       vendorFormQuestions: [],
       sponsorFormQuestions: [],
       volunteerFormQuestions: [],
@@ -48,8 +53,13 @@ router.get("/settings", requireStaff, async (req, res): Promise<void> => {
     sponsorPriceSilver: parseFloat(s.sponsorPriceSilver),
     sponsorPriceGold: parseFloat(s.sponsorPriceGold),
     sponsorPricePlatinum: parseFloat(s.sponsorPricePlatinum),
+    sponsorPriceDiamond: parseFloat(s.sponsorPriceDiamond),
     vendorSpotLimit: s.vendorSpotLimit,
-    sponsorSpotLimit: s.sponsorSpotLimit,
+    sponsorSpotLimitBronze: s.sponsorSpotLimitBronze,
+    sponsorSpotLimitSilver: s.sponsorSpotLimitSilver,
+    sponsorSpotLimitGold: s.sponsorSpotLimitGold,
+    sponsorSpotLimitPlatinum: s.sponsorSpotLimitPlatinum,
+    sponsorSpotLimitDiamond: s.sponsorSpotLimitDiamond,
     applicationDeadline: s.applicationDeadline ?? null,
     vendorFormQuestions: s.vendorFormQuestions,
     sponsorFormQuestions: s.sponsorFormQuestions,
@@ -77,8 +87,13 @@ router.patch("/settings", requireStaff, async (req, res): Promise<void> => {
   if (parsed.data.sponsorPriceSilver != null) updates.sponsorPriceSilver = parsed.data.sponsorPriceSilver.toString();
   if (parsed.data.sponsorPriceGold != null) updates.sponsorPriceGold = parsed.data.sponsorPriceGold.toString();
   if (parsed.data.sponsorPricePlatinum != null) updates.sponsorPricePlatinum = parsed.data.sponsorPricePlatinum.toString();
+  if (parsed.data.sponsorPriceDiamond != null) updates.sponsorPriceDiamond = parsed.data.sponsorPriceDiamond.toString();
   if (parsed.data.vendorSpotLimit != null) updates.vendorSpotLimit = parsed.data.vendorSpotLimit;
-  if (parsed.data.sponsorSpotLimit != null) updates.sponsorSpotLimit = parsed.data.sponsorSpotLimit;
+  if (parsed.data.sponsorSpotLimitBronze != null) updates.sponsorSpotLimitBronze = parsed.data.sponsorSpotLimitBronze;
+  if (parsed.data.sponsorSpotLimitSilver != null) updates.sponsorSpotLimitSilver = parsed.data.sponsorSpotLimitSilver;
+  if (parsed.data.sponsorSpotLimitGold != null) updates.sponsorSpotLimitGold = parsed.data.sponsorSpotLimitGold;
+  if (parsed.data.sponsorSpotLimitPlatinum != null) updates.sponsorSpotLimitPlatinum = parsed.data.sponsorSpotLimitPlatinum;
+  if (parsed.data.sponsorSpotLimitDiamond != null) updates.sponsorSpotLimitDiamond = parsed.data.sponsorSpotLimitDiamond;
   if (parsed.data.vendorFormQuestions != null) updates.vendorFormQuestions = parsed.data.vendorFormQuestions;
   if (parsed.data.sponsorFormQuestions != null) updates.sponsorFormQuestions = parsed.data.sponsorFormQuestions;
   if (parsed.data.volunteerFormQuestions != null) updates.volunteerFormQuestions = parsed.data.volunteerFormQuestions;
@@ -102,8 +117,13 @@ router.patch("/settings", requireStaff, async (req, res): Promise<void> => {
     sponsorPriceSilver: parseFloat(updated.sponsorPriceSilver),
     sponsorPriceGold: parseFloat(updated.sponsorPriceGold),
     sponsorPricePlatinum: parseFloat(updated.sponsorPricePlatinum),
+    sponsorPriceDiamond: parseFloat(updated.sponsorPriceDiamond),
     vendorSpotLimit: updated.vendorSpotLimit,
-    sponsorSpotLimit: updated.sponsorSpotLimit,
+    sponsorSpotLimitBronze: updated.sponsorSpotLimitBronze,
+    sponsorSpotLimitSilver: updated.sponsorSpotLimitSilver,
+    sponsorSpotLimitGold: updated.sponsorSpotLimitGold,
+    sponsorSpotLimitPlatinum: updated.sponsorSpotLimitPlatinum,
+    sponsorSpotLimitDiamond: updated.sponsorSpotLimitDiamond,
     vendorFormQuestions: updated.vendorFormQuestions,
     sponsorFormQuestions: updated.sponsorFormQuestions,
     volunteerFormQuestions: updated.volunteerFormQuestions,

@@ -60,8 +60,13 @@ export interface FestivalSettings {
   sponsorPriceSilver: number;
   sponsorPriceGold: number;
   sponsorPricePlatinum: number;
+  sponsorPriceDiamond: number;
   vendorSpotLimit: number;
-  sponsorSpotLimit: number;
+  sponsorSpotLimitBronze: number;
+  sponsorSpotLimitSilver: number;
+  sponsorSpotLimitGold: number;
+  sponsorSpotLimitPlatinum: number;
+  sponsorSpotLimitDiamond: number;
   vendorFormQuestions: FormQuestion[];
   sponsorFormQuestions: FormQuestion[];
   volunteerFormQuestions: FormQuestion[];
@@ -73,8 +78,13 @@ export interface FestivalSettingsUpdate {
   sponsorPriceSilver?: number;
   sponsorPriceGold?: number;
   sponsorPricePlatinum?: number;
+  sponsorPriceDiamond?: number;
   vendorSpotLimit?: number;
-  sponsorSpotLimit?: number;
+  sponsorSpotLimitBronze?: number;
+  sponsorSpotLimitSilver?: number;
+  sponsorSpotLimitGold?: number;
+  sponsorSpotLimitPlatinum?: number;
+  sponsorSpotLimitDiamond?: number;
   vendorFormQuestions?: FormQuestion[];
   sponsorFormQuestions?: FormQuestion[];
   volunteerFormQuestions?: FormQuestion[];
@@ -352,6 +362,8 @@ export interface PortalInfo {
   sponsorPriceGold?: number | null;
   /** @nullable */
   sponsorPricePlatinum?: number | null;
+  /** @nullable */
+  sponsorPriceDiamond?: number | null;
 }
 
 export interface CheckoutSession {
