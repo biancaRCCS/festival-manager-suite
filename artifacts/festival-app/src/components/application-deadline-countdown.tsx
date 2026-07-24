@@ -53,11 +53,10 @@ export function ApplicationDeadlineCountdown({ deadline }: Props) {
           Application Deadline
         </p>
       </div>
-
       <div className="px-5 py-5">
-        <p className="mb-4 text-sm text-muted-foreground">
+        <p className="mb-4 text-muted-foreground text-[18px]">
           Applications close on{" "}
-          <span className="font-semibold text-foreground">
+          <span className="font-semibold text-foreground text-[18px]">
             {new Date(deadline).toLocaleDateString("en-US", {
               weekday: "long",
               year: "numeric",
@@ -95,5 +94,5 @@ export function ApplicationDeadlineCountdown({ deadline }: Props) {
         )}
       </div>
     </div>
-  )
+  );
 }
