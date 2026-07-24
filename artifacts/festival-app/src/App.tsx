@@ -172,7 +172,7 @@ function LandingPage() {
             <img
               src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/hero.jpg`}
               alt="Romanian Festival"
-              className="w-full h-72 md:h-[420px] object-contain rounded shadow-xl"
+              className="w-full h-72 md:h-[420px] object-cover object-center rounded shadow-xl"
             />
           </div>
         </div>
