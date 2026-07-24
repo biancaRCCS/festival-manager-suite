@@ -29,7 +29,7 @@ import PortalSuccessPage from '@/pages/portal/success';
 
 import { Button } from '@/components/ui/button';
 import { Link } from 'wouter';
-import { CalendarDays, HandHeart, Briefcase } from 'lucide-react';
+import { CalendarDays, HandHeart, Store } from 'lucide-react';
 
 const clerkPubKey = publishableKeyFromHost(
   window.location.hostname,
@@ -200,7 +200,7 @@ function LandingPage() {
               <div className="bg-white border border-border rounded hover:shadow-md transition-all cursor-pointer group overflow-hidden">
                 <div className="h-1.5 w-full" style={{ backgroundColor: "#C89A2A" }} />
                 <div className="p-8">
-                  <Briefcase className="w-9 h-9 mb-5" style={{ color: "#C89A2A" }} />
+                  <Store className="w-9 h-9 mb-5" style={{ color: "#C89A2A" }} />
                   <h3 className="font-serif text-xl font-bold text-secondary mb-2">Vendors</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     Book a booth to sell your goods and food at the festival.
