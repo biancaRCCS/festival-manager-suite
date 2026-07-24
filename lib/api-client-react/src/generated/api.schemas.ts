@@ -55,6 +55,11 @@ export interface FormQuestion {
 export interface FestivalSettings {
   id: number;
   yearId: number;
+  vendorTypeLabelFood: string;
+  vendorTypeLabelCrafts: string;
+  vendorTypeLabelMerchandise: string;
+  vendorTypeLabelCultural: string;
+  vendorTypeLabelOther: string;
   vendorPriceFood: number;
   vendorPriceCrafts: number;
   vendorPriceMerchandise: number;
@@ -81,6 +86,11 @@ export interface FestivalSettings {
 }
 
 export interface FestivalSettingsUpdate {
+  vendorTypeLabelFood?: string;
+  vendorTypeLabelCrafts?: string;
+  vendorTypeLabelMerchandise?: string;
+  vendorTypeLabelCultural?: string;
+  vendorTypeLabelOther?: string;
   vendorPriceFood?: number;
   vendorPriceCrafts?: number;
   vendorPriceMerchandise?: number;

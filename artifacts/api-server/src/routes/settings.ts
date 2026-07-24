@@ -25,6 +25,11 @@ router.get("/settings", requireStaff, async (req, res): Promise<void> => {
     // Auto-create default settings
     const [created] = await db.insert(festivalSettingsTable).values({
       yearId,
+      vendorTypeLabelFood: "Food & Beverage",
+      vendorTypeLabelCrafts: "Crafts & Art",
+      vendorTypeLabelMerchandise: "Merchandise",
+      vendorTypeLabelCultural: "Cultural",
+      vendorTypeLabelOther: "Other",
       vendorPriceFood: "200.00",
       vendorPriceCrafts: "150.00",
       vendorPriceMerchandise: "150.00",
@@ -56,6 +61,11 @@ router.get("/settings", requireStaff, async (req, res): Promise<void> => {
   res.json({
     id: s.id,
     yearId: s.yearId,
+    vendorTypeLabelFood: s.vendorTypeLabelFood,
+    vendorTypeLabelCrafts: s.vendorTypeLabelCrafts,
+    vendorTypeLabelMerchandise: s.vendorTypeLabelMerchandise,
+    vendorTypeLabelCultural: s.vendorTypeLabelCultural,
+    vendorTypeLabelOther: s.vendorTypeLabelOther,
     vendorPriceFood: parseFloat(s.vendorPriceFood),
     vendorPriceCrafts: parseFloat(s.vendorPriceCrafts),
     vendorPriceMerchandise: parseFloat(s.vendorPriceMerchandise),
@@ -98,6 +108,11 @@ router.patch("/settings", requireStaff, async (req, res): Promise<void> => {
   const yearId = years[0].id;
 
   const updates: Record<string, unknown> = {};
+  if (parsed.data.vendorTypeLabelFood != null) updates.vendorTypeLabelFood = parsed.data.vendorTypeLabelFood;
+  if (parsed.data.vendorTypeLabelCrafts != null) updates.vendorTypeLabelCrafts = parsed.data.vendorTypeLabelCrafts;
+  if (parsed.data.vendorTypeLabelMerchandise != null) updates.vendorTypeLabelMerchandise = parsed.data.vendorTypeLabelMerchandise;
+  if (parsed.data.vendorTypeLabelCultural != null) updates.vendorTypeLabelCultural = parsed.data.vendorTypeLabelCultural;
+  if (parsed.data.vendorTypeLabelOther != null) updates.vendorTypeLabelOther = parsed.data.vendorTypeLabelOther;
   if (parsed.data.vendorPriceFood != null) updates.vendorPriceFood = parsed.data.vendorPriceFood.toString();
   if (parsed.data.vendorPriceCrafts != null) updates.vendorPriceCrafts = parsed.data.vendorPriceCrafts.toString();
   if (parsed.data.vendorPriceMerchandise != null) updates.vendorPriceMerchandise = parsed.data.vendorPriceMerchandise.toString();
@@ -136,6 +151,11 @@ router.patch("/settings", requireStaff, async (req, res): Promise<void> => {
   res.json({
     id: updated.id,
     yearId: updated.yearId,
+    vendorTypeLabelFood: updated.vendorTypeLabelFood,
+    vendorTypeLabelCrafts: updated.vendorTypeLabelCrafts,
+    vendorTypeLabelMerchandise: updated.vendorTypeLabelMerchandise,
+    vendorTypeLabelCultural: updated.vendorTypeLabelCultural,
+    vendorTypeLabelOther: updated.vendorTypeLabelOther,
     vendorPriceFood: parseFloat(updated.vendorPriceFood),
     vendorPriceCrafts: parseFloat(updated.vendorPriceCrafts),
     vendorPriceMerchandise: parseFloat(updated.vendorPriceMerchandise),

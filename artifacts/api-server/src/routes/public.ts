@@ -142,8 +142,16 @@ router.get("/public/form-questions", async (req, res): Promise<void> => {
 
   const deadline = s.applicationDeadline ?? null;
 
+  const vendorTypes = [
+    { key: "food",        label: s.vendorTypeLabelFood },
+    { key: "crafts",      label: s.vendorTypeLabelCrafts },
+    { key: "merchandise", label: s.vendorTypeLabelMerchandise },
+    { key: "cultural",    label: s.vendorTypeLabelCultural },
+    { key: "other",       label: s.vendorTypeLabelOther },
+  ];
+
   if (type === "vendor") {
-    res.json({ questions: s.vendorFormQuestions, applicationDeadline: deadline });
+    res.json({ questions: s.vendorFormQuestions, applicationDeadline: deadline, vendorTypes });
   } else if (type === "sponsor") {
     res.json({ questions: s.sponsorFormQuestions, applicationDeadline: deadline });
   } else if (type === "volunteer") {

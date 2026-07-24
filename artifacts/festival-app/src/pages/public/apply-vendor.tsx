@@ -51,6 +51,13 @@ export default function ApplyVendorPage() {
 
   const isLoading = yearLoading || questionsLoading
   const questions = questionsData?.questions ?? []
+  const vendorTypes: { key: string; label: string }[] = (questionsData as any)?.vendorTypes ?? [
+    { key: "food",        label: "Food & Beverage" },
+    { key: "crafts",      label: "Crafts & Art" },
+    { key: "merchandise", label: "Merchandise" },
+    { key: "cultural",    label: "Cultural" },
+    { key: "other",       label: "Other" },
+  ]
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -120,11 +127,9 @@ export default function ApplyVendorPage() {
                         <SelectValue placeholder="Select a vendor type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="food">Food & Beverage</SelectItem>
-                        <SelectItem value="crafts">Crafts & Art</SelectItem>
-                        <SelectItem value="merchandise">Merchandise</SelectItem>
-                        <SelectItem value="cultural">Cultural</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        {vendorTypes.map(vt => (
+                          <SelectItem key={vt.key} value={vt.key}>{vt.label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

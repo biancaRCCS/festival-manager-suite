@@ -161,23 +161,37 @@ export default function SettingsPage() {
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2 md:col-span-2">
-                    <Label className="text-base font-semibold">Vendor Type Prices ($)</Label>
+                    <Label className="text-base font-semibold">Vendor Type Names</Label>
+                    <p className="text-xs text-muted-foreground -mt-1">These labels appear on the public apply form.</p>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4 pt-1">
-                      {([
-                        ["Food", "Food & Beverage"],
-                        ["Crafts", "Crafts & Art"],
-                        ["Merchandise", "Merchandise"],
-                        ["Cultural", "Cultural"],
-                        ["Other", "Other"],
-                      ] as const).map(([key, label]) => {
-                        const field = `vendorPrice${key}` as keyof typeof localSettings;
+                      {(["Food", "Crafts", "Merchandise", "Cultural", "Other"] as const).map(key => {
+                        const labelField = `vendorTypeLabel${key}` as keyof typeof localSettings;
                         return (
                           <div key={key} className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">{label}</Label>
+                            <Label className="text-xs text-muted-foreground">{key}</Label>
+                            <Input
+                              value={(localSettings[labelField] as string) ?? ""}
+                              onChange={e => setLocalSettings(p => ({ ...p, [labelField]: e.target.value }))}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label className="text-base font-semibold">Vendor Type Prices ($)</Label>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 pt-1">
+                      {(["Food", "Crafts", "Merchandise", "Cultural", "Other"] as const).map(key => {
+                        const labelField = `vendorTypeLabel${key}` as keyof typeof localSettings;
+                        const priceField = `vendorPrice${key}` as keyof typeof localSettings;
+                        const displayLabel = (localSettings[labelField] as string) || key;
+                        return (
+                          <div key={key} className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">{displayLabel}</Label>
                             <Input
                               type="number"
-                              value={(localSettings[field] as number) || 0}
-                              onChange={e => setLocalSettings(p => ({ ...p, [field]: Number(e.target.value) }))}
+                              value={(localSettings[priceField] as number) || 0}
+                              onChange={e => setLocalSettings(p => ({ ...p, [priceField]: Number(e.target.value) }))}
                             />
                           </div>
                         );
@@ -187,21 +201,17 @@ export default function SettingsPage() {
                   <div className="space-y-2 md:col-span-2">
                     <Label className="text-base font-semibold">Vendor Spot Limits (per type)</Label>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4 pt-1">
-                      {([
-                        ["Food", "Food & Beverage"],
-                        ["Crafts", "Crafts & Art"],
-                        ["Merchandise", "Merchandise"],
-                        ["Cultural", "Cultural"],
-                        ["Other", "Other"],
-                      ] as const).map(([key, label]) => {
-                        const field = `vendorSpotLimit${key}` as keyof typeof localSettings;
+                      {(["Food", "Crafts", "Merchandise", "Cultural", "Other"] as const).map(key => {
+                        const labelField = `vendorTypeLabel${key}` as keyof typeof localSettings;
+                        const limitField = `vendorSpotLimit${key}` as keyof typeof localSettings;
+                        const displayLabel = (localSettings[labelField] as string) || key;
                         return (
                           <div key={key} className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">{label}</Label>
+                            <Label className="text-xs text-muted-foreground">{displayLabel}</Label>
                             <Input
                               type="number"
-                              value={(localSettings[field] as number) || 0}
-                              onChange={e => setLocalSettings(p => ({ ...p, [field]: Number(e.target.value) }))}
+                              value={(localSettings[limitField] as number) || 0}
+                              onChange={e => setLocalSettings(p => ({ ...p, [limitField]: Number(e.target.value) }))}
                             />
                           </div>
                         );

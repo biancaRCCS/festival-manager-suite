@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, numeric, jsonb, timestamp, date } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, numeric, text, jsonb, timestamp, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { festivalYearsTable } from "./festivalYears";
@@ -6,6 +6,11 @@ import { festivalYearsTable } from "./festivalYears";
 export const festivalSettingsTable = pgTable("festival_settings", {
   id: serial("id").primaryKey(),
   yearId: integer("year_id").notNull().references(() => festivalYearsTable.id),
+  vendorTypeLabelFood: text("vendor_type_label_food").notNull().default("Food & Beverage"),
+  vendorTypeLabelCrafts: text("vendor_type_label_crafts").notNull().default("Crafts & Art"),
+  vendorTypeLabelMerchandise: text("vendor_type_label_merchandise").notNull().default("Merchandise"),
+  vendorTypeLabelCultural: text("vendor_type_label_cultural").notNull().default("Cultural"),
+  vendorTypeLabelOther: text("vendor_type_label_other").notNull().default("Other"),
   vendorPriceFood: numeric("vendor_price_food", { precision: 10, scale: 2 }).notNull().default("200.00"),
   vendorPriceCrafts: numeric("vendor_price_crafts", { precision: 10, scale: 2 }).notNull().default("150.00"),
   vendorPriceMerchandise: numeric("vendor_price_merchandise", { precision: 10, scale: 2 }).notNull().default("150.00"),

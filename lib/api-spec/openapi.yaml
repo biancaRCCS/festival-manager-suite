@@ -844,12 +844,22 @@ components:
 
     FestivalSettings:
       type: object
-      required: [id, yearId, vendorPriceFood, vendorPriceCrafts, vendorPriceMerchandise, vendorPriceCultural, vendorPriceOther, sponsorPriceBronze, sponsorPriceSilver, sponsorPriceGold, sponsorPricePlatinum, sponsorPriceDiamond, vendorSpotLimitFood, vendorSpotLimitCrafts, vendorSpotLimitMerchandise, vendorSpotLimitCultural, vendorSpotLimitOther, sponsorSpotLimitBronze, sponsorSpotLimitSilver, sponsorSpotLimitGold, sponsorSpotLimitPlatinum, sponsorSpotLimitDiamond, vendorFormQuestions, sponsorFormQuestions, volunteerFormQuestions]
+      required: [id, yearId, vendorTypeLabelFood, vendorTypeLabelCrafts, vendorTypeLabelMerchandise, vendorTypeLabelCultural, vendorTypeLabelOther, vendorPriceFood, vendorPriceCrafts, vendorPriceMerchandise, vendorPriceCultural, vendorPriceOther, sponsorPriceBronze, sponsorPriceSilver, sponsorPriceGold, sponsorPricePlatinum, sponsorPriceDiamond, vendorSpotLimitFood, vendorSpotLimitCrafts, vendorSpotLimitMerchandise, vendorSpotLimitCultural, vendorSpotLimitOther, sponsorSpotLimitBronze, sponsorSpotLimitSilver, sponsorSpotLimitGold, sponsorSpotLimitPlatinum, sponsorSpotLimitDiamond, vendorFormQuestions, sponsorFormQuestions, volunteerFormQuestions]
       properties:
         id:
           type: integer
         yearId:
           type: integer
+        vendorTypeLabelFood:
+          type: string
+        vendorTypeLabelCrafts:
+          type: string
+        vendorTypeLabelMerchandise:
+          type: string
+        vendorTypeLabelCultural:
+          type: string
+        vendorTypeLabelOther:
+          type: string
         vendorPriceFood:
           type: number
         vendorPriceCrafts:
@@ -906,6 +916,16 @@ components:
     FestivalSettingsUpdate:
       type: object
       properties:
+        vendorTypeLabelFood:
+          type: string
+        vendorTypeLabelCrafts:
+          type: string
+        vendorTypeLabelMerchandise:
+          type: string
+        vendorTypeLabelCultural:
+          type: string
+        vendorTypeLabelOther:
+          type: string
         vendorPriceFood:
           type: number
         vendorPriceCrafts:
