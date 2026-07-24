@@ -142,11 +142,6 @@ function LandingPage() {
               <div className="text-white/60 text-xs tracking-wide">Preserving culture. Building community.</div>
             </div>
           </div>
-          <Link href="/sign-in">
-            <Button className="bg-primary hover:bg-primary/90 text-white font-semibold uppercase tracking-wide text-xs px-5 h-9 rounded shadow">
-              Staff Login
-            </Button>
-          </Link>
         </div>
       </header>
 
@@ -236,7 +231,12 @@ function LandingPage() {
 
       {/* Footer */}
       <footer className="bg-secondary text-white/60 text-xs text-center py-5 tracking-wide">
-        Romanian Festival &copy; {new Date().getFullYear()}
+        <div>Romanian Festival &copy; {new Date().getFullYear()}</div>
+        <div className="mt-2">
+          <Link href="/sign-in" className="text-white/25 hover:text-white/50 transition-colors text-[10px]">
+            Staff Login
+          </Link>
+        </div>
       </footer>
     </div>
   )
