@@ -79,14 +79,22 @@ export default function PortalPage() {
   const isPaid = portal.status === 'paid'
   const isFinal = portal.status === 'final_approved'
 
+  const vendorTypePrice: Record<string, number | null | undefined> = {
+    food:        portal.vendorPriceFood,
+    crafts:      portal.vendorPriceCrafts,
+    merchandise: portal.vendorPriceMerchandise,
+    cultural:    portal.vendorPriceCultural,
+    other:       portal.vendorPriceOther,
+  };
   const sponsorTierPrice: Record<string, number | null | undefined> = {
     bronze:   portal.sponsorPriceBronze,
     silver:   portal.sponsorPriceSilver,
     gold:     portal.sponsorPriceGold,
     platinum: portal.sponsorPricePlatinum,
+    diamond:  portal.sponsorPriceDiamond,
   };
   const amount = portal.type === 'vendor'
-    ? portal.vendorPrice
+    ? (vendorTypePrice[portal.vendorType ?? 'other'] ?? portal.vendorPriceOther)
     : sponsorTierPrice[portal.tier ?? 'bronze'] ?? portal.sponsorPriceBronze
 
   return (

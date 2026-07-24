@@ -10,6 +10,7 @@ export const vendorsTable = pgTable("vendors", {
   businessName: text("business_name").notNull(),
   email: text("email").notNull(),
   phone: text("phone").notNull().default(""),
+  vendorType: text("vendor_type").notNull().default("other"),
   status: text("status").notNull().default("pending"),
   applicationData: jsonb("application_data").notNull().default({}),
   agreementSigned: boolean("agreement_signed").notNull().default(false),

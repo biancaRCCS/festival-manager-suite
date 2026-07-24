@@ -44,6 +44,7 @@ export default function ApplyVendorPage() {
     businessName: "",
     email: "",
     phone: "",
+    vendorType: "",
   })
   
   const [answers, setAnswers] = useState<Record<string, string>>({})
@@ -59,6 +60,11 @@ export default function ApplyVendorPage() {
         toast({ title: `Please answer: ${q.label}`, variant: "destructive" })
         return
       }
+    }
+
+    if (!formData.vendorType) {
+      toast({ title: "Please select a vendor type", variant: "destructive" })
+      return
     }
 
     submitMutation.mutate(
@@ -106,6 +112,21 @@ export default function ApplyVendorPage() {
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone Number</Label>
                     <Input id="phone" data-testid="phone" type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="vendorType">Vendor Type <span className="text-destructive">*</span></Label>
+                    <Select required value={formData.vendorType} onValueChange={v => setFormData({...formData, vendorType: v})}>
+                      <SelectTrigger data-testid="vendorType">
+                        <SelectValue placeholder="Select a vendor type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="food">Food & Beverage</SelectItem>
+                        <SelectItem value="crafts">Crafts & Art</SelectItem>
+                        <SelectItem value="merchandise">Merchandise</SelectItem>
+                        <SelectItem value="cultural">Cultural</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>

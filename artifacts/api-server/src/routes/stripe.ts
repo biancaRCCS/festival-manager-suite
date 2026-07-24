@@ -29,7 +29,20 @@ export async function createCheckoutSession(params: {
 
   let price: number;
   if (entityType === "vendor") {
-    price = parseFloat(settingsRow?.vendorPrice ?? "200");
+    const [vendorRow] = await db
+      .select({ vendorType: vendorsTable.vendorType })
+      .from(vendorsTable)
+      .where(eq(vendorsTable.id, entity.id))
+      .limit(1);
+    const vendorType = vendorRow?.vendorType ?? "other";
+    const vendorPriceMap: Record<string, string> = {
+      food:        settingsRow?.vendorPriceFood        ?? "200",
+      crafts:      settingsRow?.vendorPriceCrafts      ?? "150",
+      merchandise: settingsRow?.vendorPriceMerchandise ?? "150",
+      cultural:    settingsRow?.vendorPriceCultural    ?? "100",
+      other:       settingsRow?.vendorPriceOther       ?? "100",
+    };
+    price = parseFloat(vendorPriceMap[vendorType] ?? "150");
   } else {
     // Look up the sponsor's chosen tier and charge the matching price
     const [sponsor] = await db

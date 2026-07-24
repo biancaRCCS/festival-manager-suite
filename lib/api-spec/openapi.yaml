@@ -844,13 +844,21 @@ components:
 
     FestivalSettings:
       type: object
-      required: [id, yearId, vendorPrice, sponsorPriceBronze, sponsorPriceSilver, sponsorPriceGold, sponsorPricePlatinum, sponsorPriceDiamond, vendorSpotLimit, sponsorSpotLimitBronze, sponsorSpotLimitSilver, sponsorSpotLimitGold, sponsorSpotLimitPlatinum, sponsorSpotLimitDiamond, vendorFormQuestions, sponsorFormQuestions, volunteerFormQuestions]
+      required: [id, yearId, vendorPriceFood, vendorPriceCrafts, vendorPriceMerchandise, vendorPriceCultural, vendorPriceOther, sponsorPriceBronze, sponsorPriceSilver, sponsorPriceGold, sponsorPricePlatinum, sponsorPriceDiamond, vendorSpotLimitFood, vendorSpotLimitCrafts, vendorSpotLimitMerchandise, vendorSpotLimitCultural, vendorSpotLimitOther, sponsorSpotLimitBronze, sponsorSpotLimitSilver, sponsorSpotLimitGold, sponsorSpotLimitPlatinum, sponsorSpotLimitDiamond, vendorFormQuestions, sponsorFormQuestions, volunteerFormQuestions]
       properties:
         id:
           type: integer
         yearId:
           type: integer
-        vendorPrice:
+        vendorPriceFood:
+          type: number
+        vendorPriceCrafts:
+          type: number
+        vendorPriceMerchandise:
+          type: number
+        vendorPriceCultural:
+          type: number
+        vendorPriceOther:
           type: number
         sponsorPriceBronze:
           type: number
@@ -862,7 +870,15 @@ components:
           type: number
         sponsorPriceDiamond:
           type: number
-        vendorSpotLimit:
+        vendorSpotLimitFood:
+          type: integer
+        vendorSpotLimitCrafts:
+          type: integer
+        vendorSpotLimitMerchandise:
+          type: integer
+        vendorSpotLimitCultural:
+          type: integer
+        vendorSpotLimitOther:
           type: integer
         sponsorSpotLimitBronze:
           type: integer
@@ -890,7 +906,15 @@ components:
     FestivalSettingsUpdate:
       type: object
       properties:
-        vendorPrice:
+        vendorPriceFood:
+          type: number
+        vendorPriceCrafts:
+          type: number
+        vendorPriceMerchandise:
+          type: number
+        vendorPriceCultural:
+          type: number
+        vendorPriceOther:
           type: number
         sponsorPriceBronze:
           type: number
@@ -902,7 +926,15 @@ components:
           type: number
         sponsorPriceDiamond:
           type: number
-        vendorSpotLimit:
+        vendorSpotLimitFood:
+          type: integer
+        vendorSpotLimitCrafts:
+          type: integer
+        vendorSpotLimitMerchandise:
+          type: integer
+        vendorSpotLimitCultural:
+          type: integer
+        vendorSpotLimitOther:
           type: integer
         sponsorSpotLimitBronze:
           type: integer
@@ -949,7 +981,7 @@ components:
 
     Vendor:
       type: object
-      required: [id, yearId, name, businessName, email, phone, status, applicationData, createdAt]
+      required: [id, yearId, name, businessName, email, phone, vendorType, status, applicationData, createdAt]
       properties:
         id:
           type: integer
@@ -962,6 +994,8 @@ components:
         email:
           type: string
         phone:
+          type: string
+        vendorType:
           type: string
         status:
           type: string
@@ -1166,7 +1200,7 @@ components:
 
     VendorApplicationInput:
       type: object
-      required: [name, businessName, email, phone, answers]
+      required: [name, businessName, email, phone, vendorType, answers]
       properties:
         name:
           type: string
@@ -1175,6 +1209,8 @@ components:
         email:
           type: string
         phone:
+          type: string
+        vendorType:
           type: string
         answers:
           type: object
@@ -1252,7 +1288,17 @@ components:
           type: string
         tier:
           type: ["string", "null"]
-        vendorPrice:
+        vendorType:
+          type: ["string", "null"]
+        vendorPriceFood:
+          type: ["number", "null"]
+        vendorPriceCrafts:
+          type: ["number", "null"]
+        vendorPriceMerchandise:
+          type: ["number", "null"]
+        vendorPriceCultural:
+          type: ["number", "null"]
+        vendorPriceOther:
           type: ["number", "null"]
         sponsorPriceBronze:
           type: ["number", "null"]

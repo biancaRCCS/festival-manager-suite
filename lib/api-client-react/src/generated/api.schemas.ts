@@ -55,13 +55,21 @@ export interface FormQuestion {
 export interface FestivalSettings {
   id: number;
   yearId: number;
-  vendorPrice: number;
+  vendorPriceFood: number;
+  vendorPriceCrafts: number;
+  vendorPriceMerchandise: number;
+  vendorPriceCultural: number;
+  vendorPriceOther: number;
   sponsorPriceBronze: number;
   sponsorPriceSilver: number;
   sponsorPriceGold: number;
   sponsorPricePlatinum: number;
   sponsorPriceDiamond: number;
-  vendorSpotLimit: number;
+  vendorSpotLimitFood: number;
+  vendorSpotLimitCrafts: number;
+  vendorSpotLimitMerchandise: number;
+  vendorSpotLimitCultural: number;
+  vendorSpotLimitOther: number;
   sponsorSpotLimitBronze: number;
   sponsorSpotLimitSilver: number;
   sponsorSpotLimitGold: number;
@@ -73,13 +81,21 @@ export interface FestivalSettings {
 }
 
 export interface FestivalSettingsUpdate {
-  vendorPrice?: number;
+  vendorPriceFood?: number;
+  vendorPriceCrafts?: number;
+  vendorPriceMerchandise?: number;
+  vendorPriceCultural?: number;
+  vendorPriceOther?: number;
   sponsorPriceBronze?: number;
   sponsorPriceSilver?: number;
   sponsorPriceGold?: number;
   sponsorPricePlatinum?: number;
   sponsorPriceDiamond?: number;
-  vendorSpotLimit?: number;
+  vendorSpotLimitFood?: number;
+  vendorSpotLimitCrafts?: number;
+  vendorSpotLimitMerchandise?: number;
+  vendorSpotLimitCultural?: number;
+  vendorSpotLimitOther?: number;
   sponsorSpotLimitBronze?: number;
   sponsorSpotLimitSilver?: number;
   sponsorSpotLimitGold?: number;
@@ -111,6 +127,7 @@ export interface Vendor {
   businessName: string;
   email: string;
   phone: string;
+  vendorType: string;
   status: VendorStatus;
   applicationData: VendorApplicationData;
   agreementSigned?: boolean;
@@ -297,6 +314,7 @@ export interface VendorApplicationInput {
   businessName: string;
   email: string;
   phone: string;
+  vendorType: string;
   answers: VendorApplicationInputAnswers;
 }
 
@@ -353,7 +371,17 @@ export interface PortalInfo {
   /** @nullable */
   tier?: string | null;
   /** @nullable */
-  vendorPrice?: number | null;
+  vendorType?: string | null;
+  /** @nullable */
+  vendorPriceFood?: number | null;
+  /** @nullable */
+  vendorPriceCrafts?: number | null;
+  /** @nullable */
+  vendorPriceMerchandise?: number | null;
+  /** @nullable */
+  vendorPriceCultural?: number | null;
+  /** @nullable */
+  vendorPriceOther?: number | null;
   /** @nullable */
   sponsorPriceBronze?: number | null;
   /** @nullable */

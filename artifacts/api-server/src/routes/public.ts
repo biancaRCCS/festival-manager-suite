@@ -32,13 +32,14 @@ router.post("/public/apply/vendor", async (req, res): Promise<void> => {
     return;
   }
 
-  const { name, businessName, email, phone, answers } = parsed.data;
+  const { name, businessName, email, phone, vendorType, answers } = parsed.data;
   const [vendor] = await db.insert(vendorsTable).values({
     yearId: years[0].id,
     name,
     businessName,
     email,
     phone: phone ?? "",
+    vendorType: vendorType ?? "other",
     status: "pending",
     applicationData: answers as Record<string, unknown>,
   }).returning();

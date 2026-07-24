@@ -160,21 +160,53 @@ export default function SettingsPage() {
                   <CardDescription>Set the base prices and maximum available spots.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label>Vendor Base Price ($)</Label>
-                    <Input 
-                      type="number" 
-                      value={localSettings.vendorPrice || 0} 
-                      onChange={e => setLocalSettings(p => ({ ...p, vendorPrice: Number(e.target.value) }))} 
-                    />
+                  <div className="space-y-2 md:col-span-2">
+                    <Label className="text-base font-semibold">Vendor Type Prices ($)</Label>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 pt-1">
+                      {([
+                        ["Food", "Food & Beverage"],
+                        ["Crafts", "Crafts & Art"],
+                        ["Merchandise", "Merchandise"],
+                        ["Cultural", "Cultural"],
+                        ["Other", "Other"],
+                      ] as const).map(([key, label]) => {
+                        const field = `vendorPrice${key}` as keyof typeof localSettings;
+                        return (
+                          <div key={key} className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">{label}</Label>
+                            <Input
+                              type="number"
+                              value={(localSettings[field] as number) || 0}
+                              onChange={e => setLocalSettings(p => ({ ...p, [field]: Number(e.target.value) }))}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Vendor Spot Limit</Label>
-                    <Input 
-                      type="number" 
-                      value={localSettings.vendorSpotLimit || 0} 
-                      onChange={e => setLocalSettings(p => ({ ...p, vendorSpotLimit: Number(e.target.value) }))} 
-                    />
+                  <div className="space-y-2 md:col-span-2">
+                    <Label className="text-base font-semibold">Vendor Spot Limits (per type)</Label>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 pt-1">
+                      {([
+                        ["Food", "Food & Beverage"],
+                        ["Crafts", "Crafts & Art"],
+                        ["Merchandise", "Merchandise"],
+                        ["Cultural", "Cultural"],
+                        ["Other", "Other"],
+                      ] as const).map(([key, label]) => {
+                        const field = `vendorSpotLimit${key}` as keyof typeof localSettings;
+                        return (
+                          <div key={key} className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">{label}</Label>
+                            <Input
+                              type="number"
+                              value={(localSettings[field] as number) || 0}
+                              onChange={e => setLocalSettings(p => ({ ...p, [field]: Number(e.target.value) }))}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                   <div className="space-y-2 md:col-span-2">
                     <Label className="text-base font-semibold">Sponsor Tier Prices ($)</Label>
