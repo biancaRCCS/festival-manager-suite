@@ -844,7 +844,7 @@ components:
 
     FestivalSettings:
       type: object
-      required: [id, yearId, vendorPrice, sponsorPrice, vendorSpotLimit, sponsorSpotLimit, vendorFormQuestions, sponsorFormQuestions, volunteerFormQuestions]
+      required: [id, yearId, vendorPrice, sponsorPriceBronze, sponsorPriceSilver, sponsorPriceGold, sponsorPricePlatinum, vendorSpotLimit, sponsorSpotLimit, vendorFormQuestions, sponsorFormQuestions, volunteerFormQuestions]
       properties:
         id:
           type: integer
@@ -852,7 +852,13 @@ components:
           type: integer
         vendorPrice:
           type: number
-        sponsorPrice:
+        sponsorPriceBronze:
+          type: number
+        sponsorPriceSilver:
+          type: number
+        sponsorPriceGold:
+          type: number
+        sponsorPricePlatinum:
           type: number
         vendorSpotLimit:
           type: integer
@@ -876,7 +882,13 @@ components:
       properties:
         vendorPrice:
           type: number
-        sponsorPrice:
+        sponsorPriceBronze:
+          type: number
+        sponsorPriceSilver:
+          type: number
+        sponsorPriceGold:
+          type: number
+        sponsorPricePlatinum:
           type: number
         vendorSpotLimit:
           type: integer
@@ -1218,9 +1230,17 @@ components:
           type: string
         eventDate:
           type: string
+        tier:
+          type: ["string", "null"]
         vendorPrice:
           type: ["number", "null"]
-        sponsorPrice:
+        sponsorPriceBronze:
+          type: ["number", "null"]
+        sponsorPriceSilver:
+          type: ["number", "null"]
+        sponsorPriceGold:
+          type: ["number", "null"]
+        sponsorPricePlatinum:
           type: ["number", "null"]
 
     CheckoutSession:

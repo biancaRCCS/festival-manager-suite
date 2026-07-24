@@ -26,8 +26,12 @@ router.get("/portal/:token", async (req, res): Promise<void> => {
       location: vendor.location ?? null,
       festivalYear: years[0]?.eventName ?? "",
       eventDate: years[0]?.eventDate ?? "",
+      tier: null,
       vendorPrice: settingsRows[0] ? parseFloat(settingsRows[0].vendorPrice) : null,
-      sponsorPrice: null,
+      sponsorPriceBronze: null,
+      sponsorPriceSilver: null,
+      sponsorPriceGold: null,
+      sponsorPricePlatinum: null,
     });
     return;
   }
@@ -37,6 +41,7 @@ router.get("/portal/:token", async (req, res): Promise<void> => {
     const sponsor = sponsors[0];
     const years = await db.select().from(festivalYearsTable).where(eq(festivalYearsTable.id, sponsor.yearId)).limit(1);
     const settingsRows = await db.select().from(festivalSettingsTable).where(eq(festivalSettingsTable.yearId, sponsor.yearId)).limit(1);
+    const s = settingsRows[0];
     res.json({
       type: "sponsor",
       id: sponsor.id,
@@ -49,8 +54,12 @@ router.get("/portal/:token", async (req, res): Promise<void> => {
       location: sponsor.location ?? null,
       festivalYear: years[0]?.eventName ?? "",
       eventDate: years[0]?.eventDate ?? "",
+      tier: sponsor.tier,
       vendorPrice: null,
-      sponsorPrice: settingsRows[0] ? parseFloat(settingsRows[0].sponsorPrice) : null,
+      sponsorPriceBronze: s ? parseFloat(s.sponsorPriceBronze) : null,
+      sponsorPriceSilver: s ? parseFloat(s.sponsorPriceSilver) : null,
+      sponsorPriceGold: s ? parseFloat(s.sponsorPriceGold) : null,
+      sponsorPricePlatinum: s ? parseFloat(s.sponsorPricePlatinum) : null,
     });
     return;
   }
@@ -86,8 +95,12 @@ router.post("/portal/:token/sign-agreement", async (req, res): Promise<void> => 
       location: updated.location ?? null,
       festivalYear: years[0]?.eventName ?? "",
       eventDate: years[0]?.eventDate ?? "",
+      tier: null,
       vendorPrice: settingsRows[0] ? parseFloat(settingsRows[0].vendorPrice) : null,
-      sponsorPrice: null,
+      sponsorPriceBronze: null,
+      sponsorPriceSilver: null,
+      sponsorPriceGold: null,
+      sponsorPricePlatinum: null,
     });
     return;
   }
@@ -100,6 +113,7 @@ router.post("/portal/:token/sign-agreement", async (req, res): Promise<void> => 
       .returning();
     const years = await db.select().from(festivalYearsTable).where(eq(festivalYearsTable.id, updated.yearId)).limit(1);
     const settingsRows = await db.select().from(festivalSettingsTable).where(eq(festivalSettingsTable.yearId, updated.yearId)).limit(1);
+    const s = settingsRows[0];
     res.json({
       type: "sponsor",
       id: updated.id,
@@ -112,8 +126,12 @@ router.post("/portal/:token/sign-agreement", async (req, res): Promise<void> => 
       location: updated.location ?? null,
       festivalYear: years[0]?.eventName ?? "",
       eventDate: years[0]?.eventDate ?? "",
+      tier: updated.tier,
       vendorPrice: null,
-      sponsorPrice: settingsRows[0] ? parseFloat(settingsRows[0].sponsorPrice) : null,
+      sponsorPriceBronze: s ? parseFloat(s.sponsorPriceBronze) : null,
+      sponsorPriceSilver: s ? parseFloat(s.sponsorPriceSilver) : null,
+      sponsorPriceGold: s ? parseFloat(s.sponsorPriceGold) : null,
+      sponsorPricePlatinum: s ? parseFloat(s.sponsorPricePlatinum) : null,
     });
     return;
   }

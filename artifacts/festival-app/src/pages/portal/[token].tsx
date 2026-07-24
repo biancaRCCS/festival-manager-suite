@@ -79,7 +79,15 @@ export default function PortalPage() {
   const isPaid = portal.status === 'paid'
   const isFinal = portal.status === 'final_approved'
 
-  const amount = portal.type === 'vendor' ? portal.vendorPrice : portal.sponsorPrice
+  const sponsorTierPrice: Record<string, number | null | undefined> = {
+    bronze:   portal.sponsorPriceBronze,
+    silver:   portal.sponsorPriceSilver,
+    gold:     portal.sponsorPriceGold,
+    platinum: portal.sponsorPricePlatinum,
+  };
+  const amount = portal.type === 'vendor'
+    ? portal.vendorPrice
+    : sponsorTierPrice[portal.tier ?? 'bronze'] ?? portal.sponsorPriceBronze
 
   return (
     <div className="min-h-screen bg-noise bg-background font-sans relative pb-20">

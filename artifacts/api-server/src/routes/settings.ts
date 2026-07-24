@@ -26,7 +26,10 @@ router.get("/settings", requireStaff, async (req, res): Promise<void> => {
     const [created] = await db.insert(festivalSettingsTable).values({
       yearId,
       vendorPrice: "200.00",
-      sponsorPrice: "500.00",
+      sponsorPriceBronze: "250.00",
+      sponsorPriceSilver: "500.00",
+      sponsorPriceGold: "1000.00",
+      sponsorPricePlatinum: "2000.00",
       vendorSpotLimit: 50,
       sponsorSpotLimit: 20,
       vendorFormQuestions: [],
@@ -41,7 +44,10 @@ router.get("/settings", requireStaff, async (req, res): Promise<void> => {
     id: s.id,
     yearId: s.yearId,
     vendorPrice: parseFloat(s.vendorPrice),
-    sponsorPrice: parseFloat(s.sponsorPrice),
+    sponsorPriceBronze: parseFloat(s.sponsorPriceBronze),
+    sponsorPriceSilver: parseFloat(s.sponsorPriceSilver),
+    sponsorPriceGold: parseFloat(s.sponsorPriceGold),
+    sponsorPricePlatinum: parseFloat(s.sponsorPricePlatinum),
     vendorSpotLimit: s.vendorSpotLimit,
     sponsorSpotLimit: s.sponsorSpotLimit,
     applicationDeadline: s.applicationDeadline ?? null,
@@ -67,7 +73,10 @@ router.patch("/settings", requireStaff, async (req, res): Promise<void> => {
 
   const updates: Record<string, unknown> = {};
   if (parsed.data.vendorPrice != null) updates.vendorPrice = parsed.data.vendorPrice.toString();
-  if (parsed.data.sponsorPrice != null) updates.sponsorPrice = parsed.data.sponsorPrice.toString();
+  if (parsed.data.sponsorPriceBronze != null) updates.sponsorPriceBronze = parsed.data.sponsorPriceBronze.toString();
+  if (parsed.data.sponsorPriceSilver != null) updates.sponsorPriceSilver = parsed.data.sponsorPriceSilver.toString();
+  if (parsed.data.sponsorPriceGold != null) updates.sponsorPriceGold = parsed.data.sponsorPriceGold.toString();
+  if (parsed.data.sponsorPricePlatinum != null) updates.sponsorPricePlatinum = parsed.data.sponsorPricePlatinum.toString();
   if (parsed.data.vendorSpotLimit != null) updates.vendorSpotLimit = parsed.data.vendorSpotLimit;
   if (parsed.data.sponsorSpotLimit != null) updates.sponsorSpotLimit = parsed.data.sponsorSpotLimit;
   if (parsed.data.vendorFormQuestions != null) updates.vendorFormQuestions = parsed.data.vendorFormQuestions;
@@ -89,7 +98,10 @@ router.patch("/settings", requireStaff, async (req, res): Promise<void> => {
     id: updated.id,
     yearId: updated.yearId,
     vendorPrice: parseFloat(updated.vendorPrice),
-    sponsorPrice: parseFloat(updated.sponsorPrice),
+    sponsorPriceBronze: parseFloat(updated.sponsorPriceBronze),
+    sponsorPriceSilver: parseFloat(updated.sponsorPriceSilver),
+    sponsorPriceGold: parseFloat(updated.sponsorPriceGold),
+    sponsorPricePlatinum: parseFloat(updated.sponsorPricePlatinum),
     vendorSpotLimit: updated.vendorSpotLimit,
     sponsorSpotLimit: updated.sponsorSpotLimit,
     vendorFormQuestions: updated.vendorFormQuestions,

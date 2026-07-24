@@ -27,9 +27,25 @@ export async function createCheckoutSession(params: {
     .where(eq(festivalYearsTable.id, entity.yearId))
     .limit(1);
 
-  const price = entityType === "vendor"
-    ? parseFloat(settingsRow?.vendorPrice ?? "200")
-    : parseFloat(settingsRow?.sponsorPrice ?? "500");
+  let price: number;
+  if (entityType === "vendor") {
+    price = parseFloat(settingsRow?.vendorPrice ?? "200");
+  } else {
+    // Look up the sponsor's chosen tier and charge the matching price
+    const [sponsor] = await db
+      .select({ tier: sponsorsTable.tier })
+      .from(sponsorsTable)
+      .where(eq(sponsorsTable.id, entity.id))
+      .limit(1);
+    const tier = sponsor?.tier ?? "bronze";
+    const tierPriceMap: Record<string, string> = {
+      bronze:   settingsRow?.sponsorPriceBronze   ?? "250",
+      silver:   settingsRow?.sponsorPriceSilver   ?? "500",
+      gold:     settingsRow?.sponsorPriceGold     ?? "1000",
+      platinum: settingsRow?.sponsorPricePlatinum ?? "2000",
+    };
+    price = parseFloat(tierPriceMap[tier] ?? "250");
+  }
 
   const domain = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost";
   const successUrl = `https://${domain}/portal/${token}/success`;
