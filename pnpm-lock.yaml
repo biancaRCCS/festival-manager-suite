@@ -163,6 +163,9 @@ importers:
       '@replit/connectors-sdk':
         specifier: ^0.4.1
         version: 0.4.1
+      stripe:
+        specifier: ^22.3.2
+        version: 22.3.2(@types/node@25.9.5)
       stripe-replit-sync:
         specifier: ^1.0.0
         version: 1.0.0(stripe@22.3.2(@types/node@25.9.5))

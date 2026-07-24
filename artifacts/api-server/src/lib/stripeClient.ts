@@ -2,10 +2,21 @@ import Stripe from 'stripe';
 import { StripeSync } from 'stripe-replit-sync';
 
 /**
- * Fetches Stripe credentials from the Replit connection API.
- * Not cached — tokens can rotate, so fetch fresh each time.
+ * Fetches the Stripe secret key.
+ * Priority:
+ *   1. STRIPE_SK_API_KEY env var (user-supplied key)
+ *   2. Replit Stripe connector API (managed integration)
  */
 async function getStripeCredentials(): Promise<{ secretKey: string; webhookSecret?: string }> {
+  // 1. User-supplied secret key takes priority
+  if (process.env.STRIPE_SK_API_KEY) {
+    return {
+      secretKey: process.env.STRIPE_SK_API_KEY,
+      webhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? '',
+    };
+  }
+
+  // 2. Fall back to Replit connector API
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY
     ? "repl " + process.env.REPL_IDENTITY
@@ -15,8 +26,7 @@ async function getStripeCredentials(): Promise<{ secretKey: string; webhookSecre
 
   if (!hostname || !xReplitToken) {
     throw new Error(
-      'Missing Replit environment variables. ' +
-      'Ensure the Stripe integration is connected via the Integrations tab.'
+      'Missing Stripe credentials. Set STRIPE_SK_API_KEY or connect Stripe via the Integrations tab.'
     );
   }
 
@@ -35,17 +45,15 @@ async function getStripeCredentials(): Promise<{ secretKey: string; webhookSecre
   const data = await resp.json();
   const settings = data.items?.[0]?.settings;
 
-  // The Replit Stripe connector stores the secret key under 'secret'
   if (!settings?.secret) {
     throw new Error(
       'Stripe integration not connected or missing secret key. ' +
-      'Connect Stripe via the Integrations tab first.'
+      'Set STRIPE_SK_API_KEY or connect Stripe via the Integrations tab.'
     );
   }
 
   return {
     secretKey: settings.secret,
-    // webhook_secret is managed by stripe-replit-sync's findOrCreateManagedWebhook
     webhookSecret: settings.webhook_secret ?? '',
   };
 }

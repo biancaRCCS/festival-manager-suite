@@ -21,3 +21,8 @@ timeoutMs = 20000
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+VITE_STRIPE_PUBLISHABLE_KEY = "pk_test_51TwWRD696YygfjNS5iucncRXHVgi1gGknlh9orvQ5omojrNQKk9A4lmOh6qdMPhPCd6YCv1yTn0U9XnyvI4L65rz00eiEEgG16"
