@@ -146,22 +146,35 @@ function LandingPage() {
       </header>
 
       {/* Hero — dark navy banner with white text, RCCS-style */}
-      <section className="bg-secondary text-white">
-        <div className="max-w-6xl mx-auto px-6 py-20 md:py-28">
-          <h1 className="font-serif text-5xl md:text-7xl font-bold leading-tight mb-6 max-w-3xl">
-            Preserving Culture.<br />
-            Strengthening Community.<br />
-            Connecting Generations.
-          </h1>
-          <p className="text-white/75 text-lg md:text-xl max-w-2xl mb-10 leading-relaxed">
-            Join us for a day of music, food, and culture. We are currently accepting
-            applications for vendors, sponsors, and volunteers.
-          </p>
-          <Link href="/apply/vendor">
-            <Button className="bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-sm px-8 h-12 rounded shadow-lg">
-              Get Involved
-            </Button>
-          </Link>
+      <section className="bg-secondary text-white overflow-hidden">
+        <div className="max-w-6xl mx-auto px-6 py-16 md:py-24 flex flex-col md:flex-row items-center gap-10 md:gap-16">
+          {/* Left: text + CTA */}
+          <div className="flex-1 min-w-0">
+            <h1 className="font-serif text-5xl md:text-6xl font-bold leading-tight mb-6">
+              Preserving Culture.<br />
+              Strengthening Community.<br />
+              Connecting Generations.
+            </h1>
+            <p className="text-white/75 text-base md:text-lg mb-10 leading-relaxed">
+              Join us for a day of music,<br />
+              food, and culture.<br />
+              Applications are open for vendors, sponsors, and volunteers.
+            </p>
+            <Link href="/apply/vendor">
+              <Button className="bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-sm px-8 h-12 rounded shadow-lg">
+                Get Involved
+              </Button>
+            </Link>
+          </div>
+
+          {/* Right: hero image */}
+          <div className="w-full md:w-[420px] flex-shrink-0">
+            <img
+              src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/hero.jpg`}
+              alt="Romanian Festival"
+              className="w-full h-72 md:h-[420px] object-cover object-center rounded shadow-xl"
+            />
+          </div>
         </div>
       </section>
 
