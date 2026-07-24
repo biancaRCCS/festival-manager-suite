@@ -91,7 +91,7 @@ export default function DashboardPage() {
                      </div>
                      <div className="flex justify-between items-center text-sm pt-2 border-t mt-1">
                        <span className="text-muted-foreground flex items-center gap-1.5"><DollarSign className="w-4 h-4 text-green-600" /> Revenue collected</span>
-                       <span className="font-semibold text-green-700">${summary.vendorRevenue.toLocaleString()}</span>
+                       <span className="font-semibold text-green-700">${(summary.vendorRevenue ?? 0).toLocaleString()}</span>
                      </div>
                    </div>
                    <div className="mt-6">
@@ -126,7 +126,7 @@ export default function DashboardPage() {
                      </div>
                      <div className="flex justify-between items-center text-sm pt-2 border-t mt-1">
                        <span className="text-muted-foreground flex items-center gap-1.5"><DollarSign className="w-4 h-4 text-green-600" /> Revenue collected</span>
-                       <span className="font-semibold text-green-700">${summary.sponsorRevenue.toLocaleString()}</span>
+                       <span className="font-semibold text-green-700">${(summary.sponsorRevenue ?? 0).toLocaleString()}</span>
                      </div>
                    </div>
                    <div className="mt-6">
