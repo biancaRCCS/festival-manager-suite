@@ -102,7 +102,7 @@ export default function ApplySponsorPage() {
                     <Input id="name" data-testid="name" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="orgName">Business Name <span className="text-destructive">*</span></Label>
+                    <Label htmlFor="orgName">Organization Name <span className="text-destructive">*</span></Label>
                     <Input id="orgName" data-testid="orgName" required value={formData.orgName} onChange={e => setFormData({...formData, orgName: e.target.value})} />
                   </div>
                   <div className="space-y-2">
@@ -114,7 +114,7 @@ export default function ApplySponsorPage() {
                     <Input id="phone" data-testid="phone" type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
                   </div>
                   <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="tier">Previous Year Sponsorship Tier <span className="text-destructive">*</span></Label>
+                    <Label htmlFor="tier">Sponsorship Tier <span className="text-destructive">*</span></Label>
                     <Select required value={formData.tier} onValueChange={v => setFormData({...formData, tier: v})}>
                       <SelectTrigger data-testid="tier">
                         <SelectValue placeholder="Select a tier" />
@@ -124,7 +124,6 @@ export default function ApplySponsorPage() {
                         <SelectItem value="silver">Silver</SelectItem>
                         <SelectItem value="gold">Gold</SelectItem>
                         <SelectItem value="platinum">Platinum</SelectItem>
-                        <SelectItem value="first time sponsor">First time sponsor</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
