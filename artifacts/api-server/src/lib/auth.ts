@@ -25,12 +25,26 @@ export async function requireStaff(req: Request, res: Response, next: NextFuncti
   // Check staff table for this Clerk user
   const staffMembers = await db.select().from(staffTable).where(eq(staffTable.clerkUserId, userId));
   if (staffMembers.length === 0) {
-    // Auto-provision admin if this is the first staff member (bootstrap)
     const allStaff = await db.select().from(staffTable);
-    if (allStaff.length === 0) {
-      // First user becomes admin
+
+    // Bootstrap: no staff at all, or only placeholder entries generated during
+    // initial auto-provision (identifiable by the admin-user_*@festival.local
+    // fallback email). Promote the first real authenticated user as admin.
+    const placeholderPattern = /^admin-user_.+@festival\.local$/;
+    const realStaff = allStaff.filter(s => !placeholderPattern.test(s.email ?? ""));
+
+    if (allStaff.length === 0 || realStaff.length === 0) {
+      // Remove any leftover placeholder entries
+      if (allStaff.length > 0) {
+        const { inArray } = await import("drizzle-orm");
+        const placeholderIds = allStaff.map(s => s.id).filter((id): id is number => id !== null);
+        if (placeholderIds.length > 0) {
+          await db.delete(staffTable).where(inArray(staffTable.id, placeholderIds));
+        }
+      }
+
       const auth2 = getAuth(req);
-      const email = (auth2 as any)?.sessionClaims?.email ?? `admin-${userId}@festival.local`;
+      const email = (auth2 as any)?.sessionClaims?.email ?? (auth2 as any)?.sessionClaims?.primary_email_address ?? `admin-${userId}@festival.local`;
       const [newStaff] = await db.insert(staffTable).values({
         clerkUserId: userId,
         email,
@@ -42,6 +56,7 @@ export async function requireStaff(req: Request, res: Response, next: NextFuncti
       next();
       return;
     }
+
     res.status(403).json({ error: "Access denied — not a registered staff member" });
     return;
   }
