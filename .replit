@@ -25,7 +25,7 @@ channel = "stable-25_05"
 [userenv]
 
 [userenv.shared]
-VITE_STRIPE_PUBLISHABLE_KEY = "pk_test_51TwWRD696YygfjNS5iucncRXHVgi1gGknlh9orvQ5omojrNQKk9A4lmOh6qdMPhPCd6YCv1yTn0U9XnyvI4L65rz00eiEEgG16"
+VITE_STRIPE_PUBLISHABLE_KEY = "pk_live_51TwnXR4sdTundQOze1DStM8kVEkLTMx8ToKfCKqHomsr8dCs6PUb7VDtQX3H5s6BQ05X8KWIt63Vhg3pQb498Bgx009uu5kM9U"
 
 [objectStorage]
 defaultBucketID = "replit-objstore-25d0580e-4757-4052-98e1-ab9497e01865"
