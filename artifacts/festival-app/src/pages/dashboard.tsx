@@ -141,7 +141,7 @@ export default function DashboardPage() {
               <Card className="hover:shadow-md transition-shadow">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-xl flex items-center justify-between">
-                    <span className="flex items-center gap-2"><Users className="w-5 h-5 text-primary" /> Volunteers</span>
+                    <span className="flex items-center gap-2 text-primary"><Users className="w-5 h-5" /> Volunteers</span>
                     <Badge variant="secondary" className="text-lg px-3 py-1">{summary.volunteerStats.total}</Badge>
                   </CardTitle>
                 </CardHeader>
