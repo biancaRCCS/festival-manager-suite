@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Link } from "wouter"
-import { Search, Eye, Download } from "lucide-react"
+import { Search, Eye, Download, Store } from "lucide-react"
 
 export default function VendorsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
@@ -42,7 +42,7 @@ export default function VendorsPage() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-serif text-primary mb-2">Vendors</h1>
+            <h1 className="text-3xl font-serif text-primary mb-2 flex items-center gap-2"><Store className="w-7 h-7" /> Vendors</h1>
             <p className="text-muted-foreground">Manage vendor applications and payments.</p>
           </div>
           <div className="flex gap-2">

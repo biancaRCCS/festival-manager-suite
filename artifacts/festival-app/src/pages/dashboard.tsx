@@ -3,7 +3,7 @@ import { AdminLayout } from "@/components/layout/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Link } from "wouter"
-import { Briefcase, HandHeart, Users, Calendar, ArrowRight, Activity, Clock, DollarSign } from "lucide-react"
+import { Store, HandHeart, Users, Calendar, ArrowRight, Activity, Clock, DollarSign } from "lucide-react"
 
 export default function DashboardPage() {
   const { data: currentYear, isLoading: yearLoading } = useGetCurrentYear()
@@ -71,8 +71,8 @@ export default function DashboardPage() {
               <Card className="hover:shadow-md transition-shadow">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-xl flex items-center justify-between">
-                    <span className="flex items-center gap-2"><Briefcase className="w-5 h-5 text-primary" /> Vendors</span>
-                    <Badge variant="secondary" className="text-lg px-3 py-1 bg-primary/10 text-primary hover:bg-primary/20">{summary.vendorStats.total}</Badge>
+                    <span className="flex items-center gap-2"><Store className="w-5 h-5 text-secondary" /> Vendors</span>
+                    <Badge variant="secondary" className="text-lg px-3 py-1 bg-secondary/10 text-secondary hover:bg-secondary/20">{summary.vendorStats.total}</Badge>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -95,7 +95,7 @@ export default function DashboardPage() {
                      </div>
                    </div>
                    <div className="mt-6">
-                     <Link href="/vendors" className="text-primary text-sm font-medium flex items-center gap-1 hover:underline">
+                     <Link href="/vendors" className="text-secondary text-sm font-medium flex items-center gap-1 hover:underline">
                         Manage Vendors <ArrowRight className="w-4 h-4" />
                      </Link>
                    </div>
