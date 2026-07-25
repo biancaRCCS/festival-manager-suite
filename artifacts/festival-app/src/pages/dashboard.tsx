@@ -176,7 +176,7 @@ export default function DashboardPage() {
                        {activity.map((item) => (
                          <div key={item.id} className="flex gap-4 items-start pb-4 border-b border-border/50 last:border-0 last:pb-0">
                            <div className="mt-1">
-                             {item.entityType === 'vendor' ? <Briefcase className="w-4 h-4 text-primary" /> : 
+                             {item.entityType === 'vendor' ? <Store className="w-4 h-4 text-primary" /> : 
                               item.entityType === 'sponsor' ? <HandHeart className="w-4 h-4 text-secondary" /> : 
                               <Users className="w-4 h-4 text-primary" />}
                            </div>
