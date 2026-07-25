@@ -71,7 +71,7 @@ export default function DashboardPage() {
               <Card className="hover:shadow-md transition-shadow">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-xl flex items-center justify-between">
-                    <span className="flex items-center gap-2"><Store className="w-5 h-5 text-secondary" /> Vendors</span>
+                    <span className="flex items-center gap-2 text-secondary"><Store className="w-5 h-5" /> Vendors</span>
                     <Badge variant="secondary" className="text-lg px-3 py-1 bg-secondary/10 text-secondary hover:bg-secondary/20">{summary.vendorStats.total}</Badge>
                   </CardTitle>
                 </CardHeader>
