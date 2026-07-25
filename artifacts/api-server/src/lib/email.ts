@@ -59,7 +59,7 @@ export async function sendPortalInviteEmail(params: {
       return;
     }
     await transporter.sendMail({
-      from: process.env.SMTP_FROM ?? "festival@example.com",
+      from: `Romanian Festival <${process.env.SMTP_FROM ?? "festival@example.com"}>`,
       to,
       subject,
       html,

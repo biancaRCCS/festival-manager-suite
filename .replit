@@ -26,6 +26,10 @@ channel = "stable-25_05"
 
 [userenv.shared]
 VITE_STRIPE_PUBLISHABLE_KEY = "pk_live_51TwnXR4sdTundQOze1DStM8kVEkLTMx8ToKfCKqHomsr8dCs6PUb7VDtQX3H5s6BQ05X8KWIt63Vhg3pQb498Bgx009uu5kM9U"
+SMTP_FROM = "vendors@romaniancenter.org"
+SMTP_HOST = "smtp.gmail.com"
+SMTP_PORT = "587"
+SMTP_SECURE = "false"
 
 [objectStorage]
 defaultBucketID = "replit-objstore-25d0580e-4757-4052-98e1-ab9497e01865"
