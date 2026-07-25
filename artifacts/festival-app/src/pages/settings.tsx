@@ -265,8 +265,66 @@ export default function SettingsPage() {
                   <CardTitle>Vendor Application Form</CardTitle>
                   <CardDescription>Customize the questions asked during vendor registration.</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <QuestionEditor formType="vendor" questions={localSettings.vendorFormQuestions || []} />
+                <CardContent className="space-y-6">
+                  {/* First question */}
+                  {localSettings.vendorFormQuestions && localSettings.vendorFormQuestions.length > 0 && (
+                    <QuestionEditor formType="vendor" questions={[localSettings.vendorFormQuestions[0]]} />
+                  )}
+
+                  {/* Details / description field */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Form Description / Details</Label>
+                    <Textarea
+                      placeholder="Add any details or instructions to display on the vendor application form..."
+                      rows={4}
+                      value={localSettings.vendorFormDescription ?? ""}
+                      onChange={e => setLocalSettings(prev => ({ ...prev, vendorFormDescription: e.target.value }))}
+                    />
+                    <p className="text-xs text-muted-foreground">This text will appear on the public vendor application form.</p>
+                  </div>
+
+                  {/* Remaining questions */}
+                  {localSettings.vendorFormQuestions && localSettings.vendorFormQuestions.length > 1 && (
+                    <QuestionEditor formType="vendor" questions={localSettings.vendorFormQuestions.slice(1)} />
+                  )}
+
+                  {/* Image upload */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Header Image</Label>
+                    {localSettings.vendorFormHeaderImage ? (
+                      <div className="relative inline-block">
+                        <img
+                          src={localSettings.vendorFormHeaderImage}
+                          alt="Vendor form header"
+                          className="max-h-40 rounded-md border object-cover"
+                        />
+                        <button
+                          onClick={() => setLocalSettings(prev => ({ ...prev, vendorFormHeaderImage: null }))}
+                          className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 shadow"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                        <ImageIcon className="w-8 h-8 text-muted-foreground mb-2" />
+                        <span className="text-sm text-muted-foreground">Click to upload an image</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={e => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+                            const reader = new FileReader()
+                            reader.onload = ev => setLocalSettings(prev => ({ ...prev, vendorFormHeaderImage: ev.target?.result as string }))
+                            reader.readAsDataURL(file)
+                          }}
+                        />
+                      </label>
+                    )}
+                    <p className="text-xs text-muted-foreground">Displayed at the top of the vendor application form.</p>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

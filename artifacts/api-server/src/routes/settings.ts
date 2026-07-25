@@ -92,6 +92,8 @@ router.get("/settings", requireStaff, async (req, res): Promise<void> => {
     volunteerFormQuestions: s.volunteerFormQuestions,
     sponsorFormDescription: s.sponsorFormDescription ?? null,
     sponsorFormHeaderImage: s.sponsorFormHeaderImage ?? null,
+    vendorFormDescription: s.vendorFormDescription ?? null,
+    vendorFormHeaderImage: s.vendorFormHeaderImage ?? null,
   });
 });
 
@@ -141,6 +143,8 @@ router.patch("/settings", requireStaff, async (req, res): Promise<void> => {
   if ("applicationDeadline" in parsed.data) updates.applicationDeadline = (parsed.data as any).applicationDeadline ?? null;
   if ("sponsorFormDescription" in parsed.data) updates.sponsorFormDescription = (parsed.data as any).sponsorFormDescription ?? null;
   if ("sponsorFormHeaderImage" in parsed.data) updates.sponsorFormHeaderImage = (parsed.data as any).sponsorFormHeaderImage ?? null;
+  if ("vendorFormDescription" in parsed.data) updates.vendorFormDescription = (parsed.data as any).vendorFormDescription ?? null;
+  if ("vendorFormHeaderImage" in parsed.data) updates.vendorFormHeaderImage = (parsed.data as any).vendorFormHeaderImage ?? null;
 
   const [updated] = await db.update(festivalSettingsTable)
     .set(updates)
@@ -185,6 +189,8 @@ router.patch("/settings", requireStaff, async (req, res): Promise<void> => {
     volunteerFormQuestions: updated.volunteerFormQuestions,
     sponsorFormDescription: updated.sponsorFormDescription ?? null,
     sponsorFormHeaderImage: updated.sponsorFormHeaderImage ?? null,
+    vendorFormDescription: updated.vendorFormDescription ?? null,
+    vendorFormHeaderImage: updated.vendorFormHeaderImage ?? null,
   });
 });
 
