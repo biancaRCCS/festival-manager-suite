@@ -130,7 +130,7 @@ export default function DashboardPage() {
                      </div>
                    </div>
                    <div className="mt-6">
-                     <Link href="/sponsors" className="text-secondary text-sm font-medium flex items-center gap-1 hover:underline">
+                     <Link href="/sponsors" className="text-amber-500 text-sm font-medium flex items-center gap-1 hover:underline">
                         Manage Sponsors <ArrowRight className="w-4 h-4" />
                      </Link>
                    </div>
