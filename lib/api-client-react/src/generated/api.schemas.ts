@@ -83,6 +83,10 @@ export interface FestivalSettings {
   vendorFormQuestions: FormQuestion[];
   sponsorFormQuestions: FormQuestion[];
   volunteerFormQuestions: FormQuestion[];
+  /** @nullable */
+  sponsorFormDescription?: string | null;
+  /** @nullable */
+  sponsorFormHeaderImage?: string | null;
 }
 
 export interface FestivalSettingsUpdate {
@@ -114,6 +118,8 @@ export interface FestivalSettingsUpdate {
   vendorFormQuestions?: FormQuestion[];
   sponsorFormQuestions?: FormQuestion[];
   volunteerFormQuestions?: FormQuestion[];
+  sponsorFormDescription?: string | null;
+  sponsorFormHeaderImage?: string | null;
 }
 
 export type VendorStatus = typeof VendorStatus[keyof typeof VendorStatus];

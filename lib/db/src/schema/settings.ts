@@ -35,6 +35,8 @@ export const festivalSettingsTable = pgTable("festival_settings", {
   vendorFormQuestions: jsonb("vendor_form_questions").notNull().default([]),
   sponsorFormQuestions: jsonb("sponsor_form_questions").notNull().default([]),
   volunteerFormQuestions: jsonb("volunteer_form_questions").notNull().default([]),
+  sponsorFormDescription: text("sponsor_form_description"),
+  sponsorFormHeaderImage: text("sponsor_form_header_image"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 

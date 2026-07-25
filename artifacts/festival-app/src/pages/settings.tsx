@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Save, Plus, Trash2, GripVertical } from "lucide-react"
+import { Save, Plus, Trash2, GripVertical, ImageIcon, X } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { FestivalSettings, FormQuestion } from "@workspace/api-client-react"
 
@@ -276,8 +277,66 @@ export default function SettingsPage() {
                   <CardTitle>Sponsor Application Form</CardTitle>
                   <CardDescription>Customize the questions asked during sponsor registration.</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <QuestionEditor formType="sponsor" questions={localSettings.sponsorFormQuestions || []} />
+                <CardContent className="space-y-6">
+                  {/* First question */}
+                  {localSettings.sponsorFormQuestions && localSettings.sponsorFormQuestions.length > 0 && (
+                    <QuestionEditor formType="sponsor" questions={[localSettings.sponsorFormQuestions[0]]} />
+                  )}
+
+                  {/* Details / description field */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Form Description / Details</Label>
+                    <Textarea
+                      placeholder="Add any details or instructions to display on the sponsor application form..."
+                      rows={4}
+                      value={localSettings.sponsorFormDescription ?? ""}
+                      onChange={e => setLocalSettings(prev => ({ ...prev, sponsorFormDescription: e.target.value }))}
+                    />
+                    <p className="text-xs text-muted-foreground">This text will appear on the public sponsor application form.</p>
+                  </div>
+
+                  {/* Remaining questions */}
+                  {localSettings.sponsorFormQuestions && localSettings.sponsorFormQuestions.length > 1 && (
+                    <QuestionEditor formType="sponsor" questions={localSettings.sponsorFormQuestions.slice(1)} />
+                  )}
+
+                  {/* Image upload */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Header Image</Label>
+                    {localSettings.sponsorFormHeaderImage ? (
+                      <div className="relative inline-block">
+                        <img
+                          src={localSettings.sponsorFormHeaderImage}
+                          alt="Sponsor form header"
+                          className="max-h-40 rounded-md border object-cover"
+                        />
+                        <button
+                          onClick={() => setLocalSettings(prev => ({ ...prev, sponsorFormHeaderImage: null }))}
+                          className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 shadow"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                        <ImageIcon className="w-8 h-8 text-muted-foreground mb-2" />
+                        <span className="text-sm text-muted-foreground">Click to upload an image</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={e => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+                            const reader = new FileReader()
+                            reader.onload = ev => setLocalSettings(prev => ({ ...prev, sponsorFormHeaderImage: ev.target?.result as string }))
+                            reader.readAsDataURL(file)
+                          }}
+                        />
+                      </label>
+                    )}
+                    <p className="text-xs text-muted-foreground">Displayed at the top of the sponsor application form.</p>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
