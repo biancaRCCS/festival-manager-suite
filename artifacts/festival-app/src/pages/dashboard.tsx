@@ -5,6 +5,16 @@ import { Badge } from "@/components/ui/badge"
 import { Link } from "wouter"
 import { Store, HandHeart, Users, Calendar, ArrowRight, Activity, Clock, DollarSign } from "lucide-react"
 
+function formatFestivalDate(dateStr: string): string {
+  const date = new Date(dateStr + "T12:00:00"); // noon to avoid timezone shifts
+  const weekday = date.toLocaleDateString("en-US", { weekday: "long" });
+  const month = date.toLocaleDateString("en-US", { month: "long" });
+  const day = date.getDate();
+  const year = date.getFullYear();
+  const suffix = day === 1 || day === 21 || day === 31 ? "st" : day === 2 || day === 22 ? "nd" : day === 3 || day === 23 ? "rd" : "th";
+  return `${weekday}, ${month} ${day}${suffix}, ${year}`;
+}
+
 export default function DashboardPage() {
   const { data: currentYear, isLoading: yearLoading } = useGetCurrentYear()
   const { data: summary, isLoading: summaryLoading } = useGetDashboardSummary({ query: { enabled: !!currentYear, queryKey: ["dashboardSummary"] } })
@@ -45,7 +55,7 @@ export default function DashboardPage() {
                  <div className="absolute right-0 top-0 w-64 h-full bg-noise mix-blend-multiply opacity-50 pointer-events-none" />
                  <CardContent className="p-8 flex items-center justify-between">
                     <div>
-                      <h2 className="text-sm font-medium text-primary uppercase tracking-wider mb-1">Countdown to {summary.festivalYear.eventName}</h2>
+                      <h2 className="text-sm font-medium text-primary uppercase tracking-wider mb-1">Countdown to The 2026 Romanian Festival</h2>
                       <div className="text-5xl font-serif text-foreground">
                         {summary.countdown > 0 ? (
                           <><span className="text-primary font-bold">{summary.countdown}</span> days left</>
@@ -55,6 +65,7 @@ export default function DashboardPage() {
                           <span className="text-muted-foreground font-bold">Completed</span>
                         )}
                       </div>
+                    <p className="text-sm text-muted-foreground mt-2">{formatFestivalDate(summary.festivalYear.eventDate)}</p>
                     </div>
                     <div className="hidden md:flex flex-col items-end text-right">
                        <span className="text-sm text-muted-foreground">Pending Actions</span>
