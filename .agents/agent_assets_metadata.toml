@@ -1,0 +1,9 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "S6Np5C2HFtWYeI9VKGiXd"
+uri = "file://festival-manager.zip"
+type = "unspecified"
+title = "Festival Manager — Source Code"
+description = "Full project export (source files only, no node_modules or build artifacts)."
