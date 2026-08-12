@@ -9,9 +9,9 @@ export function PublicLayout({ children, title, subtitle }: { children: React.Re
           <Link href="/">
             <div className="flex items-center gap-3 cursor-pointer">
               <img
-                src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/logo.svg`}
-                alt="Logo"
-                className="w-9 h-9 rounded"
+                src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/festival-dancers-navy@120.png`}
+                alt="Romanian Festival – dancing figures logo"
+                className="h-10 w-auto"
               />
               <span className="font-serif font-bold text-lg text-white hidden sm:block tracking-wide">
                 Romanian Festival

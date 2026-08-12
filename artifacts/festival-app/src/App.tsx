@@ -53,7 +53,7 @@ const clerkAppearance = {
   options: {
     logoPlacement: "inside" as const,
     logoLinkUrl: basePath || "/",
-    logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
+    logoImageUrl: `${window.location.origin}${basePath}/festival-dancers-navy@120.png`,
   },
   variables: {
     colorPrimary: "hsl(350, 86%, 42%)",
@@ -83,7 +83,7 @@ const clerkAppearance = {
     formFieldSuccessText: "text-green-600",
     alertText: "text-foreground",
     logoBox: "mb-4 justify-center",
-    logoImage: "h-12 w-12",
+    logoImage: "h-10 w-auto",
     socialButtonsBlockButton: "border border-input hover:bg-muted/50",
     formButtonPrimary: "bg-primary text-white hover:bg-primary/90 shadow font-semibold uppercase tracking-wide text-sm",
     formFieldInput: "flex h-9 w-full rounded border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
@@ -101,7 +101,7 @@ function SignInPage() {
     <div className="min-h-[100dvh] flex flex-col bg-background">
       {/* Navy header */}
       <div className="h-16 bg-secondary flex items-center px-8 gap-3 shadow-md">
-        <img src={`${basePath}/logo.svg`} alt="Logo" className="w-9 h-9 rounded" />
+        <img src={`${basePath}/festival-dancers-navy@120.png`} alt="Romanian Festival – dancing figures logo" className="h-9 w-auto" />
         <span className="font-serif font-bold text-white text-lg tracking-wide">Romanian Festival</span>
       </div>
       <div className="flex-1 flex items-center justify-center px-4 py-12 bg-background">
@@ -115,7 +115,7 @@ function SignUpPage() {
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background">
       <div className="h-16 bg-secondary flex items-center px-8 gap-3 shadow-md">
-        <img src={`${basePath}/logo.svg`} alt="Logo" className="w-9 h-9 rounded" />
+        <img src={`${basePath}/festival-dancers-navy@120.png`} alt="Romanian Festival – dancing figures logo" className="h-9 w-auto" />
         <span className="font-serif font-bold text-white text-lg tracking-wide">Romanian Festival</span>
       </div>
       <div className="flex-1 flex items-center justify-center px-4 py-12 bg-background">
@@ -133,9 +133,9 @@ function LandingPage() {
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
-              src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/logo.svg`}
-              alt="Romanian Festival Logo"
-              className="w-10 h-10 rounded"
+              src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/festival-dancers-navy@120.png`}
+              alt="Romanian Festival – dancing figures logo"
+              className="h-10 w-auto"
             />
             <div>
               <div className="font-serif font-bold text-white text-sm leading-tight uppercase tracking-wider">Romanian Festival</div>
@@ -233,7 +233,14 @@ function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-secondary text-white/60 text-xs text-center py-5 tracking-wide">
+      <footer className="bg-secondary text-white/60 text-xs text-center py-6 tracking-wide">
+        <div className="flex justify-center mb-4">
+          <img
+            src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/rccs-logo-white@96.png`}
+            alt="Romanian Community Center of Sacramento logo"
+            className="h-14 w-auto"
+          />
+        </div>
         <div>Romanian Festival &copy; {new Date().getFullYear()}</div>
         <div className="mt-2">
           <Link href="/sign-in" className="text-white/25 hover:text-white/50 transition-colors text-[10px]">

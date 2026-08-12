@@ -26,9 +26,9 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
         <div>
           <div className="h-16 flex items-center px-5 gap-3 border-b border-white/10">
             <img
-              src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/logo.svg`}
-              alt="Logo"
-              className="w-8 h-8 rounded"
+              src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/festival-dancers-navy@120.png`}
+              alt="Romanian Festival – dancing figures logo"
+              className="h-8 w-auto"
             />
             <span className="font-serif font-semibold text-base text-white tracking-wide leading-tight">
               Fest Manager

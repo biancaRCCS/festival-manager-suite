@@ -101,7 +101,7 @@ export default function PortalPage() {
     <div className="min-h-screen bg-noise bg-background font-sans relative pb-20">
       <header className="bg-card border-b p-6 flex justify-between items-center shadow-sm relative z-20">
         <div className="flex items-center gap-3">
-          <img src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/logo.svg`} alt="Logo" className="w-10 h-10 rounded-full shadow-sm" />
+          <img src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/festival-dancers.png`} alt="Romanian Festival – dancing figures logo" className="h-10 w-auto shadow-sm" />
           <span className="font-serif font-bold text-xl text-primary hidden sm:block">Romanian Festival</span>
         </div>
         <Badge variant="outline" className="text-sm px-3 py-1">
