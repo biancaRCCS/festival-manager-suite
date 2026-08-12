@@ -84,6 +84,31 @@ const TIER_LABELS: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
+// 0a. SMTP status — never exposes the password
+// ---------------------------------------------------------------------------
+export function getSmtpStatus(): {
+  configured: boolean;
+  host: string | null;
+  port: number | null;
+  user: string | null;
+  from: string | null;
+} {
+  const user = process.env.SMTP_USER ?? null;
+  const pass = process.env.SMTP_PASS ?? null;
+  const configured = !!(user && pass);
+
+  if (!configured) {
+    return { configured: false, host: null, port: null, user: null, from: null };
+  }
+
+  const host = process.env.SMTP_HOST ?? "smtp.gmail.com";
+  const port = parseInt(process.env.SMTP_PORT ?? "587");
+  const from = process.env.SMTP_FROM ?? user;
+
+  return { configured: true, host, port, user, from };
+}
+
+// ---------------------------------------------------------------------------
 // 0. Test email — throws on failure so callers can surface the error
 // ---------------------------------------------------------------------------
 export async function sendTestEmail(to: string): Promise<void> {

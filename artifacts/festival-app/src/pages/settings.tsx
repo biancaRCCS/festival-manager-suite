@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Save, Plus, Trash2, GripVertical, ImageIcon, X, Send } from "lucide-react"
+import { Save, Plus, Trash2, GripVertical, ImageIcon, X, Send, AlertTriangle, CheckCircle, Server } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { FestivalSettings, FormQuestion } from "@workspace/api-client-react"
@@ -42,6 +42,22 @@ export default function SettingsPage() {
   const [localSettings, setLocalSettings] = useState<Partial<FestivalSettings>>({})
   const initialized = useRef(false)
   const [isSendingTestEmail, setIsSendingTestEmail] = useState(false)
+
+  // SMTP status
+  const [smtpStatus, setSmtpStatus] = useState<{
+    configured: boolean;
+    host: string | null;
+    port: number | null;
+    user: string | null;
+    from: string | null;
+  } | null>(null)
+
+  useEffect(() => {
+    fetch("/api/settings/smtp-status")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setSmtpStatus(data) })
+      .catch(() => {})
+  }, [])
 
   const handleSendTestEmail = useCallback(async () => {
     setIsSendingTestEmail(true)
@@ -253,6 +269,29 @@ export default function SettingsPage() {
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground">All new vendor, sponsor, and volunteer applications are emailed here.</p>
+                  </div>
+
+                  {/* SMTP status row */}
+                  <div className="md:col-span-2">
+                    <Label className="mb-2 block">Email Sending Account</Label>
+                    {smtpStatus === null ? (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Server className="w-4 h-4 shrink-0" />
+                        <span>Loading…</span>
+                      </div>
+                    ) : smtpStatus.configured ? (
+                      <div className="flex items-start gap-2 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+                        <CheckCircle className="w-4 h-4 shrink-0 mt-0.5 text-green-600" />
+                        <span>
+                          Sending as <strong>{smtpStatus.from}</strong> via <strong>{smtpStatus.host}:{smtpStatus.port}</strong>
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-2 rounded-md border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
+                        <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-yellow-600" />
+                        <span>No credentials configured — set <code className="font-mono text-xs">SMTP_USER</code> and <code className="font-mono text-xs">SMTP_PASS</code> to enable email delivery.</span>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

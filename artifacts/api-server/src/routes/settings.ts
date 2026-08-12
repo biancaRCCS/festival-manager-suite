@@ -3,7 +3,7 @@ import { db, festivalYearsTable, festivalSettingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireStaff } from "../lib/auth";
 import { GetSettingsQueryParams, UpdateSettingsBody } from "@workspace/api-zod";
-import { sendTestEmail } from "../lib/email";
+import { sendTestEmail, getSmtpStatus } from "../lib/email";
 
 const router: IRouter = Router();
 
@@ -178,6 +178,11 @@ router.patch("/settings", requireStaff, async (req, res): Promise<void> => {
   }
 
   res.json(formatSettings(updated));
+});
+
+router.get("/settings/smtp-status", requireStaff, (req, res): void => {
+  const status = getSmtpStatus();
+  res.json(status);
 });
 
 router.post("/settings/test-email", requireStaff, async (req, res): Promise<void> => {
