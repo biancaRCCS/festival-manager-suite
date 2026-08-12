@@ -1,0 +1,29 @@
+Four changes to the vendor application form. Do not change anything else.
+
+1. SPACE SIZES. The "Number of spaces requested" options must show the physical space included, which differs by category:
+
+Major Food Vendor — Single: 10'x20' — Double: 20'x20'
+Specialty Food & Beverage — Single: 10'x10' — Double: 10'x20'
+Retail, Artisan & Business — Single: 10'x10' — Double: 10'x20'
+Verified Nonprofit — Single: 10'x10' — Double: 10'x20'
+
+Keep the existing price display (single = category fee, double = 2x fee) and show the dimensions alongside it, updating as the selected category changes.
+
+2. SETUP TYPE. Remove "Food Trailer" and "Food Truck" from "What type of setup will you have?" — only "Standard 10'x10' Tent" and "Other (describe)" remain. Food trucks and trailers are not permitted at this festival.
+
+3. FIRE MARSHAL NOTE. Replace the note under that question with:
+
+"Only 10'x10' pop-up tents are permitted. Food trucks and food trailers are not allowed. Major Food Vendors receive a 10'x20' footprint, which may be used as two 10'x10' tents or a single tent within the larger space. Any tent larger than 10'x10' must be approved by the Roseville Fire Marshal, and it is the vendor's responsibility to obtain that approval."
+
+Add this required acknowledgement to the vendor agreement section:
+
+"I understand that food trucks and food trailers are not permitted, and that any tent larger than 10'x10' requires approval from the Roseville Fire Marshal, which I am responsible for obtaining."
+
+4. FOOD AND COOKING QUESTIONS. These should appear ONLY for Major Food Vendor and Specialty Food & Beverage Vendor. Verified Nonprofit Organizations and Retail, Artisan & Business vendors must not see any of them:
+
+- Will you be preparing food on-site?
+- Will you be using propane? (and its tank count / tank size follow-ups)
+- Cooking equipment checkboxes
+- The Health Permit section, including the Placer County TFF link and the health department acknowledgement checkbox
+
+Also add "None" as the first option in the Cooking equipment checkboxes: None, Grill, Flat Top, Fryer, Smoker, Generator, Other. Selecting "None" clears and disables the others; selecting any other option clears "None".

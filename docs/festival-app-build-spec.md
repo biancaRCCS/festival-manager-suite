@@ -1,6 +1,6 @@
 # Festival Manager Suite — Build Specification
 
-**Version 6 · 12 August 2026**
+**Version 10 · 12 August 2026**
 Source: Bia (RCCS) · Sponsor & Vendor Guide 2026, pages 2–3 · working session decisions
 
 This document is the single source of truth for the vendor and sponsor application
@@ -24,6 +24,7 @@ These are unresolved or unknown. Nothing below invents an answer for them.
 | 9 | ~~Document deadline~~ | **Resolved** — 18 September 2026 |
 | 10 | ~~Spot limits per category~~ | **Resolved** — 5 / 15 / 30 / 20, as soft targets (section 3) |
 | 11 | **Printed guide correction** — pages 1 and 3 state applications are due 31 August; the deadline is now 10 September. | Needs updating and re-issuing |
+| 12 | **Printed guide corrections needed** — page 3 lists food trucks under Major Food Vendor (not permitted), and the Nonprofit category wording should state that food sales are not allowed in that category. Removed from this spec; the guide file is Bia's to update. | Bia to update guide |
 | 7 | **Font web licensing** for Zamolxis I and Arhaic Romanesc. Neither file carries an embedded license. | Confirm before launch |
 | 8 | Legal review of all acknowledgement and agreement language. | Bia confirmed someone will review |
 
@@ -114,6 +115,8 @@ filing. Uploads get built properly in September, well before permits are needed.
 - File uploads are deferred for 2026; documents are emailed instead (section 1A).
 - The festival is **free to attend in 2026**. Ticketing is a 2027 goal and out of scope.
 - **Booth sizes.** Only 10′×10′ pop-up tents are permitted. Major Food Vendors receive a 10′×20′ footprint — either two 10′×10′ tents, or one tent within the larger footprint. All other categories receive a single 10′×10′.
+- **Food trucks and food trailers are not permitted.** Only 10′×10′ pop-up tents.
+- **Tents larger than 10′×10′ require Roseville Fire Marshal approval**, obtained by the vendor.
 - **Alcohol vendors are excluded from the public application.** They are managed under individual agreements (revenue share, not a booth fee) via the invited-vendor flow in section 5A.
 - No vehicles remain on site. Assigned load-in time, 30 minutes to unload, then move to the free parking structure.
 - Water and refrigeration are not provided and are not asked about.
@@ -217,6 +220,15 @@ Directly beneath the category selector, always visible:
 
 - Number of spaces requested — **required** — single or double. Double is priced at 2× the category fee.
 
+Each option must state the physical space included, which differs by category:
+
+| Category | Single | Double |
+|---|---|---|
+| Major Food Vendor | 10′ × 20′ | 20′ × 20′ |
+| Specialty Food & Beverage | 10′ × 10′ | 10′ × 20′ |
+| Retail, Artisan & Business | 10′ × 10′ | 10′ × 20′ |
+| Verified Nonprofit | 10′ × 10′ | 10′ × 20′ |
+
 ### 4.4 Products & Business Information
 
 - **Describe the products or services you plan to offer** — **required** — long text
@@ -226,15 +238,27 @@ Directly beneath the category selector, always visible:
 
 ### 4.5 Booth & Operational Information
 
-- **What type of setup will you have?** — **required** — Standard 10′×10′ Tent · Food Trailer · Food Truck · Other (describe)
-  - Standing note: *"Only 10′×10′ pop-up tents are permitted. Major Food Vendors receive a 10′×20′ footprint, which may be used as two 10′×10′ tents or a single tent within the larger space."*
-- **Will you be preparing food on-site?** — Yes / No — *food categories only*
-- **Will you be using propane?** — Yes / No — *food categories only*
+- **What type of setup will you have?** — **required** — Standard 10′×10′ Tent · Other (describe)
+  - **Food trailers and food trucks are not permitted** and must not appear as options.
+  - Standing note: *"Only 10′×10′ pop-up tents are permitted. Major Food Vendors receive a 10′×20′ footprint, which may be used as two 10′×10′ tents or a single tent within the larger space. Any tent larger than 10′×10′ must be approved by the Roseville Fire Marshal, and it is the vendor's responsibility to obtain that approval."*
+- **Will you be preparing food on-site?** — Yes / No — *cooking categories only*
+- **Will you be using propane?** — Yes / No — *cooking categories only*
   - If Yes: number of tanks, and tank size — *conditional*
 - **Will you require electricity?** — Yes / No
   - If Yes: equipment requiring electricity, and total amps needed — *conditional*
   - Standing note beside this question: *"Electrical outlets are available in prime and VIP sponsor locations only. Power is not provided to standard vendor locations. Vendors requiring power should plan to supply their own generator."*
-- **Cooking equipment** — checkboxes — Grill · Flat Top · Fryer · Smoker · Generator · Other
+- **Cooking equipment** — checkboxes — **None** · Grill · Flat Top · Fryer · Smoker · Generator · Other — *cooking categories only*
+  - Selecting **None** clears and disables the others; selecting any other option clears None.
+  - Without a None option, an empty set is ambiguous — no equipment, or question skipped?
+
+> **"Cooking categories"** means **Major Food Vendor and Specialty Food & Beverage Vendor
+> only.**
+>
+> Neither Verified Nonprofit Organizations nor Retail, Artisan & Business vendors may sell
+> or prepare food, so they see none of these questions and are not asked for a health
+> permit. A nonprofit wishing to sell food must apply under Major Food Vendor or Specialty
+> Food & Beverage and pay that category's fee — consistent with the Nonprofit category
+> description, which already states that vendors selling prepared food may be reclassified.
 - **Number of staff/workers in your booth** — number *(collected for next year's badge planning; not used this year)*
 - **Special placement requests** — optional short text
 - **Accessibility needs** — optional short text
@@ -256,7 +280,7 @@ Directly beneath the category selector, always visible:
 
 - **Seller's Permit** — required where applicable
   - **Permit number** — text field *(stays on the form; keeps records searchable)*
-- **Health Permit** — *food categories only*
+- **Health Permit** — *cooking categories only* (Major Food and Specialty Food)
   - Link shown here: [Placer County TFF Authorization Form](https://www.placer.ca.gov/DocumentCenter/View/9479/Application-for-TFF-Food-Vendor-Authorization-PDF-Fillable-Form?bidId=)
   - Note: *"Each vendor is responsible for obtaining their own Placer County health permit."*
 - **Certificate of Insurance** — see section 4.7A for the full requirement text to display
@@ -322,10 +346,11 @@ Each is a separate required checkbox.
 - ☐ I understand payment is due within 7 days of approval, and that my space may be released if payment is not received.
 - ☐ I understand booth fees are non-refundable after payment unless otherwise stated by RCCS.
 - ☐ I understand I am responsible for providing my own tent, tables, chairs, signage, and all other booth equipment unless otherwise approved by RCCS.
+- ☐ I understand that food trucks and food trailers are not permitted, and that any tent larger than 10′×10′ requires approval from the Roseville Fire Marshal, which I am responsible for obtaining.
 - ☐ I understand running water is not provided.
 - ☐ I understand electrical outlets are available in prime and VIP sponsor locations only, and that I am responsible for my own power if required.
 - ☐ I understand I am responsible for obtaining all permits, licenses, insurance, and approvals required to operate at this event.
-- ☐ I understand food vendors must comply with all applicable Placer County Health Department requirements. *(food categories only)*
+- ☐ I understand food vendors must comply with all applicable Placer County Health Department requirements. *(cooking categories only)*
 - ☐ I understand I will be assigned a load-in time, that I will have 30 minutes to unload, and that no vehicles may remain on the festival grounds. Vehicles must be moved to the free parking structure.
 - ☐ I understand I am responsible for maintaining a clean booth space and removing all trash before leaving the event.
 - ☐ I understand RCCS is not responsible for lost, stolen, or damaged property.
@@ -540,12 +565,15 @@ Displayed when a category is selected on the form, and reproduced in the guide.
 operating large-scale prepared food service.
 
 **Examples.** Romanian grill (mici / mititei) · Sarmale · Romanian barbecue · Traditional
-Romanian entrées · Multiple hot meal items · Full-service food vendors · Large food
-trucks · Large prepared food operations
+Romanian entrées · Multiple hot meal items · Full-service food vendors · Large prepared
+food operations
+
+*Food trucks and food trailers are not permitted at the festival. All vendors operate from
+10′×10′ pop-up tents; Major Food Vendors receive a 10′×20′ footprint.*
 
 **Typical characteristics.** Complete meal service · Multiple menu items · High customer
-volume · Larger staffing requirements · Expanded equipment (grills, smokers, fryers,
-trailers) · Larger booth footprint
+volume · Larger staffing requirements · Expanded equipment (grills, smokers, fryers) ·
+Larger booth footprint
 
 **Not typically included.** Coffee or espresso vendors · Ice cream or shaved ice ·
 Beverage-only vendors · Dessert-focused vendors · Pastries or baked goods only ·
@@ -604,8 +632,11 @@ agencies · Humanitarian organizations
 **Requirements.** Must provide a valid Employer Identification Number (EIN). RCCS may
 request documentation verifying nonprofit status.
 
-**Not typically included.** For-profit businesses · Commercial vendors · Vendors selling
-prepared food as their primary offering (may be reclassified as a food vendor)
+**Not typically included.** For-profit businesses · Commercial vendors · Any sale or
+on-site preparation of food
+
+**Food is not permitted in this category.** Nonprofits wishing to sell or prepare food must
+apply under Major Food Vendor or Specialty Food & Beverage Vendor and pay that category's fee.
 
 ---
 

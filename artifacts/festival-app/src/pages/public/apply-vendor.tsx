@@ -73,7 +73,15 @@ const CATEGORY_INFO: Record<string, {
 
 const FOOD_KEYS = new Set(["major_food", "specialty_food"])
 
-const COOKING_EQUIPMENT_OPTIONS = ["Grill", "Flat Top", "Fryer", "Smoker", "Generator", "Other"]
+// Single/Double space dimensions per category
+const SPACE_SIZES: Record<string, { single: string; double: string }> = {
+  major_food:    { single: "10′×20′", double: "20′×20′" },
+  specialty_food: { single: "10′×10′", double: "10′×20′" },
+  retail:        { single: "10′×10′", double: "10′×20′" },
+  nonprofit:     { single: "10′×10′", double: "10′×20′" },
+}
+
+const COOKING_EQUIPMENT_OPTIONS = ["None", "Grill", "Flat Top", "Fryer", "Smoker", "Generator", "Other"]
 
 const HEARD_ABOUT_OPTIONS = [
   "Social media (Facebook, Instagram)",
@@ -132,6 +140,7 @@ interface FormData {
   ack_noGuarantee: boolean; ack_feesAfterApproval: boolean; ack_paymentDeadline: boolean
   ack_nonRefundable: boolean; ack_ownEquipment: boolean; ack_noWater: boolean
   ack_electricity: boolean; ack_permits: boolean; ack_foodCompliance: boolean
+  ack_fireMarshal: boolean
   ack_loadIn: boolean; ack_cleanBooth: boolean; ack_notResponsible: boolean
   ack_rccsRight: boolean
   // 4.11 Signature
@@ -154,6 +163,7 @@ const INITIAL: FormData = {
   ack_noGuarantee: false, ack_feesAfterApproval: false, ack_paymentDeadline: false,
   ack_nonRefundable: false, ack_ownEquipment: false, ack_noWater: false,
   ack_electricity: false, ack_permits: false, ack_foodCompliance: false,
+  ack_fireMarshal: false,
   ack_loadIn: false, ack_cleanBooth: false, ack_notResponsible: false,
   ack_rccsRight: false,
   signatureName: "",
@@ -235,7 +245,13 @@ export default function ApplyVendorPage() {
 
   const toggleEquipment = (item: string) =>
     setForm(prev => {
-      const s = new Set(prev.cookingEquipment)
+      if (item === "None") {
+        // toggling None clears everything else
+        const already = prev.cookingEquipment.includes("None")
+        return { ...prev, cookingEquipment: already ? [] : ["None"] }
+      }
+      // selecting any real item clears None
+      const s = new Set(prev.cookingEquipment.filter(i => i !== "None"))
       s.has(item) ? s.delete(item) : s.add(item)
       return { ...prev, cookingEquipment: Array.from(s) }
     })
@@ -281,6 +297,7 @@ export default function ApplyVendorPage() {
     if (!form.ack_electricity)         errors.push("Please check all acknowledgements")
     if (!form.ack_permits)             errors.push("Please check all acknowledgements")
     if (isFood && !form.ack_foodCompliance) errors.push("Please check all acknowledgements")
+    if (!form.ack_fireMarshal)         errors.push("Please check all acknowledgements")
     if (!form.ack_loadIn)              errors.push("Please check all acknowledgements")
     if (!form.ack_cleanBooth)          errors.push("Please check all acknowledgements")
     if (!form.ack_notResponsible)      errors.push("Please check all acknowledgements")
@@ -334,6 +351,7 @@ export default function ApplyVendorPage() {
       ack_electricity: form.ack_electricity,
       ack_permits: form.ack_permits,
       ack_foodCompliance: form.ack_foodCompliance,
+      ack_fireMarshal: form.ack_fireMarshal,
       ack_loadIn: form.ack_loadIn,
       ack_cleanBooth: form.ack_cleanBooth,
       ack_notResponsible: form.ack_notResponsible,
@@ -477,14 +495,22 @@ export default function ApplyVendorPage() {
                       <RadioGroupItem value="single" id="space-single" />
                       <Label htmlFor="space-single" className="font-normal">
                         Single space
-                        {selectedVt && <span className="text-muted-foreground ml-1.5">— ${fee.toLocaleString()}</span>}
+                        {selectedVt && (
+                          <span className="text-muted-foreground ml-1.5">
+                            — {SPACE_SIZES[form.vendorType]?.single} · ${fee.toLocaleString()}
+                          </span>
+                        )}
                       </Label>
                     </div>
                     <div className="flex items-center gap-2">
                       <RadioGroupItem value="double" id="space-double" />
                       <Label htmlFor="space-double" className="font-normal">
                         Double space
-                        {selectedVt && <span className="text-muted-foreground ml-1.5">— ${(fee * 2).toLocaleString()} (2× fee)</span>}
+                        {selectedVt && (
+                          <span className="text-muted-foreground ml-1.5">
+                            — {SPACE_SIZES[form.vendorType]?.double} · ${(fee * 2).toLocaleString()} (2× fee)
+                          </span>
+                        )}
                       </Label>
                     </div>
                   </RadioGroup>
@@ -531,7 +557,7 @@ export default function ApplyVendorPage() {
                   <div className="space-y-1.5">
                     <Label>What type of setup will you have?<RequiredStar /></Label>
                     <RadioGroup value={form.setupType} onValueChange={v => set("setupType", v)} className="flex flex-col gap-2 mt-1">
-                      {["Standard 10′×10′ Tent", "Food Trailer", "Food Truck", "Other (describe)"].map(opt => (
+                      {["Standard 10′×10′ Tent", "Other (describe)"].map(opt => (
                         <div key={opt} className="flex items-center gap-2">
                           <RadioGroupItem value={opt} id={`setup-${opt}`} />
                           <Label htmlFor={`setup-${opt}`} className="font-normal">{opt}</Label>
@@ -547,8 +573,10 @@ export default function ApplyVendorPage() {
                       />
                     )}
                     <FieldNote>
-                      Only 10′×10′ pop-up tents are permitted. Major Food Vendors receive a 10′×20′ footprint,
-                      which may be used as two 10′×10′ tents or a single tent within the larger space.
+                      Only 10′×10′ pop-up tents are permitted. Food trucks and food trailers are not allowed.
+                      Major Food Vendors receive a 10′×20′ footprint, which may be used as two 10′×10′ tents
+                      or a single tent within the larger space. Any tent larger than 10′×10′ must be approved
+                      by the Roseville Fire Marshal, and it is the vendor's responsibility to obtain that approval.
                     </FieldNote>
                   </div>
 
@@ -603,22 +631,29 @@ export default function ApplyVendorPage() {
                     )}
                   </div>
 
-                  {/* Cooking equipment */}
-                  <div className="space-y-2">
-                    <Label>Cooking equipment <span className="text-muted-foreground text-sm">(check all that apply)</span></Label>
-                    <div className="flex flex-wrap gap-4 mt-1">
-                      {COOKING_EQUIPMENT_OPTIONS.map(item => (
-                        <div key={item} className="flex items-center gap-2">
-                          <Checkbox
-                            id={`equip-${item}`}
-                            checked={form.cookingEquipment.includes(item)}
-                            onCheckedChange={() => toggleEquipment(item)}
-                          />
-                          <Label htmlFor={`equip-${item}`} className="font-normal">{item}</Label>
-                        </div>
-                      ))}
+                  {/* Cooking equipment — food categories only */}
+                  {isFood && (
+                    <div className="space-y-2">
+                      <Label>Cooking equipment <span className="text-muted-foreground text-sm">(check all that apply)</span></Label>
+                      <div className="flex flex-wrap gap-4 mt-1">
+                        {COOKING_EQUIPMENT_OPTIONS.map(item => {
+                          const noneSelected = form.cookingEquipment.includes("None")
+                          const disabled = item !== "None" && noneSelected
+                          return (
+                            <div key={item} className="flex items-center gap-2">
+                              <Checkbox
+                                id={`equip-${item}`}
+                                checked={form.cookingEquipment.includes(item)}
+                                onCheckedChange={() => toggleEquipment(item)}
+                                disabled={disabled}
+                              />
+                              <Label htmlFor={`equip-${item}`} className={`font-normal ${disabled ? "text-muted-foreground" : ""}`}>{item}</Label>
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Staff count */}
                   <div className="space-y-1.5 max-w-xs">
@@ -859,6 +894,9 @@ export default function ApplyVendorPage() {
                       I understand food vendors must comply with all applicable Placer County Health Department requirements.
                     </AckRow>
                   )}
+                  <AckRow id="ack_fireMarshal" checked={form.ack_fireMarshal} onChange={v => set("ack_fireMarshal", v)}>
+                    I understand that food trucks and food trailers are not permitted, and that any tent larger than 10′×10′ requires approval from the Roseville Fire Marshal, which I am responsible for obtaining.
+                  </AckRow>
                   <AckRow id="ack_loadIn" checked={form.ack_loadIn} onChange={v => set("ack_loadIn", v)}>
                     I understand I will be assigned a load-in time, that I will have 30 minutes to unload, and that no vehicles may remain on the festival grounds. Vehicles must be moved to the free parking structure.
                   </AckRow>
