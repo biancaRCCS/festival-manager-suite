@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, numeric, text, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { festivalYearsTable } from "./festivalYears";
@@ -11,6 +11,8 @@ export const sponsorsTable = pgTable("sponsors", {
   email: text("email").notNull(),
   phone: text("phone").notNull().default(""),
   tier: text("tier").notNull().default("bronze"),
+  // Amount the sponsor actually chooses within the tier range
+  sponsorshipAmount: numeric("sponsorship_amount", { precision: 10, scale: 2 }),
   status: text("status").notNull().default("pending"),
   applicationData: jsonb("application_data").notNull().default({}),
   agreementSigned: boolean("agreement_signed").notNull().default(false),

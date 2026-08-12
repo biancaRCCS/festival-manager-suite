@@ -14,6 +14,17 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { FestivalSettings, FormQuestion } from "@workspace/api-client-react"
 
+// Vendor categories: key → booth size (static, not editable)
+const VENDOR_CATEGORIES = [
+  { key: "MajorFood",     booth: "10′ × 20′" },
+  { key: "SpecialtyFood", booth: "10′ × 10′" },
+  { key: "Retail",        booth: "10′ × 10′" },
+  { key: "Nonprofit",     booth: "10′ × 10′" },
+] as const
+
+// Sponsor tiers in display order (lowest → highest)
+const SPONSOR_TIERS = ["Bronze", "Silver", "Gold", "Platinum", "Diamond"] as const
+
 export default function SettingsPage() {
   const queryClient = useQueryClient()
   const { toast } = useToast()
@@ -38,6 +49,9 @@ export default function SettingsPage() {
     }
   }, [settings])
 
+  const set = (key: keyof FestivalSettings, value: unknown) =>
+    setLocalSettings(prev => ({ ...prev, [key]: value }))
+
   const handleSave = () => {
     if (!currentYear?.id) return
     updateMutateFnRef.current(
@@ -52,32 +66,26 @@ export default function SettingsPage() {
     )
   }
 
+  // ── Question editor (shared across form tabs) ─────────────────────────────
   const QuestionEditor = ({ formType, questions }: { formType: 'vendor' | 'sponsor' | 'volunteer', questions: FormQuestion[] }) => {
     const key = `${formType}FormQuestions` as keyof FestivalSettings
-    
+
     const updateQuestion = (id: string, updates: Partial<FormQuestion>) => {
       const newQs = questions.map(q => q.id === id ? { ...q, ...updates } : q)
       setLocalSettings(prev => ({ ...prev, [key]: newQs }))
     }
-
     const removeQuestion = (id: string) => {
       const newQs = questions.filter(q => q.id !== id)
       setLocalSettings(prev => ({ ...prev, [key]: newQs }))
     }
-
     const addQuestion = () => {
-      const newQ: FormQuestion = {
-        id: `q_${Date.now()}`,
-        label: "New Question",
-        type: "text",
-        required: false
-      }
+      const newQ: FormQuestion = { id: `q_${Date.now()}`, label: "New Question", type: "text", required: false }
       setLocalSettings(prev => ({ ...prev, [key]: [...questions, newQ] }))
     }
 
     return (
       <div className="space-y-4">
-        {questions.map((q, i) => (
+        {questions.map((q) => (
           <div key={q.id} className="flex gap-4 items-start p-4 border rounded-md bg-background shadow-sm">
             <div className="pt-2 cursor-move text-muted-foreground"><GripVertical className="w-5 h-5" /></div>
             <div className="flex-1 space-y-4">
@@ -89,9 +97,7 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label>Type</Label>
                   <Select value={q.type} onValueChange={(v: any) => updateQuestion(q.id, { type: v })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="text">Short Text</SelectItem>
                       <SelectItem value="textarea">Long Text</SelectItem>
@@ -103,19 +109,16 @@ export default function SettingsPage() {
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <Switch 
-                    checked={q.required} 
-                    onCheckedChange={(c) => updateQuestion(q.id, { required: c })}
-                  />
+                  <Switch checked={q.required} onCheckedChange={(c) => updateQuestion(q.id, { required: c })} />
                   <Label className="text-xs">Required</Label>
                 </div>
                 {q.type === 'select' && (
                   <div className="flex-1">
-                     <Input 
-                        placeholder="Comma-separated options" 
-                        value={q.options?.join(", ") || ""} 
-                        onChange={e => updateQuestion(q.id, { options: e.target.value.split(",").map(s => s.trim()) })}
-                     />
+                    <Input
+                      placeholder="Comma-separated options"
+                      value={q.options?.join(", ") || ""}
+                      onChange={e => updateQuestion(q.id, { options: e.target.value.split(",").map(s => s.trim()) })}
+                    />
                   </div>
                 )}
               </div>
@@ -125,10 +128,19 @@ export default function SettingsPage() {
             </Button>
           </div>
         ))}
-        <Button onClick={addQuestion} variant="outline" className="w-full border-dashed"><Plus className="w-4 h-4 mr-2" /> Add Question</Button>
+        <Button onClick={addQuestion} variant="outline" className="w-full border-dashed">
+          <Plus className="w-4 h-4 mr-2" /> Add Question
+        </Button>
       </div>
     )
   }
+
+  // ── Table header helper ───────────────────────────────────────────────────
+  const TH = ({ children, className = "" }: { children: React.ReactNode, className?: string }) => (
+    <div className={`text-xs font-semibold text-muted-foreground uppercase tracking-wide py-1 ${className}`}>
+      {children}
+    </div>
+  )
 
   return (
     <AdminLayout>
@@ -136,7 +148,9 @@ export default function SettingsPage() {
         <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
           <div>
             <h1 className="text-3xl font-serif text-primary mb-2">Festival Settings</h1>
-            <p className="text-muted-foreground">Configure pricing, limits, and application forms for {currentYear?.eventName || 'the festival'}.</p>
+            <p className="text-muted-foreground">
+              Configure pricing, limits, and application forms for {currentYear?.eventName || 'the festival'}.
+            </p>
           </div>
           <Button onClick={handleSave} disabled={updateMutation.isPending || isLoading} className="shrink-0 bg-primary">
             <Save className="w-4 h-4 mr-2" /> Save Settings
@@ -144,7 +158,7 @@ export default function SettingsPage() {
         </div>
 
         {isLoading ? (
-          <div className="p-12 text-center text-muted-foreground">Loading settings...</div>
+          <div className="p-12 text-center text-muted-foreground">Loading settings…</div>
         ) : (
           <Tabs defaultValue="general" className="w-full">
             <TabsList className="grid w-full grid-cols-4 mb-6">
@@ -153,112 +167,183 @@ export default function SettingsPage() {
               <TabsTrigger value="sponsor_form">Sponsor Form</TabsTrigger>
               <TabsTrigger value="volunteer_form">Volunteer Form</TabsTrigger>
             </TabsList>
-            
+
+            {/* ── GENERAL TAB ─────────────────────────────────────────────── */}
             <TabsContent value="general" className="space-y-6">
+
+              {/* Festival Dates & Settings */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Pricing & Limits</CardTitle>
-                  <CardDescription>Set the base prices and maximum available spots.</CardDescription>
+                  <CardTitle>Festival Dates &amp; Settings</CardTitle>
+                  <CardDescription>Key dates and operational settings for the 2026 festival.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2 md:col-span-2">
-                    <Label className="text-base font-semibold">Vendor Type Names</Label>
-                    <p className="text-xs text-muted-foreground -mt-1">These labels appear on the public apply form.</p>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 pt-1">
-                      {(["Food", "Crafts", "Merchandise", "Cultural", "Other"] as const).map(key => {
-                        const labelField = `vendorTypeLabel${key}` as keyof typeof localSettings;
-                        return (
-                          <div key={key} className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">{key}</Label>
-                            <Input
-                              value={(localSettings[labelField] as string) ?? ""}
-                              onChange={e => setLocalSettings(p => ({ ...p, [labelField]: e.target.value }))}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
+                  <div className="space-y-2">
+                    <Label>Festival Date</Label>
+                    <Input
+                      type="date"
+                      value={localSettings.festivalDate ?? ""}
+                      onChange={e => set("festivalDate", e.target.value || null)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Application Deadline</Label>
+                    <Input
+                      type="date"
+                      value={localSettings.applicationDeadline ?? ""}
+                      onChange={e => set("applicationDeadline", e.target.value || null)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Document Deadline</Label>
+                    <Input
+                      type="date"
+                      value={localSettings.documentDeadline ?? ""}
+                      onChange={e => set("documentDeadline", e.target.value || null)}
+                    />
+                    <p className="text-xs text-muted-foreground">Deadline for emailed permits, certificates, and licenses.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Payment Window (days after approval)</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={localSettings.paymentWindowDays ?? 7}
+                      onChange={e => set("paymentWindowDays", Number(e.target.value))}
+                    />
+                    <p className="text-xs text-muted-foreground">Vendors must pay within this many days of approval.</p>
                   </div>
                   <div className="space-y-2 md:col-span-2">
-                    <Label className="text-base font-semibold">Vendor Type Prices ($)</Label>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 pt-1">
-                      {(["Food", "Crafts", "Merchandise", "Cultural", "Other"] as const).map(key => {
-                        const labelField = `vendorTypeLabel${key}` as keyof typeof localSettings;
-                        const priceField = `vendorPrice${key}` as keyof typeof localSettings;
-                        const displayLabel = (localSettings[labelField] as string) || key;
-                        return (
-                          <div key={key} className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">{displayLabel}</Label>
-                            <Input
-                              type="number"
-                              value={(localSettings[priceField] as number) || 0}
-                              onChange={e => setLocalSettings(p => ({ ...p, [priceField]: Number(e.target.value) }))}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <Label>Notification Email</Label>
+                    <Input
+                      type="email"
+                      value={localSettings.notificationEmail ?? ""}
+                      onChange={e => set("notificationEmail", e.target.value || null)}
+                      placeholder="vendors@romaniancenter.org"
+                    />
+                    <p className="text-xs text-muted-foreground">All new vendor, sponsor, and volunteer applications are emailed here.</p>
                   </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label className="text-base font-semibold">Vendor Spot Limits (per type)</Label>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 pt-1">
-                      {(["Food", "Crafts", "Merchandise", "Cultural", "Other"] as const).map(key => {
-                        const labelField = `vendorTypeLabel${key}` as keyof typeof localSettings;
-                        const limitField = `vendorSpotLimit${key}` as keyof typeof localSettings;
-                        const displayLabel = (localSettings[labelField] as string) || key;
-                        return (
-                          <div key={key} className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">{displayLabel}</Label>
-                            <Input
-                              type="number"
-                              value={(localSettings[limitField] as number) || 0}
-                              onChange={e => setLocalSettings(p => ({ ...p, [limitField]: Number(e.target.value) }))}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
+                </CardContent>
+              </Card>
+
+              {/* Vendor Categories */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Vendor Categories</CardTitle>
+                  <CardDescription>
+                    Spot targets are soft — a full category never blocks an application. Counts are visible to admins only;
+                    availability is never shown to applicants.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {/* Table — 4 columns */}
+                  <div className="grid grid-cols-[1fr_100px_90px_80px] gap-x-4 gap-y-2 items-center min-w-0">
+                    <TH>Category Label</TH>
+                    <TH className="text-right">Fee ($)</TH>
+                    <TH className="text-center">Spot Target</TH>
+                    <TH>Booth</TH>
+
+                    {VENDOR_CATEGORIES.map(({ key, booth }) => {
+                      const labelField  = `vendorTypeLabel${key}` as keyof FestivalSettings
+                      const priceField  = `vendorPrice${key}`     as keyof FestivalSettings
+                      const limitField  = `vendorSpotLimit${key}` as keyof FestivalSettings
+                      return (
+                        <>
+                          <Input
+                            key={`${key}-label`}
+                            value={(localSettings[labelField] as string) ?? ""}
+                            onChange={e => set(labelField, e.target.value)}
+                            className="text-sm"
+                          />
+                          <Input
+                            key={`${key}-price`}
+                            type="number"
+                            min={0}
+                            value={(localSettings[priceField] as number) ?? 0}
+                            onChange={e => set(priceField, Number(e.target.value))}
+                            className="text-right text-sm"
+                          />
+                          <Input
+                            key={`${key}-limit`}
+                            type="number"
+                            min={0}
+                            value={(localSettings[limitField] as number) ?? 0}
+                            onChange={e => set(limitField, Number(e.target.value))}
+                            className="text-center text-sm"
+                          />
+                          <span key={`${key}-booth`} className="text-sm text-muted-foreground whitespace-nowrap">{booth}</span>
+                        </>
+                      )
+                    })}
                   </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label className="text-base font-semibold">Sponsor Tier Prices ($)</Label>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 pt-1">
-                      {(["Bronze", "Silver", "Gold", "Platinum", "Diamond"] as const).map(tier => {
-                        const key = `sponsorPrice${tier}` as keyof typeof localSettings;
-                        return (
-                          <div key={tier} className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">{tier}</Label>
-                            <Input
-                              type="number"
-                              value={(localSettings[key] as number) || 0}
-                              onChange={e => setLocalSettings(p => ({ ...p, [key]: Number(e.target.value) }))}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label className="text-base font-semibold">Sponsor Spot Limits (per tier)</Label>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 pt-1">
-                      {(["Bronze", "Silver", "Gold", "Platinum", "Diamond"] as const).map(tier => {
-                        const key = `sponsorSpotLimit${tier}` as keyof typeof localSettings;
-                        return (
-                          <div key={tier} className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">{tier}</Label>
-                            <Input
-                              type="number"
-                              value={(localSettings[key] as number) || 0}
-                              onChange={e => setLocalSettings(p => ({ ...p, [key]: Number(e.target.value) }))}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
+                </CardContent>
+              </Card>
+
+              {/* Sponsor Tiers */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Sponsor Tiers</CardTitle>
+                  <CardDescription>
+                    Sponsors choose their own contribution within the tier range. Leave the Diamond maximum blank — there is no upper limit.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {/* Table — 5 columns */}
+                  <div className="grid grid-cols-[80px_1fr_1fr_80px] gap-x-4 gap-y-2 items-center">
+                    <TH>Tier</TH>
+                    <TH>Minimum ($)</TH>
+                    <TH>Maximum ($)</TH>
+                    <TH className="text-center">Spots</TH>
+
+                    {SPONSOR_TIERS.map(tier => {
+                      const minField   = `sponsorPrice${tier}`        as keyof FestivalSettings
+                      const maxField   = `sponsorPriceMax${tier}`     as keyof FestivalSettings
+                      const limitField = `sponsorSpotLimit${tier}`    as keyof FestivalSettings
+                      const isDiamond  = tier === "Diamond"
+
+                      const maxValue = localSettings[maxField]
+                      const maxDisplayValue = maxValue != null ? (maxValue as number) : ""
+
+                      return (
+                        <>
+                          <span key={`${tier}-label`} className="font-medium text-sm">{tier}</span>
+                          <Input
+                            key={`${tier}-min`}
+                            type="number"
+                            min={0}
+                            value={(localSettings[minField] as number) ?? 0}
+                            onChange={e => set(minField, Number(e.target.value))}
+                            className="text-sm"
+                          />
+                          <Input
+                            key={`${tier}-max`}
+                            type="number"
+                            min={0}
+                            value={maxDisplayValue}
+                            placeholder={isDiamond ? "No maximum" : ""}
+                            onChange={e => {
+                              const val = e.target.value
+                              set(maxField, val === "" ? null : Number(val))
+                            }}
+                            className="text-sm"
+                          />
+                          <Input
+                            key={`${tier}-spots`}
+                            type="number"
+                            min={0}
+                            value={(localSettings[limitField] as number) ?? 0}
+                            onChange={e => set(limitField, Number(e.target.value))}
+                            className="text-center text-sm"
+                          />
+                        </>
+                      )
+                    })}
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
 
+            {/* ── VENDOR FORM TAB ──────────────────────────────────────────── */}
             <TabsContent value="vendor_form">
               <Card>
                 <CardHeader>
@@ -266,12 +351,10 @@ export default function SettingsPage() {
                   <CardDescription>Customize the questions asked during vendor registration.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* First question */}
                   {localSettings.vendorFormQuestions && localSettings.vendorFormQuestions.length > 0 && (
                     <QuestionEditor formType="vendor" questions={[localSettings.vendorFormQuestions[0]]} />
                   )}
 
-                  {/* Details / description field */}
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Form Description / Details</Label>
                     <Textarea
@@ -283,21 +366,15 @@ export default function SettingsPage() {
                     <p className="text-xs text-muted-foreground">This text will appear on the public vendor application form.</p>
                   </div>
 
-                  {/* Remaining questions */}
                   {localSettings.vendorFormQuestions && localSettings.vendorFormQuestions.length > 1 && (
                     <QuestionEditor formType="vendor" questions={localSettings.vendorFormQuestions.slice(1)} />
                   )}
 
-                  {/* Image upload */}
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Header Image</Label>
                     {localSettings.vendorFormHeaderImage ? (
                       <div className="relative inline-block">
-                        <img
-                          src={localSettings.vendorFormHeaderImage}
-                          alt="Vendor form header"
-                          className="max-h-40 rounded-md border object-cover"
-                        />
+                        <img src={localSettings.vendorFormHeaderImage} alt="Vendor form header" className="max-h-40 rounded-md border object-cover" />
                         <button
                           onClick={() => setLocalSettings(prev => ({ ...prev, vendorFormHeaderImage: null }))}
                           className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 shadow"
@@ -309,18 +386,13 @@ export default function SettingsPage() {
                       <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
                         <ImageIcon className="w-8 h-8 text-muted-foreground mb-2" />
                         <span className="text-sm text-muted-foreground">Click to upload an image</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={e => {
-                            const file = e.target.files?.[0]
-                            if (!file) return
-                            const reader = new FileReader()
-                            reader.onload = ev => setLocalSettings(prev => ({ ...prev, vendorFormHeaderImage: ev.target?.result as string }))
-                            reader.readAsDataURL(file)
-                          }}
-                        />
+                        <input type="file" accept="image/*" className="hidden" onChange={e => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          const reader = new FileReader()
+                          reader.onload = ev => setLocalSettings(prev => ({ ...prev, vendorFormHeaderImage: ev.target?.result as string }))
+                          reader.readAsDataURL(file)
+                        }} />
                       </label>
                     )}
                     <p className="text-xs text-muted-foreground">Displayed at the top of the vendor application form.</p>
@@ -329,6 +401,7 @@ export default function SettingsPage() {
               </Card>
             </TabsContent>
 
+            {/* ── SPONSOR FORM TAB ─────────────────────────────────────────── */}
             <TabsContent value="sponsor_form">
               <Card>
                 <CardHeader>
@@ -336,12 +409,10 @@ export default function SettingsPage() {
                   <CardDescription>Customize the questions asked during sponsor registration.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* First question */}
                   {localSettings.sponsorFormQuestions && localSettings.sponsorFormQuestions.length > 0 && (
                     <QuestionEditor formType="sponsor" questions={[localSettings.sponsorFormQuestions[0]]} />
                   )}
 
-                  {/* Details / description field */}
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Form Description / Details</Label>
                     <Textarea
@@ -353,21 +424,15 @@ export default function SettingsPage() {
                     <p className="text-xs text-muted-foreground">This text will appear on the public sponsor application form.</p>
                   </div>
 
-                  {/* Remaining questions */}
                   {localSettings.sponsorFormQuestions && localSettings.sponsorFormQuestions.length > 1 && (
                     <QuestionEditor formType="sponsor" questions={localSettings.sponsorFormQuestions.slice(1)} />
                   )}
 
-                  {/* Image upload */}
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Header Image</Label>
                     {localSettings.sponsorFormHeaderImage ? (
                       <div className="relative inline-block">
-                        <img
-                          src={localSettings.sponsorFormHeaderImage}
-                          alt="Sponsor form header"
-                          className="max-h-40 rounded-md border object-cover"
-                        />
+                        <img src={localSettings.sponsorFormHeaderImage} alt="Sponsor form header" className="max-h-40 rounded-md border object-cover" />
                         <button
                           onClick={() => setLocalSettings(prev => ({ ...prev, sponsorFormHeaderImage: null }))}
                           className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 shadow"
@@ -379,18 +444,13 @@ export default function SettingsPage() {
                       <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
                         <ImageIcon className="w-8 h-8 text-muted-foreground mb-2" />
                         <span className="text-sm text-muted-foreground">Click to upload an image</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={e => {
-                            const file = e.target.files?.[0]
-                            if (!file) return
-                            const reader = new FileReader()
-                            reader.onload = ev => setLocalSettings(prev => ({ ...prev, sponsorFormHeaderImage: ev.target?.result as string }))
-                            reader.readAsDataURL(file)
-                          }}
-                        />
+                        <input type="file" accept="image/*" className="hidden" onChange={e => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          const reader = new FileReader()
+                          reader.onload = ev => setLocalSettings(prev => ({ ...prev, sponsorFormHeaderImage: ev.target?.result as string }))
+                          reader.readAsDataURL(file)
+                        }} />
                       </label>
                     )}
                     <p className="text-xs text-muted-foreground">Displayed at the top of the sponsor application form.</p>
@@ -399,6 +459,7 @@ export default function SettingsPage() {
               </Card>
             </TabsContent>
 
+            {/* ── VOLUNTEER FORM TAB ───────────────────────────────────────── */}
             <TabsContent value="volunteer_form">
               <Card>
                 <CardHeader>

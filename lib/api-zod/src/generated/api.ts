@@ -287,37 +287,65 @@ export const GetSettingsQueryParams = zod.object({
   "yearId": zod.coerce.number().optional()
 })
 
+const formQuestionSchema = zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "type": zod.enum(['text', 'textarea', 'select', 'checkbox']),
+  "required": zod.boolean(),
+  "options": zod.array(zod.string()).nullish(),
+  "placeholder": zod.string().nullish()
+})
+
+const settingsShape = {
+  // Vendor categories (4)
+  "vendorTypeLabelMajorFood":    zod.string(),
+  "vendorTypeLabelSpecialtyFood": zod.string(),
+  "vendorTypeLabelRetail":       zod.string(),
+  "vendorTypeLabelNonprofit":    zod.string(),
+  "vendorPriceMajorFood":    zod.number(),
+  "vendorPriceSpecialtyFood": zod.number(),
+  "vendorPriceRetail":       zod.number(),
+  "vendorPriceNonprofit":    zod.number(),
+  "vendorSpotLimitMajorFood":    zod.number(),
+  "vendorSpotLimitSpecialtyFood": zod.number(),
+  "vendorSpotLimitRetail":       zod.number(),
+  "vendorSpotLimitNonprofit":    zod.number(),
+  // Sponsor tiers — min and max prices
+  "sponsorPriceBronze":   zod.number(),
+  "sponsorPriceSilver":   zod.number(),
+  "sponsorPriceGold":     zod.number(),
+  "sponsorPricePlatinum": zod.number(),
+  "sponsorPriceDiamond":  zod.number(),
+  "sponsorPriceMaxBronze":   zod.number(),
+  "sponsorPriceMaxSilver":   zod.number(),
+  "sponsorPriceMaxGold":     zod.number(),
+  "sponsorPriceMaxPlatinum": zod.number(),
+  "sponsorPriceMaxDiamond":  zod.number().nullable(),
+  "sponsorSpotLimitBronze":   zod.number(),
+  "sponsorSpotLimitSilver":   zod.number(),
+  "sponsorSpotLimitGold":     zod.number(),
+  "sponsorSpotLimitPlatinum": zod.number(),
+  "sponsorSpotLimitDiamond":  zod.number(),
+  // Dates & operational settings
+  "festivalDate":        zod.string().nullable(),
+  "applicationDeadline": zod.string().nullable(),
+  "documentDeadline":    zod.string().nullable(),
+  "paymentWindowDays":   zod.number(),
+  "notificationEmail":   zod.string().nullable(),
+  // Form questions
+  "vendorFormQuestions":    zod.array(formQuestionSchema),
+  "sponsorFormQuestions":   zod.array(formQuestionSchema),
+  "volunteerFormQuestions": zod.array(formQuestionSchema),
+}
+
 export const GetSettingsResponse = zod.object({
   "id": zod.number(),
   "yearId": zod.number(),
-  "vendorPrice": zod.number(),
-  "sponsorPrice": zod.number(),
-  "vendorSpotLimit": zod.number(),
-  "sponsorSpotLimit": zod.number(),
-  "vendorFormQuestions": zod.array(zod.object({
-  "id": zod.string(),
-  "label": zod.string(),
-  "type": zod.enum(['text', 'textarea', 'select', 'checkbox']),
-  "required": zod.boolean(),
-  "options": zod.array(zod.string()).nullish(),
-  "placeholder": zod.string().nullish()
-})),
-  "sponsorFormQuestions": zod.array(zod.object({
-  "id": zod.string(),
-  "label": zod.string(),
-  "type": zod.enum(['text', 'textarea', 'select', 'checkbox']),
-  "required": zod.boolean(),
-  "options": zod.array(zod.string()).nullish(),
-  "placeholder": zod.string().nullish()
-})),
-  "volunteerFormQuestions": zod.array(zod.object({
-  "id": zod.string(),
-  "label": zod.string(),
-  "type": zod.enum(['text', 'textarea', 'select', 'checkbox']),
-  "required": zod.boolean(),
-  "options": zod.array(zod.string()).nullish(),
-  "placeholder": zod.string().nullish()
-}))
+  ...settingsShape,
+  "sponsorFormDescription":  zod.string().nullable(),
+  "sponsorFormHeaderImage":  zod.string().nullable(),
+  "vendorFormDescription":   zod.string().nullable(),
+  "vendorFormHeaderImage":   zod.string().nullable(),
 })
 
 
@@ -325,67 +353,60 @@ export const GetSettingsResponse = zod.object({
  * @summary Update settings
  */
 export const UpdateSettingsBody = zod.object({
-  "vendorPrice": zod.number().optional(),
-  "sponsorPrice": zod.number().optional(),
-  "vendorSpotLimit": zod.number().optional(),
-  "sponsorSpotLimit": zod.number().optional(),
-  "vendorFormQuestions": zod.array(zod.object({
-  "id": zod.string(),
-  "label": zod.string(),
-  "type": zod.enum(['text', 'textarea', 'select', 'checkbox']),
-  "required": zod.boolean(),
-  "options": zod.array(zod.string()).nullish(),
-  "placeholder": zod.string().nullish()
-})).optional(),
-  "sponsorFormQuestions": zod.array(zod.object({
-  "id": zod.string(),
-  "label": zod.string(),
-  "type": zod.enum(['text', 'textarea', 'select', 'checkbox']),
-  "required": zod.boolean(),
-  "options": zod.array(zod.string()).nullish(),
-  "placeholder": zod.string().nullish()
-})).optional(),
-  "volunteerFormQuestions": zod.array(zod.object({
-  "id": zod.string(),
-  "label": zod.string(),
-  "type": zod.enum(['text', 'textarea', 'select', 'checkbox']),
-  "required": zod.boolean(),
-  "options": zod.array(zod.string()).nullish(),
-  "placeholder": zod.string().nullish()
-})).optional()
+  // Vendor categories (4)
+  "vendorTypeLabelMajorFood":    zod.string().optional(),
+  "vendorTypeLabelSpecialtyFood": zod.string().optional(),
+  "vendorTypeLabelRetail":       zod.string().optional(),
+  "vendorTypeLabelNonprofit":    zod.string().optional(),
+  "vendorPriceMajorFood":    zod.number().optional(),
+  "vendorPriceSpecialtyFood": zod.number().optional(),
+  "vendorPriceRetail":       zod.number().optional(),
+  "vendorPriceNonprofit":    zod.number().optional(),
+  "vendorSpotLimitMajorFood":    zod.number().optional(),
+  "vendorSpotLimitSpecialtyFood": zod.number().optional(),
+  "vendorSpotLimitRetail":       zod.number().optional(),
+  "vendorSpotLimitNonprofit":    zod.number().optional(),
+  // Sponsor tiers — min and max prices
+  "sponsorPriceBronze":   zod.number().optional(),
+  "sponsorPriceSilver":   zod.number().optional(),
+  "sponsorPriceGold":     zod.number().optional(),
+  "sponsorPricePlatinum": zod.number().optional(),
+  "sponsorPriceDiamond":  zod.number().optional(),
+  "sponsorPriceMaxBronze":   zod.number().optional(),
+  "sponsorPriceMaxSilver":   zod.number().optional(),
+  "sponsorPriceMaxGold":     zod.number().optional(),
+  "sponsorPriceMaxPlatinum": zod.number().optional(),
+  "sponsorPriceMaxDiamond":  zod.number().nullable().optional(),
+  "sponsorSpotLimitBronze":   zod.number().optional(),
+  "sponsorSpotLimitSilver":   zod.number().optional(),
+  "sponsorSpotLimitGold":     zod.number().optional(),
+  "sponsorSpotLimitPlatinum": zod.number().optional(),
+  "sponsorSpotLimitDiamond":  zod.number().optional(),
+  // Dates & operational settings
+  "festivalDate":        zod.string().nullable().optional(),
+  "applicationDeadline": zod.string().nullable().optional(),
+  "documentDeadline":    zod.string().nullable().optional(),
+  "paymentWindowDays":   zod.number().optional(),
+  "notificationEmail":   zod.string().nullable().optional(),
+  // Form questions
+  "vendorFormQuestions":    zod.array(formQuestionSchema).optional(),
+  "sponsorFormQuestions":   zod.array(formQuestionSchema).optional(),
+  "volunteerFormQuestions": zod.array(formQuestionSchema).optional(),
+  // Form customisation
+  "sponsorFormDescription":  zod.string().nullable().optional(),
+  "sponsorFormHeaderImage":  zod.string().nullable().optional(),
+  "vendorFormDescription":   zod.string().nullable().optional(),
+  "vendorFormHeaderImage":   zod.string().nullable().optional(),
 })
 
 export const UpdateSettingsResponse = zod.object({
   "id": zod.number(),
   "yearId": zod.number(),
-  "vendorPrice": zod.number(),
-  "sponsorPrice": zod.number(),
-  "vendorSpotLimit": zod.number(),
-  "sponsorSpotLimit": zod.number(),
-  "vendorFormQuestions": zod.array(zod.object({
-  "id": zod.string(),
-  "label": zod.string(),
-  "type": zod.enum(['text', 'textarea', 'select', 'checkbox']),
-  "required": zod.boolean(),
-  "options": zod.array(zod.string()).nullish(),
-  "placeholder": zod.string().nullish()
-})),
-  "sponsorFormQuestions": zod.array(zod.object({
-  "id": zod.string(),
-  "label": zod.string(),
-  "type": zod.enum(['text', 'textarea', 'select', 'checkbox']),
-  "required": zod.boolean(),
-  "options": zod.array(zod.string()).nullish(),
-  "placeholder": zod.string().nullish()
-})),
-  "volunteerFormQuestions": zod.array(zod.object({
-  "id": zod.string(),
-  "label": zod.string(),
-  "type": zod.enum(['text', 'textarea', 'select', 'checkbox']),
-  "required": zod.boolean(),
-  "options": zod.array(zod.string()).nullish(),
-  "placeholder": zod.string().nullish()
-}))
+  ...settingsShape,
+  "sponsorFormDescription":  zod.string().nullable(),
+  "sponsorFormHeaderImage":  zod.string().nullable(),
+  "vendorFormDescription":   zod.string().nullable(),
+  "vendorFormHeaderImage":   zod.string().nullable(),
 })
 
 

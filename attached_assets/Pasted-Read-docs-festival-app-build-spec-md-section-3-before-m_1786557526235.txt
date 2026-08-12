@@ -1,0 +1,34 @@
+Read docs/festival-app-build-spec.md section 3 before making changes.
+
+I need to replace the vendor categories and sponsor tiers throughout the app. The current ones are placeholders and are all wrong.
+
+Vendor categories — replace the existing five (food, crafts, merchandise, cultural, other) with exactly these four:
+
+major_food — "Major Food Vendor" — $2,000 — 10'x20' footprint — 5 spots
+specialty_food — "Specialty Food & Beverage Vendor" — $600 — 10'x10' — 15 spots
+retail — "Retail, Artisan & Business Vendor" — $300 — 10'x10' — 30 spots
+nonprofit — "Verified Nonprofit Organization" — $150 — 10'x10' — 20 spots
+
+Important — spot limits are soft targets, not hard caps. A category reaching its limit must never block or reject an application. The form always accepts submissions. The limits exist so the admin can see which categories are filling up. Show the count received against the target on the admin dashboard only — never show remaining spots, availability, or "X left" to public applicants anywhere on the public site.
+
+Sponsor tiers — keep the five names but replace the amounts. Each tier now has a minimum and a maximum, because sponsors choose their own amount within the tier:
+
+Bronze — $750 to $1,499 — 10 available
+Silver — $1,500 to $2,999 — 10 available
+Gold — $3,000 to $4,999 — 10 available
+Platinum — $5,000 to $9,999 — 5 available
+Diamond — $10,000 and above, no maximum — 3 available
+
+Add a sponsorship_amount column to the sponsors table for the amount the sponsor actually chooses.
+
+Also add these settings, editable from the settings page:
+
+Festival date — 26 September 2026
+Application deadline — 10 September 2026
+Document deadline — 18 September 2026
+Payment window after approval, in days — 7
+Notification email address — vendors@romaniancenter.org
+
+Update the settings page UI to match the new categories and tiers. Do not touch the application forms, the portal, or Stripe in this change — those come next.
+
+Tell me what database migration is needed before you run it.

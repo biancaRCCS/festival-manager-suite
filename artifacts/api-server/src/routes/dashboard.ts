@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, festivalYearsTable, festivalSettingsTable, vendorsTable, sponsorsTable, volunteersTable, activityLogTable } from "@workspace/db";
-import { eq, and, desc, count, sql } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { requireStaff } from "../lib/auth";
 import { GetDashboardFinancialsQueryParams } from "@workspace/api-zod";
 
@@ -30,6 +30,34 @@ async function getStatsForYear(yearId: number) {
   return { vendors, sponsors, volunteers, statFor };
 }
 
+// Build vendor price map from settings (4 categories)
+function buildVendorPriceMap(s: typeof festivalSettingsTable.$inferSelect | undefined): Record<string, number> {
+  return {
+    major_food:    s ? parseFloat(s.vendorPriceMajorFood)    : 2000,
+    specialty_food: s ? parseFloat(s.vendorPriceSpecialtyFood) : 600,
+    retail:        s ? parseFloat(s.vendorPriceRetail)       : 300,
+    nonprofit:     s ? parseFloat(s.vendorPriceNonprofit)    : 150,
+  };
+}
+
+// Build sponsor price map from settings — uses tier min price as the revenue estimate
+// when the sponsor's actual chosen amount (sponsorshipAmount) is not yet set.
+function buildSponsorPriceMap(s: typeof festivalSettingsTable.$inferSelect | undefined): Record<string, number> {
+  return {
+    bronze:   s ? parseFloat(s.sponsorPriceBronze)   : 750,
+    silver:   s ? parseFloat(s.sponsorPriceSilver)   : 1500,
+    gold:     s ? parseFloat(s.sponsorPriceGold)     : 3000,
+    platinum: s ? parseFloat(s.sponsorPricePlatinum) : 5000,
+    diamond:  s ? parseFloat(s.sponsorPriceDiamond)  : 10000,
+  };
+}
+
+// Revenue for a paid sponsor: use sponsorshipAmount if set, else fall back to tier min
+function sponsorAmount(sp: typeof sponsorsTable.$inferSelect, tierMap: Record<string, number>): number {
+  if (sp.sponsorshipAmount != null) return parseFloat(sp.sponsorshipAmount);
+  return tierMap[sp.tier ?? "bronze"] ?? 750;
+}
+
 router.get("/dashboard/summary", requireStaff, async (req, res): Promise<void> => {
   const years = await db.select().from(festivalYearsTable).where(eq(festivalYearsTable.isActive, true)).limit(1);
   if (years.length === 0) {
@@ -42,31 +70,27 @@ router.get("/dashboard/summary", requireStaff, async (req, res): Promise<void> =
   const settingsRows = await db.select().from(festivalSettingsTable).where(eq(festivalSettingsTable.yearId, year.id)).limit(1);
   const s = settingsRows[0];
 
-  const vendorPriceMap: Record<string, number> = {
-    food:        s ? parseFloat(s.vendorPriceFood)        : 200,
-    crafts:      s ? parseFloat(s.vendorPriceCrafts)      : 150,
-    merchandise: s ? parseFloat(s.vendorPriceMerchandise) : 150,
-    cultural:    s ? parseFloat(s.vendorPriceCultural)    : 100,
-    other:       s ? parseFloat(s.vendorPriceOther)       : 100,
-  };
-  const sponsorPriceMap: Record<string, number> = {
-    bronze:   s ? parseFloat(s.sponsorPriceBronze)   : 250,
-    silver:   s ? parseFloat(s.sponsorPriceSilver)   : 500,
-    gold:     s ? parseFloat(s.sponsorPriceGold)     : 1000,
-    platinum: s ? parseFloat(s.sponsorPricePlatinum) : 2000,
-    diamond:  s ? parseFloat(s.sponsorPriceDiamond)  : 5000,
-  };
+  const vendorPriceMap  = buildVendorPriceMap(s);
+  const sponsorPriceMap = buildSponsorPriceMap(s);
 
-  const paidVendors = vendors.filter(v => v.status === "paid" || v.status === "final_approved");
+  const paidVendors  = vendors.filter(v => v.status === "paid" || v.status === "final_approved");
   const paidSponsors = sponsors.filter(sp => sp.status === "paid" || sp.status === "final_approved");
-  const vendorRevenue = paidVendors.reduce((sum, v) => sum + (vendorPriceMap[v.vendorType] ?? 150), 0);
-  const sponsorRevenue = paidSponsors.reduce((sum, sp) => sum + (sponsorPriceMap[sp.tier ?? "bronze"] ?? 250), 0);
+  const vendorRevenue  = paidVendors.reduce((sum, v) => sum + (vendorPriceMap[v.vendorType] ?? 300), 0);
+  const sponsorRevenue = paidSponsors.reduce((sum, sp) => sum + sponsorAmount(sp, sponsorPriceMap), 0);
   const totalRevenue = vendorRevenue + sponsorRevenue;
 
-  const vendorStats = statFor(vendors);
-  const sponsorStats = statFor(sponsors);
+  const vendorStats    = statFor(vendors);
+  const sponsorStats   = statFor(sponsors);
   const volunteerStats = statFor(volunteers);
   const pendingActions = vendorStats.pending + sponsorStats.pending + volunteerStats.pending;
+
+  // Category breakdown for admin visibility (counts against targets)
+  const vendorCategoryStats = s ? [
+    { key: "major_food",    label: s.vendorTypeLabelMajorFood,    count: vendors.filter(v => v.vendorType === "major_food").length,    target: s.vendorSpotLimitMajorFood,    booth: "10′ × 20′" },
+    { key: "specialty_food", label: s.vendorTypeLabelSpecialtyFood, count: vendors.filter(v => v.vendorType === "specialty_food").length, target: s.vendorSpotLimitSpecialtyFood, booth: "10′ × 10′" },
+    { key: "retail",        label: s.vendorTypeLabelRetail,        count: vendors.filter(v => v.vendorType === "retail").length,        target: s.vendorSpotLimitRetail,        booth: "10′ × 10′" },
+    { key: "nonprofit",     label: s.vendorTypeLabelNonprofit,     count: vendors.filter(v => v.vendorType === "nonprofit").length,     target: s.vendorSpotLimitNonprofit,     booth: "10′ × 10′" },
+  ] : [];
 
   res.json({
     festivalYear: year,
@@ -78,6 +102,7 @@ router.get("/dashboard/summary", requireStaff, async (req, res): Promise<void> =
     sponsorRevenue,
     totalRevenue,
     pendingActions,
+    vendorCategoryStats,
   });
 });
 
@@ -97,20 +122,8 @@ router.get("/dashboard/financials", requireStaff, async (req, res): Promise<void
   const settingsRows = await db.select().from(festivalSettingsTable).where(eq(festivalSettingsTable.yearId, yearId)).limit(1);
   const sf = settingsRows[0];
 
-  const vendorPriceMapF: Record<string, number> = {
-    food:        sf ? parseFloat(sf.vendorPriceFood)        : 200,
-    crafts:      sf ? parseFloat(sf.vendorPriceCrafts)      : 150,
-    merchandise: sf ? parseFloat(sf.vendorPriceMerchandise) : 150,
-    cultural:    sf ? parseFloat(sf.vendorPriceCultural)    : 100,
-    other:       sf ? parseFloat(sf.vendorPriceOther)       : 100,
-  };
-  const sponsorPriceMapF: Record<string, number> = {
-    bronze:   sf ? parseFloat(sf.sponsorPriceBronze)   : 250,
-    silver:   sf ? parseFloat(sf.sponsorPriceSilver)   : 500,
-    gold:     sf ? parseFloat(sf.sponsorPriceGold)     : 1000,
-    platinum: sf ? parseFloat(sf.sponsorPricePlatinum) : 2000,
-    diamond:  sf ? parseFloat(sf.sponsorPriceDiamond)  : 5000,
-  };
+  const vendorPriceMap  = buildVendorPriceMap(sf);
+  const sponsorPriceMap = buildSponsorPriceMap(sf);
 
   const vendors = await db.select().from(vendorsTable).where(
     and(eq(vendorsTable.yearId, yearId), sql`status IN ('paid', 'final_approved')`)
@@ -119,20 +132,20 @@ router.get("/dashboard/financials", requireStaff, async (req, res): Promise<void
     and(eq(sponsorsTable.yearId, yearId), sql`status IN ('paid', 'final_approved')`)
   );
 
-  const vendorRevenue = vendors.reduce((sum, v) => sum + (vendorPriceMapF[v.vendorType] ?? 150), 0);
-  const sponsorRevenue = sponsors.reduce((sum, sp) => sum + (sponsorPriceMapF[sp.tier ?? "bronze"] ?? 250), 0);
+  const vendorRevenue  = vendors.reduce((sum, v) => sum + (vendorPriceMap[v.vendorType] ?? 300), 0);
+  const sponsorRevenue = sponsors.reduce((sum, sp) => sum + sponsorAmount(sp, sponsorPriceMap), 0);
 
   const recentPayments = [
     ...vendors.filter(v => v.paidAt).map(v => ({
       type: "vendor" as const,
       name: `${v.name} — ${v.businessName}`,
-      amount: vendorPriceMapF[v.vendorType] ?? 150,
+      amount: vendorPriceMap[v.vendorType] ?? 300,
       paidAt: v.paidAt!.toISOString(),
     })),
     ...sponsors.filter(s => s.paidAt).map(s => ({
       type: "sponsor" as const,
       name: `${s.name} — ${s.orgName}`,
-      amount: sponsorPriceMapF[s.tier ?? "bronze"] ?? 250,
+      amount: sponsorAmount(s, sponsorPriceMap),
       paidAt: s.paidAt!.toISOString(),
     })),
   ].sort((a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime()).slice(0, 10);

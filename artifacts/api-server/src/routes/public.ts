@@ -143,11 +143,10 @@ router.get("/public/form-questions", async (req, res): Promise<void> => {
   const deadline = s.applicationDeadline ?? null;
 
   const vendorTypes = [
-    { key: "food",        label: s.vendorTypeLabelFood },
-    { key: "crafts",      label: s.vendorTypeLabelCrafts },
-    { key: "merchandise", label: s.vendorTypeLabelMerchandise },
-    { key: "cultural",    label: s.vendorTypeLabelCultural },
-    { key: "other",       label: s.vendorTypeLabelOther },
+    { key: "major_food",    label: s.vendorTypeLabelMajorFood,    price: parseFloat(s.vendorPriceMajorFood),    booth: "10′ × 20′" },
+    { key: "specialty_food", label: s.vendorTypeLabelSpecialtyFood, price: parseFloat(s.vendorPriceSpecialtyFood), booth: "10′ × 10′" },
+    { key: "retail",        label: s.vendorTypeLabelRetail,        price: parseFloat(s.vendorPriceRetail),        booth: "10′ × 10′" },
+    { key: "nonprofit",     label: s.vendorTypeLabelNonprofit,     price: parseFloat(s.vendorPriceNonprofit),     booth: "10′ × 10′" },
   ];
 
   if (type === "vendor") {

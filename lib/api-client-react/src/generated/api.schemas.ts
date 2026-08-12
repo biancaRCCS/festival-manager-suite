@@ -33,7 +33,6 @@ export interface FestivalYearUpdate {
 
 export type FormQuestionType = typeof FormQuestionType[keyof typeof FormQuestionType];
 
-
 export const FormQuestionType = {
   text: 'text',
   textarea: 'textarea',
@@ -55,31 +54,51 @@ export interface FormQuestion {
 export interface FestivalSettings {
   id: number;
   yearId: number;
-  vendorTypeLabelFood: string;
-  vendorTypeLabelCrafts: string;
-  vendorTypeLabelMerchandise: string;
-  vendorTypeLabelCultural: string;
-  vendorTypeLabelOther: string;
-  vendorPriceFood: number;
-  vendorPriceCrafts: number;
-  vendorPriceMerchandise: number;
-  vendorPriceCultural: number;
-  vendorPriceOther: number;
+
+  // Vendor categories (4)
+  vendorTypeLabelMajorFood: string;
+  vendorTypeLabelSpecialtyFood: string;
+  vendorTypeLabelRetail: string;
+  vendorTypeLabelNonprofit: string;
+  vendorPriceMajorFood: number;
+  vendorPriceSpecialtyFood: number;
+  vendorPriceRetail: number;
+  vendorPriceNonprofit: number;
+  vendorSpotLimitMajorFood: number;
+  vendorSpotLimitSpecialtyFood: number;
+  vendorSpotLimitRetail: number;
+  vendorSpotLimitNonprofit: number;
+
+  // Sponsor tiers — min and max prices
   sponsorPriceBronze: number;
   sponsorPriceSilver: number;
   sponsorPriceGold: number;
   sponsorPricePlatinum: number;
   sponsorPriceDiamond: number;
-  vendorSpotLimitFood: number;
-  vendorSpotLimitCrafts: number;
-  vendorSpotLimitMerchandise: number;
-  vendorSpotLimitCultural: number;
-  vendorSpotLimitOther: number;
+  sponsorPriceMaxBronze: number;
+  sponsorPriceMaxSilver: number;
+  sponsorPriceMaxGold: number;
+  sponsorPriceMaxPlatinum: number;
+  /** @nullable */
+  sponsorPriceMaxDiamond?: number | null;
   sponsorSpotLimitBronze: number;
   sponsorSpotLimitSilver: number;
   sponsorSpotLimitGold: number;
   sponsorSpotLimitPlatinum: number;
   sponsorSpotLimitDiamond: number;
+
+  // Dates & operational settings
+  /** @nullable */
+  festivalDate?: string | null;
+  /** @nullable */
+  applicationDeadline?: string | null;
+  /** @nullable */
+  documentDeadline?: string | null;
+  paymentWindowDays: number;
+  /** @nullable */
+  notificationEmail?: string | null;
+
+  // Form customisation
   vendorFormQuestions: FormQuestion[];
   sponsorFormQuestions: FormQuestion[];
   volunteerFormQuestions: FormQuestion[];
@@ -94,31 +113,45 @@ export interface FestivalSettings {
 }
 
 export interface FestivalSettingsUpdate {
-  vendorTypeLabelFood?: string;
-  vendorTypeLabelCrafts?: string;
-  vendorTypeLabelMerchandise?: string;
-  vendorTypeLabelCultural?: string;
-  vendorTypeLabelOther?: string;
-  vendorPriceFood?: number;
-  vendorPriceCrafts?: number;
-  vendorPriceMerchandise?: number;
-  vendorPriceCultural?: number;
-  vendorPriceOther?: number;
+  // Vendor categories (4)
+  vendorTypeLabelMajorFood?: string;
+  vendorTypeLabelSpecialtyFood?: string;
+  vendorTypeLabelRetail?: string;
+  vendorTypeLabelNonprofit?: string;
+  vendorPriceMajorFood?: number;
+  vendorPriceSpecialtyFood?: number;
+  vendorPriceRetail?: number;
+  vendorPriceNonprofit?: number;
+  vendorSpotLimitMajorFood?: number;
+  vendorSpotLimitSpecialtyFood?: number;
+  vendorSpotLimitRetail?: number;
+  vendorSpotLimitNonprofit?: number;
+
+  // Sponsor tiers — min and max prices
   sponsorPriceBronze?: number;
   sponsorPriceSilver?: number;
   sponsorPriceGold?: number;
   sponsorPricePlatinum?: number;
   sponsorPriceDiamond?: number;
-  vendorSpotLimitFood?: number;
-  vendorSpotLimitCrafts?: number;
-  vendorSpotLimitMerchandise?: number;
-  vendorSpotLimitCultural?: number;
-  vendorSpotLimitOther?: number;
+  sponsorPriceMaxBronze?: number;
+  sponsorPriceMaxSilver?: number;
+  sponsorPriceMaxGold?: number;
+  sponsorPriceMaxPlatinum?: number;
+  sponsorPriceMaxDiamond?: number | null;
   sponsorSpotLimitBronze?: number;
   sponsorSpotLimitSilver?: number;
   sponsorSpotLimitGold?: number;
   sponsorSpotLimitPlatinum?: number;
   sponsorSpotLimitDiamond?: number;
+
+  // Dates & operational settings
+  festivalDate?: string | null;
+  applicationDeadline?: string | null;
+  documentDeadline?: string | null;
+  paymentWindowDays?: number;
+  notificationEmail?: string | null;
+
+  // Form customisation
   vendorFormQuestions?: FormQuestion[];
   sponsorFormQuestions?: FormQuestion[];
   volunteerFormQuestions?: FormQuestion[];
@@ -130,7 +163,6 @@ export interface FestivalSettingsUpdate {
 
 export type VendorStatus = typeof VendorStatus[keyof typeof VendorStatus];
 
-
 export const VendorStatus = {
   pending: 'pending',
   approved: 'approved',
@@ -141,6 +173,17 @@ export const VendorStatus = {
 } as const;
 
 export type VendorApplicationData = { [key: string]: unknown };
+
+export type VendorApplicationInputAnswers = { [key: string]: unknown };
+
+export interface VendorApplicationInput {
+  name: string;
+  businessName: string;
+  email: string;
+  phone: string;
+  vendorType: string;
+  answers: VendorApplicationInputAnswers;
+}
 
 export interface Vendor {
   id: number;
@@ -160,6 +203,8 @@ export interface Vendor {
   /** @nullable */
   reviewNote?: string | null;
   /** @nullable */
+  agreementSignedName?: string | null;
+  /** @nullable */
   paidAt?: string | null;
   /** @nullable */
   approvedAt?: string | null;
@@ -169,7 +214,6 @@ export interface Vendor {
 }
 
 export type SponsorStatus = typeof SponsorStatus[keyof typeof SponsorStatus];
-
 
 export const SponsorStatus = {
   pending: 'pending',
@@ -182,6 +226,19 @@ export const SponsorStatus = {
 
 export type SponsorApplicationData = { [key: string]: unknown };
 
+export type SponsorApplicationInputAnswers = { [key: string]: unknown };
+
+export interface SponsorApplicationInput {
+  name: string;
+  orgName: string;
+  email: string;
+  phone: string;
+  tier: string;
+  /** Amount chosen by the sponsor within the tier range */
+  sponsorshipAmount?: number;
+  answers: SponsorApplicationInputAnswers;
+}
+
 export interface Sponsor {
   id: number;
   yearId: number;
@@ -190,6 +247,8 @@ export interface Sponsor {
   email: string;
   phone: string;
   tier: string;
+  /** @nullable */
+  sponsorshipAmount?: number | null;
   status: SponsorStatus;
   applicationData: SponsorApplicationData;
   agreementSigned?: boolean;
@@ -199,6 +258,8 @@ export interface Sponsor {
   location?: string | null;
   /** @nullable */
   reviewNote?: string | null;
+  /** @nullable */
+  agreementSignedName?: string | null;
   /** @nullable */
   paidAt?: string | null;
   /** @nullable */
@@ -210,7 +271,6 @@ export interface Sponsor {
 
 export type VolunteerStatus = typeof VolunteerStatus[keyof typeof VolunteerStatus];
 
-
 export const VolunteerStatus = {
   pending: 'pending',
   approved: 'approved',
@@ -218,6 +278,16 @@ export const VolunteerStatus = {
 } as const;
 
 export type VolunteerApplicationData = { [key: string]: unknown };
+
+export type VolunteerApplicationInputAnswers = { [key: string]: unknown };
+
+export interface VolunteerApplicationInput {
+  name: string;
+  email: string;
+  phone: string;
+  availability?: string;
+  answers: VolunteerApplicationInputAnswers;
+}
 
 export interface Volunteer {
   id: number;
@@ -237,7 +307,6 @@ export interface Volunteer {
 }
 
 export type StaffMemberRole = typeof StaffMemberRole[keyof typeof StaffMemberRole];
-
 
 export const StaffMemberRole = {
   admin: 'admin',
@@ -263,6 +332,14 @@ export interface ApplicationStats {
   finalApproved: number;
 }
 
+export interface VendorCategoryStat {
+  key: string;
+  label: string;
+  count: number;
+  target: number;
+  booth: string;
+}
+
 export interface DashboardSummary {
   festivalYear: FestivalYear;
   /** Days until the festival */
@@ -275,10 +352,11 @@ export interface DashboardSummary {
   totalRevenue: number;
   /** Total applications needing attention */
   pendingActions: number;
+  /** Per-category counts vs soft targets (admin only) */
+  vendorCategoryStats?: VendorCategoryStat[];
 }
 
 export type PaymentRecordType = typeof PaymentRecordType[keyof typeof PaymentRecordType];
-
 
 export const PaymentRecordType = {
   vendor: 'vendor',
@@ -303,7 +381,6 @@ export interface FinancialSummary {
 
 export type ActivityItemType = typeof ActivityItemType[keyof typeof ActivityItemType];
 
-
 export const ActivityItemType = {
   new_application: 'new_application',
   approved: 'approved',
@@ -314,7 +391,6 @@ export const ActivityItemType = {
 } as const;
 
 export type ActivityItemEntityType = typeof ActivityItemEntityType[keyof typeof ActivityItemEntityType];
-
 
 export const ActivityItemEntityType = {
   vendor: 'vendor',
@@ -331,38 +407,6 @@ export interface ActivityItem {
   createdAt: string;
 }
 
-export type VendorApplicationInputAnswers = { [key: string]: unknown };
-
-export interface VendorApplicationInput {
-  name: string;
-  businessName: string;
-  email: string;
-  phone: string;
-  vendorType: string;
-  answers: VendorApplicationInputAnswers;
-}
-
-export type SponsorApplicationInputAnswers = { [key: string]: unknown };
-
-export interface SponsorApplicationInput {
-  name: string;
-  orgName: string;
-  email: string;
-  phone: string;
-  tier: string;
-  answers: SponsorApplicationInputAnswers;
-}
-
-export type VolunteerApplicationInputAnswers = { [key: string]: unknown };
-
-export interface VolunteerApplicationInput {
-  name: string;
-  email: string;
-  phone: string;
-  availability?: string;
-  answers: VolunteerApplicationInputAnswers;
-}
-
 export interface ApplicationConfirmation {
   message: string;
   id: number;
@@ -370,12 +414,16 @@ export interface ApplicationConfirmation {
 
 export type PortalInfoType = typeof PortalInfoType[keyof typeof PortalInfoType];
 
-
 export const PortalInfoType = {
   vendor: 'vendor',
   sponsor: 'sponsor',
 } as const;
 
+/**
+ * Portal info returned to vendor/sponsor via their portal token.
+ * Price fields reflect the new category/tier structure.
+ * Note: vendor price fields will be updated when the portal rebuild lands.
+ */
 export interface PortalInfo {
   type: PortalInfoType;
   id?: number;
@@ -396,17 +444,9 @@ export interface PortalInfo {
   tier?: string | null;
   /** @nullable */
   vendorType?: string | null;
-  /** @nullable */
-  vendorPriceFood?: number | null;
-  /** @nullable */
-  vendorPriceCrafts?: number | null;
-  /** @nullable */
-  vendorPriceMerchandise?: number | null;
-  /** @nullable */
-  vendorPriceCultural?: number | null;
-  /** @nullable */
-  vendorPriceOther?: number | null;
-  /** @nullable */
+  /** @nullable Vendor category fee */
+  vendorPrice?: number | null;
+  /** @nullable Sponsor tier minimum */
   sponsorPriceBronze?: number | null;
   /** @nullable */
   sponsorPriceSilver?: number | null;
@@ -416,6 +456,8 @@ export interface PortalInfo {
   sponsorPricePlatinum?: number | null;
   /** @nullable */
   sponsorPriceDiamond?: number | null;
+  /** @nullable Sponsor's chosen amount */
+  sponsorshipAmount?: number | null;
 }
 
 export interface CheckoutSession {
@@ -427,7 +469,6 @@ export interface AgreementSignature {
 }
 
 export type ReviewDecisionStatus = typeof ReviewDecisionStatus[keyof typeof ReviewDecisionStatus];
-
 
 export const ReviewDecisionStatus = {
   approved: 'approved',
@@ -441,7 +482,6 @@ export interface ReviewDecision {
 }
 
 export type VolunteerReviewStatus = typeof VolunteerReviewStatus[keyof typeof VolunteerReviewStatus];
-
 
 export const VolunteerReviewStatus = {
   approved: 'approved',
@@ -463,7 +503,6 @@ export interface SpotAssignment {
 
 export type StaffInviteRole = typeof StaffInviteRole[keyof typeof StaffInviteRole];
 
-
 export const StaffInviteRole = {
   admin: 'admin',
   staff: 'staff',
@@ -476,37 +515,36 @@ export interface StaffInvite {
 }
 
 export type GetDashboardFinancialsParams = {
-yearId?: number;
+  yearId?: number;
 };
 
 export type GetSettingsParams = {
-yearId?: number;
+  yearId?: number;
 };
 
 export type ListVendorsParams = {
-yearId?: number;
-status?: string;
+  yearId?: number;
+  status?: string;
 };
 
 export type ListSponsorsParams = {
-yearId?: number;
-status?: string;
+  yearId?: number;
+  status?: string;
 };
 
 export type ListVolunteersParams = {
-yearId?: number;
-status?: string;
+  yearId?: number;
+  status?: string;
 };
 
 export type ExportVendorsParams = {
-yearId?: number;
+  yearId?: number;
 };
 
 export type ExportSponsorsParams = {
-yearId?: number;
+  yearId?: number;
 };
 
 export type ExportVolunteersParams = {
-yearId?: number;
+  yearId?: number;
 };
-
