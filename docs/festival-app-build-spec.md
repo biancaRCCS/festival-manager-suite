@@ -1,6 +1,6 @@
 # Festival Manager Suite — Build Specification
 
-**Version 10 · 12 August 2026**
+**Version 11 · 12 August 2026**
 Source: Bia (RCCS) · Sponsor & Vendor Guide 2026, pages 2–3 · working session decisions
 
 This document is the single source of truth for the vendor and sponsor application
@@ -370,6 +370,51 @@ Notification email to vendors@romaniancenter.org.
 ---
 
 ## 5. Sponsor application — two stages
+
+### 5.0 Sponsor tier benefits — exact text for the form
+
+Transcribed from page 2 of the 2026 Sponsor & Vendor Guide. Display this table on the
+sponsor application so applicants can compare tiers. Do not paraphrase, reorder, or invent
+benefits. "–" means the tier does not include that benefit.
+
+**Why sponsor** (intro text above the table):
+
+> Sponsors are featured across all of our outreach and marketing: our website, email
+> campaigns, social media, printed materials, and on-site signage before, during, and
+> after the festival. Vendor booths, by comparison, are not included in any outreach or
+> marketing materials. If visibility for your brand matters to you, sponsorship is where
+> it happens.
+
+| Benefit | Diamond $10,000+ | Platinum $5,000+ | Gold $3,000+ | Silver $1,500+ | Bronze $750+ |
+|---|---|---|---|---|---|
+| Availability | 3 | 5 | 10 | 10 | 10 |
+| Booth space | VIP location | Prime location | Prime location | Standard location | Standard location |
+| Recognition on RCCS & Festival websites | Premier logo & link | Prominent logo & link | Logo & link | Logo & link | Name listing |
+| Complimentary 10′×10′ promo booth space | Included | Included | Included | Included | Included |
+| Logo on stage LED screen * | Premier display | Prominent display | Standard display | Logo listing | – |
+| Recognition in email campaigns | Premier placement | Prominent placement | Grouped logo | Logo listing | – |
+| Acknowledgment during the event | Throughout event | Multiple mentions | One mention | – | – |
+| Social-media recognition (pre & post) | Dedicated feature | Dedicated post | Individual mention | – | – |
+| Company-provided banner near main stage | Included | Included | – | – | – |
+| Additional on-site signage at key locations | Premier logo | Prominent logo | – | – | – |
+| Post-event thank-you email & social post | Premier mention | Prominent mention | – | – | – |
+| Company logo on official event flyer * | Premier logo | Prominent logo | – | – | – |
+| Reserved sponsor VIP area seating | 6 Seats | 4 Seats | – | – | – |
+| Additional company-provided banner | Included | – | – | – | – |
+
+**Sponsor VIP seating** (note below the table):
+
+> Diamond includes six reserved seats and Platinum sponsorship includes four reserved seats
+> in a designated 10′ × 10′ sponsor viewing area. Seating is separate from the sponsor booth
+> and does not include food, beverages, parking, or other hospitality unless confirmed by RCCS.
+
+**\* Production deadline** (note below the table):
+
+> Inclusion in printed or finalized promotional materials is subject to receipt of payment
+> and approved logo files by Monday, August 31, 2026. Sponsorships confirmed after this
+> deadline will receive remaining digital and on-site benefits where feasible.
+
+---
 
 ### Stage 1 — short application (public)
 

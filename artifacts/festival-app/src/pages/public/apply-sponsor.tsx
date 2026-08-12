@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useToast } from "@/hooks/use-toast"
-import { Loader2, Check, Minus, Mail } from "lucide-react"
+import { Loader2, Check, Mail } from "lucide-react"
 import { ApplicationDeadlineCountdown } from "@/components/application-deadline-countdown"
 
 // ---------------------------------------------------------------------------
@@ -35,31 +35,27 @@ async function fetchSponsorConfig(): Promise<FormConfig> {
 }
 
 // ---------------------------------------------------------------------------
-// Tier benefits — marketing content
+// Benefits table — exact text from section 5.0 of the spec.
+// Columns ordered Diamond → Bronze (highest to lowest), matching the guide.
 // ---------------------------------------------------------------------------
-const TIER_BENEFITS: Record<string, string[]> = {
-  bronze:   ["Complimentary 10′×10′ promo booth", "Name in festival program", "Social media mention", "Signage at festival"],
-  silver:   ["Complimentary 10′×10′ promo booth", "Name in festival program", "Social media mention", "Signage at festival", "Logo on festival website", "Logo on event banners"],
-  gold:     ["Complimentary 10′×10′ promo booth", "Name in festival program", "Social media mention", "Signage at festival", "Logo on festival website", "Logo on event banners", "Stage banner recognition", "Verbal announcement from stage"],
-  platinum: ["Complimentary 10′×10′ promo booth", "Name in festival program", "Social media mention", "Signage at festival", "Logo on festival website", "Logo on event banners", "Stage banner recognition", "Verbal announcement from stage", "Premier booth placement", "Featured social media posts", "Logo on all printed materials"],
-  diamond:  ["Complimentary 10′×10′ promo booth", "Name in festival program", "Social media mention", "Signage at festival", "Logo on festival website", "Logo on event banners", "Stage banner recognition", "Verbal announcement from stage", "Premier booth placement", "Featured social media posts", "Logo on all printed materials", "Title sponsor recognition", "Exclusive naming rights to an event area", "Press release recognition"],
-}
+const TIER_KEYS_DESC = ["diamond", "platinum", "gold", "silver", "bronze"] as const
 
-const ALL_BENEFITS = [
-  "Complimentary 10′×10′ promo booth",
-  "Name in festival program",
-  "Social media mention",
-  "Signage at festival",
-  "Logo on festival website",
-  "Logo on event banners",
-  "Stage banner recognition",
-  "Verbal announcement from stage",
-  "Premier booth placement",
-  "Featured social media posts",
-  "Logo on all printed materials",
-  "Title sponsor recognition",
-  "Exclusive naming rights to an event area",
-  "Press release recognition",
+// Row label → [diamond, platinum, gold, silver, bronze]
+const BENEFITS_ROWS: Array<{ label: string; asterisk?: boolean; values: [string, string, string, string, string] }> = [
+  { label: "Availability",                                   values: ["3",               "5",                "10",              "10",           "10"]             },
+  { label: "Booth space",                                    values: ["VIP location",    "Prime location",   "Prime location",  "Standard location", "Standard location"] },
+  { label: "Recognition on RCCS & Festival websites",        values: ["Premier logo & link", "Prominent logo & link", "Logo & link", "Logo & link", "Name listing"] },
+  { label: "Complimentary 10′×10′ promo booth space",        values: ["Included",        "Included",         "Included",        "Included",     "Included"]       },
+  { label: "Logo on stage LED screen",  asterisk: true,      values: ["Premier display", "Prominent display","Standard display","Logo listing", "–"]              },
+  { label: "Recognition in email campaigns",                 values: ["Premier placement","Prominent placement","Grouped logo", "Logo listing", "–"]              },
+  { label: "Acknowledgment during the event",                values: ["Throughout event","Multiple mentions", "One mention",    "–",            "–"]              },
+  { label: "Social-media recognition (pre & post)",          values: ["Dedicated feature","Dedicated post",  "Individual mention","–",          "–"]              },
+  { label: "Company-provided banner near main stage",        values: ["Included",        "Included",         "–",               "–",            "–"]              },
+  { label: "Additional on-site signage at key locations",    values: ["Premier logo",    "Prominent logo",   "–",               "–",            "–"]              },
+  { label: "Post-event thank-you email & social post",       values: ["Premier mention", "Prominent mention","–",               "–",            "–"]              },
+  { label: "Company logo on official event flyer", asterisk: true, values: ["Premier logo", "Prominent logo","–",              "–",            "–"]              },
+  { label: "Reserved sponsor VIP area seating",              values: ["6 Seats",         "4 Seats",          "–",               "–",            "–"]              },
+  { label: "Additional company-provided banner",             values: ["Included",        "–",                "–",               "–",            "–"]              },
 ]
 
 // ---------------------------------------------------------------------------
@@ -71,6 +67,10 @@ function fmt(n: number) {
 
 function tierRangeLabel(tier: SponsorTier) {
   return tier.max == null ? `${fmt(tier.min)} and above` : `${fmt(tier.min)} – ${fmt(tier.max)}`
+}
+
+function tierShortLabel(tier: SponsorTier) {
+  return tier.max == null ? `${fmt(tier.min)}+` : `${fmt(tier.min)}+`
 }
 
 function findTierForAmount(amount: number, tiers: SponsorTier[]): SponsorTier | null {
@@ -93,7 +93,7 @@ function validateAmount(
   if (!Number.isInteger(n)) {
     return { ok: false, error: "Please enter a whole dollar amount (no cents)." }
   }
-  const minBronze = tiers[0]?.min ?? 750
+  const minBronze = tiers.find(t => t.key === "bronze")?.min ?? 750
   if (n < minBronze) {
     return { ok: false, error: `Sponsorship amounts start at ${fmt(minBronze)} (Bronze tier).` }
   }
@@ -129,62 +129,92 @@ function SectionHeading({ title }: { title: string }) {
 }
 
 function BenefitsTable({ tiers }: { tiers: SponsorTier[] }) {
-  const tierKeys = tiers.map(t => t.key)
+  // Map key → tier object for quick lookup; display order is Diamond → Bronze
+  const tierMap = Object.fromEntries(tiers.map(t => [t.key, t]))
+  const colTiers = TIER_KEYS_DESC.map(k => tierMap[k]).filter(Boolean) as SponsorTier[]
+
+  if (colTiers.length === 0) return null
+
   return (
-    <div className="overflow-x-auto rounded-md border border-border">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b bg-muted/40">
-            <th className="text-left px-4 py-3 font-medium text-foreground min-w-[200px]">Benefit</th>
-            {tiers.map(t => (
-              <th key={t.key} className="px-4 py-3 text-center font-semibold text-foreground whitespace-nowrap">
-                <div>{t.label}</div>
-                <div className="text-xs font-normal text-muted-foreground mt-0.5">{tierRangeLabel(t)}</div>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {ALL_BENEFITS.map((benefit, i) => (
-            <tr key={benefit} className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}>
-              <td className="px-4 py-2.5 text-foreground">{benefit}</td>
-              {tierKeys.map(key => {
-                const included = TIER_BENEFITS[key]?.includes(benefit)
-                return (
-                  <td key={key} className="px-4 py-2.5 text-center">
-                    {included
-                      ? <Check className="w-4 h-4 text-green-600 mx-auto" />
-                      : <Minus className="w-4 h-4 text-muted-foreground/40 mx-auto" />
-                    }
-                  </td>
-                )
-              })}
+    <div className="space-y-6">
+      {/* Why sponsor — verbatim from spec */}
+      <blockquote className="border-l-4 border-secondary pl-5 py-1 text-muted-foreground text-sm leading-relaxed">
+        Sponsors are featured across all of our outreach and marketing: our website, email
+        campaigns, social media, printed materials, and on-site signage before, during, and
+        after the festival. Vendor booths, by comparison, are not included in any outreach or
+        marketing materials. If visibility for your brand matters to you, sponsorship is where
+        it happens.
+      </blockquote>
+
+      {/* Benefits table */}
+      <div className="overflow-x-auto rounded-md border border-border">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b bg-muted/40">
+              <th className="text-left px-4 py-3 font-medium text-foreground min-w-[220px]">Benefit</th>
+              {colTiers.map(t => (
+                <th key={t.key} className="px-4 py-3 text-center font-semibold text-foreground whitespace-nowrap min-w-[110px]">
+                  <div>{t.label}</div>
+                  <div className="text-xs font-normal text-muted-foreground mt-0.5">{tierShortLabel(t)}</div>
+                </th>
+              ))}
             </tr>
-          ))}
-          <tr className="border-t bg-muted/40 font-medium">
-            <td className="px-4 py-3 text-foreground">Spots available</td>
-            {tiers.map(t => (
-              <td key={t.key} className="px-4 py-3 text-center text-foreground">
-                {t.key === "diamond" ? "3" : String(t.spotLimit)}
-              </td>
+          </thead>
+          <tbody>
+            {BENEFITS_ROWS.map((row, i) => (
+              <tr key={row.label} className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}>
+                <td className="px-4 py-2.5 text-foreground leading-snug">
+                  {row.label}{row.asterisk && <span className="text-muted-foreground"> *</span>}
+                </td>
+                {TIER_KEYS_DESC.map((key, ci) => {
+                  const val = row.values[ci]
+                  const isDash = val === "–"
+                  const isIncluded = val === "Included" || val === "6 Seats" || val === "4 Seats"
+                  return (
+                    <td key={key} className="px-4 py-2.5 text-center">
+                      {isDash
+                        ? <span className="text-muted-foreground/40">–</span>
+                        : isIncluded
+                        ? <span className="text-green-700 font-medium">{val}</span>
+                        : <span className="text-foreground">{val}</span>
+                      }
+                    </td>
+                  )
+                })}
+              </tr>
             ))}
-          </tr>
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
+
+      {/* VIP seating note — verbatim from spec */}
+      <p className="text-sm text-muted-foreground leading-relaxed">
+        Diamond includes six reserved seats and Platinum sponsorship includes four reserved seats
+        in a designated 10′ × 10′ sponsor viewing area. Seating is separate from the sponsor booth
+        and does not include food, beverages, parking, or other hospitality unless confirmed by RCCS.
+      </p>
+
+      {/* Production deadline note — verbatim from spec */}
+      <p className="text-sm text-muted-foreground leading-relaxed">
+        <span className="font-medium">*</span>{" "}
+        Inclusion in printed or finalized promotional materials is subject to receipt of payment
+        and approved logo files by Monday, August 31, 2026. Sponsorships confirmed after this
+        deadline will receive remaining digital and on-site benefits where feasible.
+      </p>
     </div>
   )
 }
 
 // ---------------------------------------------------------------------------
-// Confirmation
+// Confirmation — exact text from spec
 // ---------------------------------------------------------------------------
 function ConfirmationMessage() {
   return (
-    <div className="py-10 space-y-6 text-center max-w-xl mx-auto">
+    <div className="py-10 space-y-6 max-w-xl mx-auto">
       <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto">
         <Check className="w-8 h-8 text-green-600" />
       </div>
-      <div className="space-y-4 text-left">
+      <div className="space-y-4">
         <p className="text-foreground leading-relaxed">
           Thank you for your interest in sponsoring the Romanian Festival. Someone from the Romanian
           Community Center of Sacramento will be in touch within one to two business days.
@@ -233,17 +263,16 @@ export default function ApplySponsorPage() {
     boothOrNameOnly: "",
   })
 
+  const tiers: SponsorTier[] = config?.sponsorTiers ?? []
+  const selectedTier = tiers.find(t => t.key === form.tier)
+
   const set = (k: keyof typeof form, v: string) => {
     setForm(prev => ({ ...prev, [k]: v }))
-    // When tier changes, re-validate existing amount
     if (k === "tier" && form.sponsorshipAmount && tiers.length > 0) {
       const result = validateAmount(form.sponsorshipAmount, v, tiers)
       setAmountError(result.ok ? null : (result.error ?? null))
     }
   }
-
-  const tiers: SponsorTier[] = config?.sponsorTiers ?? []
-  const selectedTier = tiers.find(t => t.key === form.tier)
 
   const handleAmountBlur = () => {
     if (!form.sponsorshipAmount || !form.tier || tiers.length === 0) return
@@ -252,8 +281,7 @@ export default function ApplySponsorPage() {
   }
 
   const handleAmountChange = (v: string) => {
-    set("sponsorshipAmount", v)
-    // Clear error while typing
+    setForm(prev => ({ ...prev, sponsorshipAmount: v }))
     if (amountError) setAmountError(null)
   }
 
@@ -266,26 +294,28 @@ export default function ApplySponsorPage() {
     if (!form.email.trim())       errors.push("Email Address is required.")
     if (!form.phone.trim())       errors.push("Phone Number is required.")
     if (!form.tier)               errors.push("Please select a sponsorship tier.")
-    if (!form.boothOrNameOnly)    errors.push("Please indicate whether you want a booth or name-only sponsorship.")
     if (!form.participatedBefore) errors.push("Please answer whether you have sponsored the festival before.")
+    if (!form.boothOrNameOnly)    errors.push("Please indicate whether you want a booth or name-only sponsorship.")
 
-    // Amount validation
+    let parsedAmount: number | undefined
     if (!form.sponsorshipAmount.trim()) {
       errors.push("Sponsorship amount is required.")
-    } else if (tiers.length > 0) {
+    } else if (tiers.length > 0 && form.tier) {
       const result = validateAmount(form.sponsorshipAmount, form.tier, tiers)
       if (!result.ok) {
         setAmountError(result.error ?? null)
         errors.push(result.error ?? "Invalid sponsorship amount.")
+      } else {
+        parsedAmount = result.parsedAmount
       }
+    } else {
+      parsedAmount = parseFloat(form.sponsorshipAmount)
     }
 
     if (errors.length > 0) {
       toast({ title: errors[0], variant: "destructive" })
       return
     }
-
-    const parsedAmount = parseFloat(form.sponsorshipAmount)
 
     submitMutation.mutate(
       {
@@ -322,17 +352,14 @@ export default function ApplySponsorPage() {
         <ApplicationDeadlineCountdown deadline={config.applicationDeadline} />
       )}
 
-      {/* ── Tier benefits ── */}
-      {!submitted && tiers.length > 0 && (
-        <div className="mb-8 space-y-3">
+      {/* ── Benefits table — shown above form, hidden after submission ── */}
+      {!submitted && (
+        <div className="mb-8 space-y-4">
           <h2 className="font-serif text-2xl text-foreground">Sponsorship Tiers & Benefits</h2>
-          <p className="text-sm text-muted-foreground">
-            Every tier includes a complimentary 10′×10′ promotional booth. Sponsor booths are for
-            visibility and promotion — selling prepared food requires a separate vendor application.
-            Inclusion in printed materials requires payment and approved logo files by{" "}
-            <strong>Monday, 31 August 2026</strong>.
-          </p>
-          <BenefitsTable tiers={tiers} />
+          {isLoading
+            ? <div className="h-32 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+            : <BenefitsTable tiers={tiers} />
+          }
         </div>
       )}
 
@@ -375,76 +402,76 @@ export default function ApplySponsorPage() {
                 </div>
               </section>
 
-              {/* ── Sponsorship Tier & Amount ── */}
+              {/* ── Sponsorship Tier ── */}
               <section>
-                <SectionHeading title="Sponsorship Tier & Amount" />
-                <div className="space-y-6">
+                <SectionHeading title="Sponsorship Tier" />
+                <div className="space-y-2">
+                  <Label>Select your tier<RequiredStar /></Label>
+                  <RadioGroup
+                    value={form.tier}
+                    onValueChange={v => set("tier", v)}
+                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-1"
+                  >
+                    {/* Show Bronze → Diamond ascending for selection */}
+                    {[...tiers].reverse().map(tier => (
+                      <label
+                        key={tier.key}
+                        htmlFor={`tier-${tier.key}`}
+                        className={`cursor-pointer rounded-md border p-4 transition-colors ${
+                          form.tier === tier.key
+                            ? "border-secondary bg-secondary/5"
+                            : "border-border hover:border-secondary/40 hover:bg-muted/30"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <RadioGroupItem value={tier.key} id={`tier-${tier.key}`} />
+                          <span className="font-semibold text-foreground">{tier.label}</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground pl-6">{tierRangeLabel(tier)}</p>
+                      </label>
+                    ))}
+                  </RadioGroup>
+                </div>
+              </section>
 
-                  {/* Tier selection */}
-                  <div className="space-y-2">
-                    <Label>Select your sponsorship tier<RequiredStar /></Label>
-                    <RadioGroup
-                      value={form.tier}
-                      onValueChange={v => set("tier", v)}
-                      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-1"
-                    >
-                      {tiers.map(tier => (
-                        <label
-                          key={tier.key}
-                          htmlFor={`tier-${tier.key}`}
-                          className={`cursor-pointer rounded-md border p-4 transition-colors ${
-                            form.tier === tier.key
-                              ? "border-secondary bg-secondary/5"
-                              : "border-border hover:border-secondary/40 hover:bg-muted/30"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 mb-2">
-                            <RadioGroupItem value={tier.key} id={`tier-${tier.key}`} />
-                            <span className="font-semibold text-foreground">{tier.label}</span>
-                          </div>
-                          <p className="text-sm text-muted-foreground pl-6">{tierRangeLabel(tier)}</p>
-                        </label>
-                      ))}
-                    </RadioGroup>
+              {/* ── Sponsorship Amount ── */}
+              <section>
+                <SectionHeading title="Sponsorship Amount" />
+                <div className="space-y-1.5 max-w-xs">
+                  <Label htmlFor="sponsorshipAmount">
+                    Sponsorship amount<RequiredStar />
+                  </Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm select-none">$</span>
+                    <Input
+                      id="sponsorshipAmount"
+                      type="number"
+                      min={tiers.find(t => t.key === "bronze")?.min ?? 750}
+                      step={1}
+                      className="pl-7"
+                      placeholder={
+                        selectedTier
+                          ? selectedTier.max != null
+                            ? `${selectedTier.min} – ${selectedTier.max}`
+                            : `${selectedTier.min} or more`
+                          : "Select a tier first"
+                      }
+                      value={form.sponsorshipAmount}
+                      onChange={e => handleAmountChange(e.target.value)}
+                      onBlur={handleAmountBlur}
+                    />
                   </div>
-
-                  {/* Amount */}
-                  <div className="space-y-1.5 max-w-xs">
-                    <Label htmlFor="sponsorshipAmount">
-                      Sponsorship amount<RequiredStar />
-                    </Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                      <Input
-                        id="sponsorshipAmount"
-                        type="number"
-                        min={tiers[0]?.min ?? 750}
-                        step={1}
-                        className="pl-7"
-                        placeholder={
-                          selectedTier
-                            ? selectedTier.max != null
-                              ? `${selectedTier.min} – ${selectedTier.max}`
-                              : `${selectedTier.min}+`
-                            : "Select a tier first"
-                        }
-                        value={form.sponsorshipAmount}
-                        onChange={e => handleAmountChange(e.target.value)}
-                        onBlur={handleAmountBlur}
-                      />
-                    </div>
-                    {selectedTier && !amountError && (
-                      <p className="text-xs text-muted-foreground">
-                        {selectedTier.key === "diamond"
-                          ? `Enter any amount of ${fmt(selectedTier.min)} or more.`
-                          : `Enter any whole-dollar amount from ${fmt(selectedTier.min)} to ${fmt(selectedTier.max!)}.`
-                        }
-                      </p>
-                    )}
-                    {amountError && (
-                      <p className="text-sm text-destructive leading-snug">{amountError}</p>
-                    )}
-                  </div>
+                  {selectedTier && !amountError && (
+                    <p className="text-xs text-muted-foreground">
+                      {selectedTier.key === "diamond"
+                        ? `Enter any amount of ${fmt(selectedTier.min)} or more.`
+                        : `Enter any whole-dollar amount from ${fmt(selectedTier.min)} to ${fmt(selectedTier.max!)}.`
+                      }
+                    </p>
+                  )}
+                  {amountError && (
+                    <p className="text-sm text-destructive leading-snug">{amountError}</p>
+                  )}
                 </div>
               </section>
 
@@ -452,8 +479,6 @@ export default function ApplySponsorPage() {
               <section>
                 <SectionHeading title="About Your Organization" />
                 <div className="space-y-5">
-
-                  {/* Previous sponsor */}
                   <div className="space-y-1.5">
                     <Label>Have you sponsored the Romanian Festival before?<RequiredStar /></Label>
                     <RadioGroup
@@ -472,7 +497,6 @@ export default function ApplySponsorPage() {
                     </RadioGroup>
                   </div>
 
-                  {/* Org description */}
                   <div className="space-y-1.5">
                     <Label htmlFor="orgDescription">
                       Describe your organization or business{" "}
@@ -494,14 +518,15 @@ export default function ApplySponsorPage() {
                 <SectionHeading title="Booth or Name-Only Sponsorship" />
                 <div className="space-y-3">
                   <p className="text-sm text-muted-foreground">
-                    Every sponsorship tier includes a complimentary 10′×10′ promotional booth.
-                    If you prefer to be recognized by name without operating a booth, select
-                    "Name only" below.
+                    Every sponsorship tier includes a complimentary 10′×10′ promotional booth. This
+                    booth is for visibility and promotion — it is not a vendor booth and does not
+                    include the right to sell prepared food. If you prefer to be recognized as a
+                    sponsor without operating a booth, select "Name only."
                   </p>
                   <RadioGroup
                     value={form.boothOrNameOnly}
                     onValueChange={v => set("boothOrNameOnly", v)}
-                    className="flex flex-col sm:flex-row gap-4 mt-1"
+                    className="flex flex-col sm:flex-row gap-4 mt-2"
                   >
                     <label
                       htmlFor="booth-booth"
@@ -511,11 +536,11 @@ export default function ApplySponsorPage() {
                           : "border-border hover:border-secondary/40 hover:bg-muted/30"
                       }`}
                     >
-                      <RadioGroupItem value="booth" id="booth-booth" className="mt-0.5" />
+                      <RadioGroupItem value="booth" id="booth-booth" className="mt-0.5 shrink-0" />
                       <div>
                         <p className="font-medium text-foreground">Booth at the festival</p>
                         <p className="text-sm text-muted-foreground">
-                          I would like to operate a 10′×10′ promotional booth at the festival.
+                          I would like to operate a 10′×10′ promotional booth.
                         </p>
                       </div>
                     </label>
@@ -527,7 +552,7 @@ export default function ApplySponsorPage() {
                           : "border-border hover:border-secondary/40 hover:bg-muted/30"
                       }`}
                     >
-                      <RadioGroupItem value="name_only" id="booth-name" className="mt-0.5" />
+                      <RadioGroupItem value="name_only" id="booth-name" className="mt-0.5 shrink-0" />
                       <div>
                         <p className="font-medium text-foreground">Name-only sponsorship</p>
                         <p className="text-sm text-muted-foreground">
@@ -536,11 +561,6 @@ export default function ApplySponsorPage() {
                       </div>
                     </label>
                   </RadioGroup>
-                  {!form.boothOrNameOnly && (
-                    <p className="text-xs text-muted-foreground">
-                      <RequiredStar /> Please select one of the options above.
-                    </p>
-                  )}
                 </div>
               </section>
 
