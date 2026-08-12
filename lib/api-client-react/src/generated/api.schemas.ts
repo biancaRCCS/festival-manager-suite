@@ -342,8 +342,10 @@ export interface VendorCategoryStat {
 
 export interface DashboardSummary {
   festivalYear: FestivalYear;
-  /** Days until the festival */
-  countdown: number;
+  /** Festival date from Settings (YYYY-MM-DD), null if not yet set */
+  festivalDate?: string | null;
+  /** Days until the festival (null if no festival date is set) */
+  countdown: number | null;
   vendorStats: ApplicationStats;
   sponsorStats: ApplicationStats;
   volunteerStats: ApplicationStats;

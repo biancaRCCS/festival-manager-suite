@@ -6,11 +6,13 @@ import { GetDashboardFinancialsQueryParams } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
-function calcCountdown(eventDate: string): number {
-  const event = new Date(eventDate);
+function calcCountdown(eventDate: string | null | undefined): number | null {
+  if (!eventDate) return null;
+  const event = new Date(eventDate + "T12:00:00");
+  if (isNaN(event.getTime())) return null;
   const now = new Date();
   const diff = event.getTime() - now.getTime();
-  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
 async function getStatsForYear(yearId: number) {
@@ -92,9 +94,12 @@ router.get("/dashboard/summary", requireStaff, async (req, res): Promise<void> =
     { key: "nonprofit",     label: s.vendorTypeLabelNonprofit,     count: vendors.filter(v => v.vendorType === "nonprofit").length,     target: s.vendorSpotLimitNonprofit,     booth: "10′ × 10′" },
   ] : [];
 
+  const festivalDate = s?.festivalDate ?? null;
+
   res.json({
     festivalYear: year,
-    countdown: calcCountdown(year.eventDate),
+    festivalDate,
+    countdown: calcCountdown(festivalDate),
     vendorStats,
     sponsorStats,
     volunteerStats,
