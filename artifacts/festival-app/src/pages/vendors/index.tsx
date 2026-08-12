@@ -19,11 +19,18 @@ export default function VendorsPage() {
     { query: { enabled: !!currentYear, queryKey: ["vendors", currentYear?.id, statusFilter] } }
   )
 
-  const filteredVendors = vendors?.filter(v => 
-    v.name.toLowerCase().includes(search.toLowerCase()) || 
-    v.businessName.toLowerCase().includes(search.toLowerCase()) ||
-    v.email.toLowerCase().includes(search.toLowerCase())
-  )
+  const filteredVendors = vendors?.filter(v => {
+    const q = search.toLowerCase()
+    if (!q) return true
+    const ad = (v.applicationData ?? {}) as Record<string, unknown>
+    const permit = String(ad.sellerPermitNumber ?? "").toLowerCase()
+    return (
+      v.name.toLowerCase().includes(q) ||
+      v.businessName.toLowerCase().includes(q) ||
+      v.email.toLowerCase().includes(q) ||
+      permit.includes(q)
+    )
+  })
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -109,6 +116,10 @@ export default function VendorsPage() {
                       <TableCell className="font-medium text-foreground">
                         {vendor.businessName}
                         <div className="text-xs text-muted-foreground font-normal">{vendor.name}</div>
+                        {(() => {
+                          const permit = String(((vendor.applicationData ?? {}) as Record<string, unknown>).sellerPermitNumber ?? "")
+                          return permit ? <div className="text-xs text-muted-foreground font-normal">Permit: {permit}</div> : null
+                        })()}
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">{vendor.email}</div>
