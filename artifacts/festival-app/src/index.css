@@ -1,3 +1,11 @@
+@font-face {
+  font-family: 'Zamolxis';
+  src: url('/ZamolxisI.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 @import 'tailwindcss';
 @import 'tw-animate-css';
@@ -223,4 +231,8 @@
     background-color: hsl(var(--primary));
     border-radius: 2px;
   }
+}
+
+.font-wordmark {
+  font-family: 'Zamolxis', Georgia, serif;
 }

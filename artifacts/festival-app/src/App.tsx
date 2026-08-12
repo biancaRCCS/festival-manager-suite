@@ -143,16 +143,17 @@ function LandingPage() {
     <div className="min-h-screen bg-background font-sans flex flex-col">
       {/* Navy header */}
       <header className="bg-secondary shadow-md">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="max-w-6xl mx-auto px-6 h-20 md:h-32 flex items-center justify-between">
+          <div className="flex items-center gap-3 md:gap-5">
             <img
               src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/festival-dancers-navy@120.png`}
               alt="Romanian Festival – dancing figures logo"
-              className="h-10 w-auto"
+              className="h-12 md:h-[76px] w-auto"
             />
             <div>
-              <div className="font-serif font-bold text-white text-sm leading-tight uppercase tracking-wider">Romanian Festival</div>
-              <div className="text-white/60 text-xs tracking-wide">Preserving culture. Building community.</div>
+              <div className="font-wordmark text-white uppercase leading-none text-[22px] md:text-[34px]">Romanian</div>
+              <div className="font-sans font-bold text-white uppercase leading-tight tracking-[0.3em] text-[10px] md:text-[15px] mt-0.5 md:mt-1">Festival</div>
+              <div className="text-white/60 tracking-wide text-[10px] md:text-[13px] mt-1 md:mt-1.5">Preserving culture. Building community.</div>
             </div>
           </div>
         </div>
