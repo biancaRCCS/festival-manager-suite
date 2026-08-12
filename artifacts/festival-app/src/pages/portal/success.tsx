@@ -18,7 +18,7 @@ export default function PortalSuccessPage() {
               Thank you for your payment. Your registration is now confirmed.
             </p>
             <Link href={`/portal/${token}`}>
-              <button className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium h-10 px-6 bg-primary text-primary-foreground shadow hover:bg-primary/90">
+              <button className="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium h-10 px-6 bg-primary text-primary-foreground shadow hover:bg-primary/90">
                 Return to Portal <ArrowRight className="w-4 h-4 ml-2" />
               </button>
             </Link>

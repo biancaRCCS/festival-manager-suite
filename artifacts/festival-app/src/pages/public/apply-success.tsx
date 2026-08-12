@@ -17,7 +17,7 @@ export default function ApplySuccessPage() {
             Once approved, you will receive an email with next steps and a link to your portal.
           </p>
           <Link href="/">
-            <button className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium h-12 px-8 bg-primary text-primary-foreground shadow hover:bg-primary/90 transition-transform hover:-translate-y-0.5">
+            <button className="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium h-12 px-8 bg-primary text-primary-foreground shadow hover:bg-primary/90 transition-transform hover:-translate-y-0.5">
               Return to Homepage <ArrowRight className="w-4 h-4 ml-2" />
             </button>
           </Link>

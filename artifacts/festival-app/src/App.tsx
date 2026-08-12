@@ -84,8 +84,8 @@ const clerkAppearance = {
     alertText: "text-foreground",
     logoBox: "mb-4 justify-center",
     logoImage: "h-12 w-12",
-    socialButtonsBlockButton: "border border-input hover:bg-muted/50 rounded",
-    formButtonPrimary: "bg-primary text-white hover:bg-primary/90 shadow rounded font-semibold uppercase tracking-wide text-sm",
+    socialButtonsBlockButton: "border border-input hover:bg-muted/50",
+    formButtonPrimary: "bg-primary text-white hover:bg-primary/90 shadow font-semibold uppercase tracking-wide text-sm",
     formFieldInput: "flex h-9 w-full rounded border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
     footerAction: "justify-center",
     dividerLine: "bg-border",
@@ -158,7 +158,7 @@ function LandingPage() {
             applications for vendors, sponsors, and volunteers.
           </p>
           <Link href="/apply/vendor">
-            <Button className="bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-sm px-8 h-12 rounded shadow-lg">
+            <Button className="bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-sm px-8 h-12 shadow-lg">
               Get Involved
             </Button>
           </Link>
