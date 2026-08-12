@@ -26,6 +26,7 @@ import {
   UserPlus,
   Filter,
   X,
+  Download,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -96,6 +97,33 @@ export default function ActivityPage() {
   const [page, setPage]             = useState(1)
   const [typeFilter, setTypeFilter] = useState<string>("all")
   const [entityFilter, setEntityFilter] = useState<string>("all")
+  const [isExporting, setIsExporting] = useState(false)
+
+  function handleExport() {
+    const params = new URLSearchParams()
+    if (typeFilter   !== "all") params.set("type",       typeFilter)
+    if (entityFilter !== "all") params.set("entityType", entityFilter)
+    const qs = params.toString()
+    const url = `/api/dashboard/activity/export${qs ? `?${qs}` : ""}`
+
+    setIsExporting(true)
+    fetch(url)
+      .then(res => {
+        if (!res.ok) throw new Error("Export failed")
+        return res.blob()
+      })
+      .then(blob => {
+        const href = URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = href
+        const date = new Date().toISOString().slice(0, 10)
+        a.download = `activity-log-${date}.csv`
+        a.click()
+        URL.revokeObjectURL(href)
+      })
+      .catch(console.error)
+      .finally(() => setIsExporting(false))
+  }
 
   const params = {
     page,
@@ -127,11 +155,23 @@ export default function ActivityPage() {
               Full audit trail — approvals, rejections, payments, and deletions
             </p>
           </div>
-          {data && (
-            <span className="text-sm text-muted-foreground">
-              {data.total.toLocaleString()} total {data.total === 1 ? "entry" : "entries"}
-            </span>
-          )}
+          <div className="flex items-center gap-3">
+            {data && (
+              <span className="text-sm text-muted-foreground">
+                {data.total.toLocaleString()} total {data.total === 1 ? "entry" : "entries"}
+              </span>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              disabled={isExporting || !data || data.total === 0}
+              className="gap-1.5"
+            >
+              <Download className="w-4 h-4" />
+              {isExporting ? "Exporting…" : "Export CSV"}
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}

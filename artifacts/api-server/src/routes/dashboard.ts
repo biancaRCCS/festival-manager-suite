@@ -235,4 +235,53 @@ router.get("/dashboard/activity", requireStaff, async (req, res): Promise<void> 
   });
 });
 
+router.get("/dashboard/activity/export", requireStaff, async (req, res): Promise<void> => {
+  const typeFilter       = req.query.type       as string | undefined;
+  const entityTypeFilter = req.query.entityType as string | undefined;
+
+  const conditions: ReturnType<typeof eq>[] = [];
+  if (typeFilter)       conditions.push(eq(activityLogTable.type,       typeFilter));
+  if (entityTypeFilter) conditions.push(eq(activityLogTable.entityType, entityTypeFilter));
+
+  const whereClause = conditions.length > 0
+    ? and(...conditions as [ReturnType<typeof eq>, ...ReturnType<typeof eq>[]])
+    : undefined;
+
+  const rows = await db.select().from(activityLogTable)
+    .where(whereClause)
+    .orderBy(desc(activityLogTable.createdAt));
+
+  // Build CSV with injection protection:
+  // - Always quote values containing comma, double-quote, newline (\n), or carriage return (\r)
+  // - Neutralize spreadsheet formula injection: prefix with a tab if value starts with =, +, -, or @
+  const escape = (v: string | number | null | undefined): string => {
+    let s = v == null ? "" : String(v);
+    // Neutralize formula injection (Excel/Sheets treat leading =, +, -, @ as formula markers)
+    if (/^[\t ]*[=+\-@]/.test(s)) {
+      s = `\t${s}`;
+    }
+    if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
+      return `"${s.replace(/"/g, '""')}"`;
+    }
+    return s;
+  };
+
+  const header = ["Date", "Type", "Entity Type", "Entity ID", "Message"].join(",");
+  const csvRows = rows.map(r =>
+    [
+      escape(r.createdAt.toISOString()),
+      escape(r.type),
+      escape(r.entityType),
+      escape(r.entityId),
+      escape(r.message),
+    ].join(",")
+  );
+
+  const csv = [header, ...csvRows].join("\n");
+
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", `attachment; filename="activity-log-${new Date().toISOString().slice(0, 10)}.csv"`);
+  res.send(csv);
+});
+
 export default router;
