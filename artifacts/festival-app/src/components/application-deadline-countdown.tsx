@@ -8,8 +8,14 @@ interface TimeLeft {
   seconds: number
 }
 
+/** Parse a date-only string (YYYY-MM-DD) as local noon to avoid UTC-offset shifts. */
+function parseDateOnly(dateStr: string): Date {
+  const [y, m, d] = dateStr.split("-").map(Number)
+  return new Date(y, m - 1, d, 12, 0, 0)
+}
+
 function calcTimeLeft(deadline: string): TimeLeft | null {
-  const diff = new Date(deadline).getTime() - Date.now()
+  const diff = parseDateOnly(deadline).getTime() - Date.now()
   if (diff <= 0) return null
   return {
     days: Math.floor(diff / (1000 * 60 * 60 * 24)),
@@ -58,7 +64,7 @@ export function ApplicationDeadlineCountdown({ deadline }: Props) {
         <p className="mb-4 text-sm text-muted-foreground">
           Applications close on{" "}
           <span className="font-semibold text-foreground">
-            {new Date(deadline).toLocaleDateString("en-US", {
+            {parseDateOnly(deadline).toLocaleDateString("en-US", {
               weekday: "long",
               year: "numeric",
               month: "long",

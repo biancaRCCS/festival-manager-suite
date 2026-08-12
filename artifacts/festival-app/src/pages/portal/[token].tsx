@@ -206,7 +206,7 @@ export default function PortalPage() {
                     <div className="mt-1"><Calendar className="w-5 h-5 text-muted-foreground" /></div>
                     <div>
                       <p className="font-medium">Event Date</p>
-                      <p className="text-muted-foreground">{new Date(portal.eventDate).toLocaleDateString()}</p>
+                      <p className="text-muted-foreground">{new Date(portal.eventDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
                     </div>
                   </div>
                   <div className="flex gap-4">
