@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { logger } from "./logger";
+import { db, activityLogTable } from "@workspace/db";
 
 // ---------------------------------------------------------------------------
 // Transporter
@@ -33,6 +34,7 @@ function getAppBaseUrl(): string {
 }
 
 // Shared send helper — fire-and-forget, never throws.
+// On SMTP failure, the error is written to the activity_log so admins can see it.
 async function send(to: string, subject: string, html: string): Promise<void> {
   try {
     const transporter = getTransporter();
@@ -43,7 +45,19 @@ async function send(to: string, subject: string, html: string): Promise<void> {
     await transporter.sendMail({ from: FROM(), to, subject, html });
     logger.info({ to, subject }, "Email sent");
   } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
     logger.error({ err, to, subject }, "Failed to send email");
+    // Log to activity_log so the failure is visible in the admin UI.
+    try {
+      await db.insert(activityLogTable).values({
+        type: "email_failure",
+        message: `Failed to send "${subject}" to ${to}: ${errMsg}`,
+        entityType: "email",
+        entityId: 0,
+      });
+    } catch (logErr) {
+      logger.error({ logErr }, "Failed to record email failure in activity log");
+    }
   }
 }
 

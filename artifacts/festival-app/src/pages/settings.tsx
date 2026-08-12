@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Save, Plus, Trash2, GripVertical, ImageIcon, X, Send, AlertTriangle, CheckCircle, Server } from "lucide-react"
+import { Save, Plus, Trash2, GripVertical, ImageIcon, X, Send, AlertTriangle, CheckCircle, Server, MailX } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { FestivalSettings, FormQuestion } from "@workspace/api-client-react"
@@ -52,10 +52,20 @@ export default function SettingsPage() {
     from: string | null;
   } | null>(null)
 
+  // Email failure log
+  const [emailFailures, setEmailFailures] = useState<{ id: number; message: string; createdAt: string }[]>([])
+
   useEffect(() => {
     fetch("/api/settings/smtp-status")
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data) setSmtpStatus(data) })
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    fetch(`${import.meta.env.BASE_URL.replace(/\/$/, "")}/api/dashboard/email-failures`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.items) setEmailFailures(data.items) })
       .catch(() => {})
   }, [])
 
@@ -295,6 +305,41 @@ export default function SettingsPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Email Delivery Failures */}
+              {emailFailures.length > 0 && (
+                <Card className="border-red-200">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-2">
+                      <MailX className="w-5 h-5 text-red-600 shrink-0" />
+                      <CardTitle className="text-red-700">Email Delivery Failures (last 30 days)</CardTitle>
+                    </div>
+                    <CardDescription>
+                      {emailFailures.length === 1
+                        ? "1 email failed to deliver."
+                        : `${emailFailures.length} emails failed to deliver.`}{" "}
+                      Check your SMTP credentials and use the test button above to verify delivery is working.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="rounded-md border border-red-100 overflow-hidden text-sm">
+                      {emailFailures.map((f, idx) => (
+                        <div
+                          key={f.id}
+                          className={`px-4 py-3 ${idx % 2 === 0 ? "bg-red-50/50" : "bg-white"}`}
+                        >
+                          <div className="flex justify-between gap-4 items-start">
+                            <span className="text-red-800 break-all">{f.message}</span>
+                            <span className="text-xs text-muted-foreground shrink-0 mt-0.5">
+                              {new Date(f.createdAt).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Vendor Categories */}
               <Card>

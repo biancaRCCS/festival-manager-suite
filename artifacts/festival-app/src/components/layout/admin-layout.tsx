@@ -1,5 +1,6 @@
 import { Link, useLocation } from "wouter"
 import { useClerk, useUser } from "@clerk/react"
+import { useEffect, useState } from "react"
 import { Calendar, Users, Briefcase, HandHeart, Settings, LogOut, ShieldCheck, Home, ClipboardList } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -8,6 +9,14 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation()
   const { signOut } = useClerk()
   const { user } = useUser()
+  const [emailFailureCount, setEmailFailureCount] = useState(0)
+
+  useEffect(() => {
+    fetch(`${import.meta.env.BASE_URL.replace(/\/$/, "")}/api/dashboard/email-failures`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.count) setEmailFailureCount(data.count) })
+      .catch(() => {})
+  }, [])
 
   const navItems = [
     { href: "/dashboard",  label: "Dashboard",   icon: Home },
@@ -16,7 +25,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     { href: "/volunteers", label: "Volunteers",   icon: Users },
     { href: "/activity",   label: "Activity Log", icon: ClipboardList },
     { href: "/staff",      label: "Staff",        icon: ShieldCheck },
-    { href: "/settings",   label: "Settings",     icon: Settings },
+    { href: "/settings",   label: "Settings",     icon: Settings, badge: emailFailureCount > 0 ? emailFailureCount : undefined },
   ]
 
   return (
@@ -50,7 +59,12 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                     )}
                   >
                     <item.icon className="w-4 h-4 shrink-0" />
-                    {item.label}
+                    <span className="flex-1">{item.label}</span>
+                    {"badge" in item && item.badge !== undefined && (
+                      <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-[18px] text-center">
+                        {item.badge > 99 ? "99+" : item.badge}
+                      </span>
+                    )}
                   </div>
                 </Link>
               )

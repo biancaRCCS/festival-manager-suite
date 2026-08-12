@@ -165,6 +165,32 @@ router.get("/dashboard/financials", requireStaff, async (req, res): Promise<void
   });
 });
 
+router.get("/dashboard/email-failures", requireStaff, async (_req, res): Promise<void> => {
+  const since = new Date();
+  since.setDate(since.getDate() - 30);
+
+  const rows = await db
+    .select()
+    .from(activityLogTable)
+    .where(
+      and(
+        eq(activityLogTable.type, "email_failure"),
+        sql`${activityLogTable.createdAt} >= ${since.toISOString()}`
+      )
+    )
+    .orderBy(desc(activityLogTable.createdAt))
+    .limit(50);
+
+  res.json({
+    count: rows.length,
+    items: rows.map(r => ({
+      id: r.id,
+      message: r.message,
+      createdAt: r.createdAt.toISOString(),
+    })),
+  });
+});
+
 router.get("/dashboard/activity", requireStaff, async (req, res): Promise<void> => {
   const page   = Math.max(1, parseInt((req.query.page  as string) || "1",  10) || 1);
   const limit  = Math.min(100, Math.max(1, parseInt((req.query.limit as string) || "50", 10) || 50));
