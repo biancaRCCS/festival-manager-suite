@@ -34,15 +34,14 @@ export async function createCheckoutSession(params: {
       .from(vendorsTable)
       .where(eq(vendorsTable.id, entity.id))
       .limit(1);
-    const vendorType = vendorRow?.vendorType ?? "other";
+    const vendorType = vendorRow?.vendorType ?? "retail";
     const vendorPriceMap: Record<string, string> = {
-      food:        settingsRow?.vendorPriceFood        ?? "200",
-      crafts:      settingsRow?.vendorPriceCrafts      ?? "150",
-      merchandise: settingsRow?.vendorPriceMerchandise ?? "150",
-      cultural:    settingsRow?.vendorPriceCultural    ?? "100",
-      other:       settingsRow?.vendorPriceOther       ?? "100",
+      major_food:    settingsRow?.vendorPriceMajorFood    ?? "2000",
+      specialty_food: settingsRow?.vendorPriceSpecialtyFood ?? "600",
+      retail:        settingsRow?.vendorPriceRetail        ?? "300",
+      nonprofit:     settingsRow?.vendorPriceNonprofit     ?? "150",
     };
-    price = parseFloat(vendorPriceMap[vendorType] ?? "150");
+    price = parseFloat(vendorPriceMap[vendorType] ?? "300");
   } else {
     // Look up the sponsor's chosen tier and charge the matching price
     const [sponsor] = await db

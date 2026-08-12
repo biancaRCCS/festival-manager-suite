@@ -444,8 +444,14 @@ export interface PortalInfo {
   tier?: string | null;
   /** @nullable */
   vendorType?: string | null;
-  /** @nullable Vendor category fee */
-  vendorPrice?: number | null;
+  /** @nullable */
+  vendorPriceMajorFood?: number | null;
+  /** @nullable */
+  vendorPriceSpecialtyFood?: number | null;
+  /** @nullable */
+  vendorPriceRetail?: number | null;
+  /** @nullable */
+  vendorPriceNonprofit?: number | null;
   /** @nullable Sponsor tier minimum */
   sponsorPriceBronze?: number | null;
   /** @nullable */

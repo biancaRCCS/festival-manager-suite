@@ -35,10 +35,6 @@ router.post("/festival-years", requireStaff, async (req, res): Promise<void> => 
   // Create default settings for the new year
   await db.insert(festivalSettingsTable).values({
     yearId: created.id,
-    vendorPrice: "200.00",
-    sponsorPrice: "500.00",
-    vendorSpotLimit: 50,
-    sponsorSpotLimit: 20,
     vendorFormQuestions: [],
     sponsorFormQuestions: [],
     volunteerFormQuestions: [],

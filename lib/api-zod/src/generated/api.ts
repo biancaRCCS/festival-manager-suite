@@ -37,6 +37,7 @@ export const SubmitVendorApplicationBody = zod.object({
   "businessName": zod.string(),
   "email": zod.string(),
   "phone": zod.string(),
+  "vendorType": zod.string().optional(),
   "answers": zod.record(zod.string(), zod.unknown())
 })
 
