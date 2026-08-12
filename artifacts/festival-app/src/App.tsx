@@ -161,41 +161,56 @@ function LandingPage() {
       {/* Hero */}
       <section className="bg-secondary text-white">
         <div className="max-w-6xl mx-auto px-6 py-16 md:py-24">
+          <div className="flex flex-col md:flex-row md:items-center gap-10 md:gap-16">
 
-          {/* Theme — year's creative concept */}
-          <p className="font-serif italic text-white/60 text-base md:text-lg mb-5 tracking-wide leading-snug">
-            150 Years of Constantin Brâncuși — Tradition, Art, and Romanian Spirit
-          </p>
+            {/* Left — text */}
+            <div className="flex-1 min-w-0">
+              {/* Theme — year's creative concept */}
+              <p className="font-serif italic text-white/60 text-base md:text-lg mb-5 tracking-wide leading-snug">
+                150 Years of Constantin Brâncuși — Tradition, Art, and Romanian Spirit
+              </p>
 
-          {/* Main heading */}
-          <h1 className="font-serif text-5xl md:text-7xl font-bold leading-tight mb-8 max-w-3xl">
-            Preserving Culture.<br />
-            Strengthening<br />
-            Community.<br />
-            Connecting Generations.
-          </h1>
+              {/* Main heading */}
+              <h1 className="font-serif text-5xl md:text-7xl font-bold leading-tight mb-8">
+                Preserving Culture.<br />
+                Strengthening<br />
+                Community.<br />
+                Connecting Generations.
+              </h1>
 
-          {/* Event details */}
-          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-y-3 gap-x-8 mb-10 text-white/80 text-sm md:text-base">
-            <span className="flex items-center gap-2.5">
-              <CalendarDays className="w-4 h-4 text-white/45 shrink-0" />
-              Saturday, September 26, 2026
-            </span>
-            <span className="flex items-center gap-2.5">
-              <Clock className="w-4 h-4 text-white/45 shrink-0" />
-              12:00 PM – 9:00 PM
-            </span>
-            <span className="flex items-center gap-2.5">
-              <MapPin className="w-4 h-4 text-white/45 shrink-0" />
-              Vernon Street Town Square, Downtown Roseville, CA
-            </span>
+              {/* Event details */}
+              <div className="flex flex-col sm:flex-row sm:flex-wrap gap-y-3 gap-x-8 mb-10 text-white/80 text-sm md:text-base">
+                <span className="flex items-center gap-2.5">
+                  <CalendarDays className="w-4 h-4 text-white/45 shrink-0" />
+                  Saturday, September 26, 2026
+                </span>
+                <span className="flex items-center gap-2.5">
+                  <Clock className="w-4 h-4 text-white/45 shrink-0" />
+                  12:00 PM – 9:00 PM
+                </span>
+                <span className="flex items-center gap-2.5">
+                  <MapPin className="w-4 h-4 text-white/45 shrink-0" />
+                  Vernon Street Town Square, Downtown Roseville, CA
+                </span>
+              </div>
+
+              <Link href="/apply/vendor">
+                <Button className="bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-sm px-8 h-12 shadow-lg">
+                  Get Involved
+                </Button>
+              </Link>
+            </div>
+
+            {/* Right — dancers logo (desktop: right column; mobile: below button, centered) */}
+            <div className="flex justify-center md:justify-end md:w-[40%] md:flex-shrink-0">
+              <img
+                src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/festival-dancers.png`}
+                alt="Romanian Festival — dancing figures"
+                className="w-44 sm:w-56 md:w-full md:max-w-[480px] h-auto"
+              />
+            </div>
+
           </div>
-
-          <Link href="/apply/vendor">
-            <Button className="bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-sm px-8 h-12 shadow-lg">
-              Get Involved
-            </Button>
-          </Link>
         </div>
       </section>
 
