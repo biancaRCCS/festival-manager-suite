@@ -14,14 +14,14 @@ async function initStripe() {
   }
 
   logger.info("Running Stripe schema migrations…");
-  await runMigrations({ databaseUrl, schema: "stripe" });
+  await runMigrations({ databaseUrl });
   logger.info("Stripe schema ready.");
 
   const stripeSync = await getStripeSync();
 
   const webhookBaseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
   logger.info({ webhookBaseUrl }, "Configuring managed Stripe webhook…");
-  const { webhook } = await stripeSync.findOrCreateManagedWebhook(
+  const webhook = await stripeSync.findOrCreateManagedWebhook(
     `${webhookBaseUrl}/api/stripe/webhook`
   );
   logger.info({ url: webhook?.url }, "Stripe webhook configured.");
