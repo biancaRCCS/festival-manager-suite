@@ -19,11 +19,15 @@ export default function SponsorsPage() {
     { query: { enabled: !!currentYear, queryKey: ["sponsors", currentYear?.id, statusFilter] } }
   )
 
-  const filteredSponsors = sponsors?.filter(s => 
-    s.name.toLowerCase().includes(search.toLowerCase()) || 
-    s.orgName.toLowerCase().includes(search.toLowerCase()) ||
-    s.email.toLowerCase().includes(search.toLowerCase())
-  )
+  const filteredSponsors = sponsors?.filter(s => {
+    const q = search.toLowerCase()
+    if (!q) return true
+    return (
+      s.name.toLowerCase().includes(q) ||
+      s.orgName.toLowerCase().includes(q) ||
+      s.email.toLowerCase().includes(q)
+    )
+  })
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -112,7 +116,14 @@ export default function SponsorsPage() {
                         <div className="text-xs text-muted-foreground font-normal">{sponsor.name}</div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="capitalize">{sponsor.tier}</Badge>
+                        <div className="flex flex-col gap-1">
+                          <Badge variant="outline" className="capitalize w-fit">{sponsor.tier}</Badge>
+                          {sponsor.sponsorshipAmount != null && (
+                            <span className="text-xs text-muted-foreground">
+                              ${Number(sponsor.sponsorshipAmount).toLocaleString()}
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">{sponsor.email}</div>
