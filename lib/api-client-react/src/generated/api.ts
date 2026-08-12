@@ -2731,6 +2731,42 @@ export function useExportVolunteers<TData = Awaited<ReturnType<typeof exportVolu
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+// ── Delete vendor ──────────────────────────────────────────────────────────
+export const deleteVendor = async (id: number, options?: RequestInit): Promise<void> => {
+  return customFetch<void>(`/api/vendors/${id}`, { ...options, method: 'DELETE' });
+};
+
+export const useDeleteVendor = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<void, TError, { id: number }, TContext> }
+): UseMutationResult<void, TError, { id: number }, TContext> => {
+  const mutationFn: MutationFunction<void, { id: number }> = ({ id }) => deleteVendor(id);
+  return useMutation({ mutationFn, mutationKey: ['deleteVendor'], ...options?.mutation });
+};
+
+// ── Delete sponsor ─────────────────────────────────────────────────────────
+export const deleteSponsor = async (id: number, options?: RequestInit): Promise<void> => {
+  return customFetch<void>(`/api/sponsors/${id}`, { ...options, method: 'DELETE' });
+};
+
+export const useDeleteSponsor = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<void, TError, { id: number }, TContext> }
+): UseMutationResult<void, TError, { id: number }, TContext> => {
+  const mutationFn: MutationFunction<void, { id: number }> = ({ id }) => deleteSponsor(id);
+  return useMutation({ mutationFn, mutationKey: ['deleteSponsor'], ...options?.mutation });
+};
+
+// ── Delete volunteer ───────────────────────────────────────────────────────
+export const deleteVolunteer = async (id: number, options?: RequestInit): Promise<void> => {
+  return customFetch<void>(`/api/volunteers/${id}`, { ...options, method: 'DELETE' });
+};
+
+export const useDeleteVolunteer = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<void, TError, { id: number }, TContext> }
+): UseMutationResult<void, TError, { id: number }, TContext> => {
+  const mutationFn: MutationFunction<void, { id: number }> = ({ id }) => deleteVolunteer(id);
+  return useMutation({ mutationFn, mutationKey: ['deleteVolunteer'], ...options?.mutation });
+};
+
 
 
 

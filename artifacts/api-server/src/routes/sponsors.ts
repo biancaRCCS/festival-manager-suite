@@ -169,4 +169,25 @@ router.patch("/sponsors/:id/assign", requireStaff, async (req, res): Promise<voi
   res.json(formatSponsor(updated));
 });
 
+router.delete("/sponsors/:id", requireStaff, async (req, res): Promise<void> => {
+  const parsed = GetSponsorParams.safeParse(req.params);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid ID" });
+    return;
+  }
+  const { id } = parsed.data;
+  const [deleted] = await db.delete(sponsorsTable).where(eq(sponsorsTable.id, id)).returning();
+  if (!deleted) {
+    res.status(404).json({ error: "Sponsor not found" });
+    return;
+  }
+  await db.insert(activityLogTable).values({
+    type: "deleted",
+    message: `Sponsor record deleted: ${deleted.name} (${deleted.orgName})`,
+    entityType: "sponsor",
+    entityId: deleted.id,
+  });
+  res.status(204).send();
+});
+
 export default router;

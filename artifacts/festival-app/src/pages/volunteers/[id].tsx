@@ -1,6 +1,6 @@
 import { useState, useRef } from "react"
 import { useLocation, useParams } from "wouter"
-import { useGetVolunteer, useReviewVolunteer, getGetVolunteerQueryKey } from "@workspace/api-client-react"
+import { useGetVolunteer, useReviewVolunteer, getGetVolunteerQueryKey, useDeleteVolunteer } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { ArrowLeft, Mail, Phone, Clock, UserCog } from "lucide-react"
+import { ArrowLeft, Mail, Phone, Clock, UserCog, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 export default function VolunteerDetailPage() {
@@ -21,10 +21,12 @@ export default function VolunteerDetailPage() {
 
   const { data: volunteer, isLoading } = useGetVolunteer(id, { query: { enabled: !!id, queryKey: getGetVolunteerQueryKey(id) } })
   const reviewMutation = useReviewVolunteer({ mutation: { mutationKey: ["reviewVolunteer", id] } })
+  const deleteMutation = useDeleteVolunteer()
 
   const [reviewNote, setReviewNote] = useState("")
   const [assignedRole, setAssignedRole] = useState("")
   const [isReviewOpen, setIsReviewOpen] = useState(false)
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
 
   const reviewMutateFnRef = useRef(reviewMutation.mutate)
   reviewMutateFnRef.current = reviewMutation.mutate
@@ -39,6 +41,19 @@ export default function VolunteerDetailPage() {
           queryClient.setQueryData(getGetVolunteerQueryKey(id), data)
         },
         onError: () => toast({ title: "Failed to review volunteer", variant: "destructive" })
+      }
+    )
+  }
+
+  const handleDelete = () => {
+    deleteMutation.mutate(
+      { id },
+      {
+        onSuccess: () => {
+          toast({ title: "Volunteer record deleted" })
+          setLocation("/volunteers")
+        },
+        onError: () => toast({ title: "Failed to delete volunteer", variant: "destructive" })
       }
     )
   }
@@ -88,6 +103,28 @@ export default function VolunteerDetailPage() {
                 </DialogContent>
               </Dialog>
             )}
+
+            <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="border-destructive/30 text-destructive hover:bg-destructive/5">
+                  <Trash2 className="w-4 h-4 mr-2" /> Delete
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Delete this volunteer record?</DialogTitle>
+                  <DialogDescription>
+                    This will permanently delete <strong>{volunteer.name}</strong> and all associated data. This cannot be undone.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="gap-2 sm:gap-0">
+                  <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>Cancel</Button>
+                  <Button variant="destructive" onClick={handleDelete} disabled={deleteMutation.isPending}>
+                    {deleteMutation.isPending ? "Deleting…" : "Delete Permanently"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 

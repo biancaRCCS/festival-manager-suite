@@ -180,4 +180,24 @@ router.patch("/vendors/:id/assign", requireStaff, async (req, res): Promise<void
   res.json(formatVendor(updated));
 });
 
+router.delete("/vendors/:id", requireStaff, async (req, res): Promise<void> => {
+  const parsed = GetVendorParams.safeParse(req.params);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid ID" });
+    return;
+  }
+  const [deleted] = await db.delete(vendorsTable).where(eq(vendorsTable.id, parsed.data.id)).returning();
+  if (!deleted) {
+    res.status(404).json({ error: "Vendor not found" });
+    return;
+  }
+  await db.insert(activityLogTable).values({
+    type: "deleted",
+    message: `Vendor record deleted: ${deleted.name} (${deleted.businessName})`,
+    entityType: "vendor",
+    entityId: deleted.id,
+  });
+  res.status(204).send();
+});
+
 export default router;

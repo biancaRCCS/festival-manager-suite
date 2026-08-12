@@ -88,4 +88,24 @@ router.patch("/volunteers/:id/review", requireStaff, async (req, res): Promise<v
   res.json(formatVolunteer(updated));
 });
 
+router.delete("/volunteers/:id", requireStaff, async (req, res): Promise<void> => {
+  const parsed = GetVolunteerParams.safeParse(req.params);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid ID" });
+    return;
+  }
+  const [deleted] = await db.delete(volunteersTable).where(eq(volunteersTable.id, parsed.data.id)).returning();
+  if (!deleted) {
+    res.status(404).json({ error: "Volunteer not found" });
+    return;
+  }
+  await db.insert(activityLogTable).values({
+    type: "deleted",
+    message: `Volunteer record deleted: ${deleted.name}`,
+    entityType: "volunteer",
+    entityId: deleted.id,
+  });
+  res.status(204).send();
+});
+
 export default router;

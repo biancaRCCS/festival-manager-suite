@@ -1,6 +1,6 @@
 import { useState, useRef } from "react"
 import { useLocation, useParams } from "wouter"
-import { useGetSponsor, useReviewSponsor, useFinalApproveSponsor, useAssignSponsorSpot, getGetSponsorQueryKey } from "@workspace/api-client-react"
+import { useGetSponsor, useReviewSponsor, useFinalApproveSponsor, useAssignSponsorSpot, getGetSponsorQueryKey, useDeleteSponsor } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { ArrowLeft, CheckCircle2, MapPin, Clock } from "lucide-react"
+import { ArrowLeft, CheckCircle2, MapPin, Clock, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 // ---------------------------------------------------------------------------
@@ -68,12 +68,14 @@ export default function SponsorDetailPage() {
   const reviewMutation = useReviewSponsor({ mutation: { mutationKey: ["reviewSponsor", id] } })
   const finalApproveMutation = useFinalApproveSponsor({ mutation: { mutationKey: ["finalApproveSponsor", id] } })
   const assignSpotMutation = useAssignSponsorSpot({ mutation: { mutationKey: ["assignSpotSponsor", id] } })
+  const deleteMutation = useDeleteSponsor()
 
   const [reviewNote, setReviewNote] = useState("")
   const [spotNumber, setSpotNumber] = useState("")
   const [locationName, setLocationName] = useState("")
   const [isReviewOpen, setIsReviewOpen] = useState(false)
   const [isSpotOpen, setIsSpotOpen] = useState(false)
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
 
   const reviewMutateFnRef = useRef(reviewMutation.mutate)
   reviewMutateFnRef.current = reviewMutation.mutate
@@ -120,6 +122,19 @@ export default function SponsorDetailPage() {
           queryClient.setQueryData(getGetSponsorQueryKey(id), data)
         },
         onError: () => toast({ title: "Failed to assign spot", variant: "destructive" })
+      }
+    )
+  }
+
+  const handleDelete = () => {
+    deleteMutation.mutate(
+      { id },
+      {
+        onSuccess: () => {
+          toast({ title: "Sponsor record deleted" })
+          setLocation("/sponsors")
+        },
+        onError: () => toast({ title: "Failed to delete sponsor", variant: "destructive" })
       }
     )
   }
@@ -210,6 +225,28 @@ export default function SponsorDetailPage() {
                 </div>
                 <DialogFooter>
                   <Button onClick={handleAssignSpot} disabled={!spotNumber || !locationName}>Save Assignment</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="border-destructive/30 text-destructive hover:bg-destructive/5">
+                  <Trash2 className="w-4 h-4 mr-2" /> Delete
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Delete this sponsor record?</DialogTitle>
+                  <DialogDescription>
+                    This will permanently delete <strong>{sponsor.orgName}</strong> ({sponsor.name}) and all associated data. This cannot be undone.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="gap-2 sm:gap-0">
+                  <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>Cancel</Button>
+                  <Button variant="destructive" onClick={handleDelete} disabled={deleteMutation.isPending}>
+                    {deleteMutation.isPending ? "Deleting…" : "Delete Permanently"}
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
