@@ -18,6 +18,7 @@ import VolunteersPage from '@/pages/volunteers/index';
 import VolunteerDetailPage from '@/pages/volunteers/[id]';
 import SettingsPage from '@/pages/settings';
 import StaffPage from '@/pages/staff';
+import ActivityPage from '@/pages/activity';
 
 import ApplyVendorPage from '@/pages/public/apply-vendor';
 import ApplySponsorPage from '@/pages/public/apply-sponsor';
@@ -416,6 +417,7 @@ function ClerkProviderWithRoutes() {
             <ProtectedRoute path="/volunteers/:id" component={VolunteerDetailPage} />
             <ProtectedRoute path="/settings" component={SettingsPage} />
             <ProtectedRoute path="/staff" component={StaffPage} />
+            <ProtectedRoute path="/activity" component={ActivityPage} />
 
             <Route component={NotFound} />
           </Switch>

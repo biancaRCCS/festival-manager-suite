@@ -13,5 +13,7 @@ export interface SponsorApplicationInput {
   email: string;
   phone: string;
   tier: string;
+  /** @nullable */
+  sponsorshipAmount?: number | null;
   answers: SponsorApplicationInputAnswers;
 }

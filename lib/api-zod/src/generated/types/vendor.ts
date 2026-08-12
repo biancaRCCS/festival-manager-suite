@@ -15,9 +15,12 @@ export interface Vendor {
   businessName: string;
   email: string;
   phone: string;
+  vendorType: string;
   status: VendorStatus;
   applicationData: VendorApplicationData;
   agreementSigned?: boolean;
+  /** @nullable */
+  agreementSignedName?: string | null;
   /** @nullable */
   spotNumber?: string | null;
   /** @nullable */

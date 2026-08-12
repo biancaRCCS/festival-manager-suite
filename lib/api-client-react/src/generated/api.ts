@@ -20,7 +20,6 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  ActivityItem,
   AgreementSignature,
   ApplicationConfirmation,
   CheckoutSession,
@@ -35,11 +34,13 @@ import type {
   FestivalYearUpdate,
   FinancialSummary,
   GetDashboardFinancialsParams,
+  GetRecentActivityParams,
   GetSettingsParams,
   HealthStatus,
   ListSponsorsParams,
   ListVendorsParams,
   ListVolunteersParams,
+  PaginatedActivityResponse,
   PortalInfo,
   ReviewDecision,
   Sponsor,
@@ -829,20 +830,27 @@ export function useGetDashboardFinancials<TData = Awaited<ReturnType<typeof getD
 
 
 
-export const getGetRecentActivityUrl = () => {
+export const getGetRecentActivityUrl = (params?: GetRecentActivityParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/dashboard/activity`
+  return stringifiedParams.length > 0 ? `/api/dashboard/activity?${stringifiedParams}` : `/api/dashboard/activity`
 }
 
 /**
- * @summary Get recent activity feed
+ * @summary Get paginated activity feed with optional filters
  */
-export const getRecentActivity = async ( options?: RequestInit): Promise<ActivityItem[]> => {
+export const getRecentActivity = async (params?: GetRecentActivityParams, options?: RequestInit): Promise<PaginatedActivityResponse> => {
 
-  return customFetch<ActivityItem[]>(getGetRecentActivityUrl(),
+  return customFetch<PaginatedActivityResponse>(getGetRecentActivityUrl(params),
   {
     ...options,
     method: 'GET'
@@ -855,23 +863,23 @@ export const getRecentActivity = async ( options?: RequestInit): Promise<Activit
 
 
 
-export const getGetRecentActivityQueryKey = () => {
+export const getGetRecentActivityQueryKey = (params?: GetRecentActivityParams,) => {
     return [
-    `/api/dashboard/activity`
+    `/api/dashboard/activity`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetRecentActivityQueryOptions = <TData = Awaited<ReturnType<typeof getRecentActivity>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRecentActivity>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetRecentActivityQueryOptions = <TData = Awaited<ReturnType<typeof getRecentActivity>>, TError = ErrorType<unknown>>(params?: GetRecentActivityParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRecentActivity>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetRecentActivityQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetRecentActivityQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRecentActivity>>> = ({ signal }) => getRecentActivity({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRecentActivity>>> = ({ signal }) => getRecentActivity(params, { signal, ...requestOptions });
 
 
 
@@ -885,15 +893,15 @@ export type GetRecentActivityQueryError = ErrorType<unknown>
 
 
 /**
- * @summary Get recent activity feed
+ * @summary Get paginated activity feed with optional filters
  */
 
 export function useGetRecentActivity<TData = Awaited<ReturnType<typeof getRecentActivity>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRecentActivity>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: GetRecentActivityParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRecentActivity>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetRecentActivityQueryOptions(options)
+  const queryOptions = getGetRecentActivityQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -1442,6 +1450,77 @@ export function useGetVendor<TData = Awaited<ReturnType<typeof getVendor>>, TErr
 
 
 
+export const getDeleteVendorUrl = (id: number,) => {
+
+
+
+
+  return `/api/vendors/${id}`
+}
+
+/**
+ * @summary Delete a vendor
+ */
+export const deleteVendor = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteVendorUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteVendorMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVendor>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteVendor>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteVendor'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteVendor>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteVendor(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteVendorMutationResult = NonNullable<Awaited<ReturnType<typeof deleteVendor>>>
+
+    export type DeleteVendorMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete a vendor
+ */
+export const useDeleteVendor = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVendor>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteVendor>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteVendorMutationOptions(options));
+    }
+
 export const getReviewVendorUrl = (id: number,) => {
 
 
@@ -1818,6 +1897,77 @@ export function useGetSponsor<TData = Awaited<ReturnType<typeof getSponsor>>, TE
 
 
 
+export const getDeleteSponsorUrl = (id: number,) => {
+
+
+
+
+  return `/api/sponsors/${id}`
+}
+
+/**
+ * @summary Delete a sponsor
+ */
+export const deleteSponsor = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteSponsorUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteSponsorMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSponsor>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteSponsor>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteSponsor'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteSponsor>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteSponsor(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteSponsorMutationResult = NonNullable<Awaited<ReturnType<typeof deleteSponsor>>>
+
+    export type DeleteSponsorMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete a sponsor
+ */
+export const useDeleteSponsor = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSponsor>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteSponsor>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteSponsorMutationOptions(options));
+    }
+
 export const getReviewSponsorUrl = (id: number,) => {
 
 
@@ -2193,6 +2343,77 @@ export function useGetVolunteer<TData = Awaited<ReturnType<typeof getVolunteer>>
 
 
 
+
+export const getDeleteVolunteerUrl = (id: number,) => {
+
+
+
+
+  return `/api/volunteers/${id}`
+}
+
+/**
+ * @summary Delete a volunteer
+ */
+export const deleteVolunteer = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteVolunteerUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteVolunteerMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVolunteer>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteVolunteer>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteVolunteer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteVolunteer>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteVolunteer(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteVolunteerMutationResult = NonNullable<Awaited<ReturnType<typeof deleteVolunteer>>>
+
+    export type DeleteVolunteerMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete a volunteer
+ */
+export const useDeleteVolunteer = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVolunteer>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteVolunteer>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteVolunteerMutationOptions(options));
+    }
 
 export const getReviewVolunteerUrl = (id: number,) => {
 
@@ -2730,42 +2951,6 @@ export function useExportVolunteers<TData = Awaited<ReturnType<typeof exportVolu
 
   return withQueryKey(query, queryOptions.queryKey);
 }
-
-// ── Delete vendor ──────────────────────────────────────────────────────────
-export const deleteVendor = async (id: number, options?: RequestInit): Promise<void> => {
-  return customFetch<void>(`/api/vendors/${id}`, { ...options, method: 'DELETE' });
-};
-
-export const useDeleteVendor = <TError = ErrorType<unknown>, TContext = unknown>(
-  options?: { mutation?: UseMutationOptions<void, TError, { id: number }, TContext> }
-): UseMutationResult<void, TError, { id: number }, TContext> => {
-  const mutationFn: MutationFunction<void, { id: number }> = ({ id }) => deleteVendor(id);
-  return useMutation({ mutationFn, mutationKey: ['deleteVendor'], ...options?.mutation });
-};
-
-// ── Delete sponsor ─────────────────────────────────────────────────────────
-export const deleteSponsor = async (id: number, options?: RequestInit): Promise<void> => {
-  return customFetch<void>(`/api/sponsors/${id}`, { ...options, method: 'DELETE' });
-};
-
-export const useDeleteSponsor = <TError = ErrorType<unknown>, TContext = unknown>(
-  options?: { mutation?: UseMutationOptions<void, TError, { id: number }, TContext> }
-): UseMutationResult<void, TError, { id: number }, TContext> => {
-  const mutationFn: MutationFunction<void, { id: number }> = ({ id }) => deleteSponsor(id);
-  return useMutation({ mutationFn, mutationKey: ['deleteSponsor'], ...options?.mutation });
-};
-
-// ── Delete volunteer ───────────────────────────────────────────────────────
-export const deleteVolunteer = async (id: number, options?: RequestInit): Promise<void> => {
-  return customFetch<void>(`/api/volunteers/${id}`, { ...options, method: 'DELETE' });
-};
-
-export const useDeleteVolunteer = <TError = ErrorType<unknown>, TContext = unknown>(
-  options?: { mutation?: UseMutationOptions<void, TError, { id: number }, TContext> }
-): UseMutationResult<void, TError, { id: number }, TContext> => {
-  const mutationFn: MutationFunction<void, { id: number }> = ({ id }) => deleteVolunteer(id);
-  return useMutation({ mutationFn, mutationKey: ['deleteVolunteer'], ...options?.mutation });
-};
 
 
 

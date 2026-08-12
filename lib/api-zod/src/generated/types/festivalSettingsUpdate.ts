@@ -8,11 +8,52 @@
 import type { FormQuestion } from './formQuestion';
 
 export interface FestivalSettingsUpdate {
-  vendorPrice?: number;
-  sponsorPrice?: number;
-  vendorSpotLimit?: number;
-  sponsorSpotLimit?: number;
+  vendorTypeLabelMajorFood?: string;
+  vendorTypeLabelSpecialtyFood?: string;
+  vendorTypeLabelRetail?: string;
+  vendorTypeLabelNonprofit?: string;
+  vendorPriceMajorFood?: number;
+  vendorPriceSpecialtyFood?: number;
+  vendorPriceRetail?: number;
+  vendorPriceNonprofit?: number;
+  vendorSpotLimitMajorFood?: number;
+  vendorSpotLimitSpecialtyFood?: number;
+  vendorSpotLimitRetail?: number;
+  vendorSpotLimitNonprofit?: number;
+  sponsorPriceBronze?: number;
+  sponsorPriceSilver?: number;
+  sponsorPriceGold?: number;
+  sponsorPricePlatinum?: number;
+  sponsorPriceDiamond?: number;
+  sponsorPriceMaxBronze?: number;
+  sponsorPriceMaxSilver?: number;
+  sponsorPriceMaxGold?: number;
+  sponsorPriceMaxPlatinum?: number;
+  /** @nullable */
+  sponsorPriceMaxDiamond?: number | null;
+  sponsorSpotLimitBronze?: number;
+  sponsorSpotLimitSilver?: number;
+  sponsorSpotLimitGold?: number;
+  sponsorSpotLimitPlatinum?: number;
+  sponsorSpotLimitDiamond?: number;
+  /** @nullable */
+  festivalDate?: string | null;
+  /** @nullable */
+  applicationDeadline?: string | null;
+  /** @nullable */
+  documentDeadline?: string | null;
+  paymentWindowDays?: number;
+  /** @nullable */
+  notificationEmail?: string | null;
   vendorFormQuestions?: FormQuestion[];
   sponsorFormQuestions?: FormQuestion[];
   volunteerFormQuestions?: FormQuestion[];
+  /** @nullable */
+  sponsorFormDescription?: string | null;
+  /** @nullable */
+  sponsorFormHeaderImage?: string | null;
+  /** @nullable */
+  vendorFormDescription?: string | null;
+  /** @nullable */
+  vendorFormHeaderImage?: string | null;
 }

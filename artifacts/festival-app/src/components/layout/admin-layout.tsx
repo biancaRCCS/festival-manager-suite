@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter"
 import { useClerk, useUser } from "@clerk/react"
-import { Calendar, Users, Briefcase, HandHeart, Settings, LogOut, ShieldCheck, Home } from "lucide-react"
+import { Calendar, Users, Briefcase, HandHeart, Settings, LogOut, ShieldCheck, Home, ClipboardList } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
@@ -10,12 +10,13 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user } = useUser()
 
   const navItems = [
-    { href: "/dashboard", label: "Dashboard", icon: Home },
-    { href: "/vendors", label: "Vendors", icon: Briefcase },
-    { href: "/sponsors", label: "Sponsors", icon: HandHeart },
-    { href: "/volunteers", label: "Volunteers", icon: Users },
-    { href: "/staff", label: "Staff", icon: ShieldCheck },
-    { href: "/settings", label: "Settings", icon: Settings },
+    { href: "/dashboard",  label: "Dashboard",   icon: Home },
+    { href: "/vendors",    label: "Vendors",      icon: Briefcase },
+    { href: "/sponsors",   label: "Sponsors",     icon: HandHeart },
+    { href: "/volunteers", label: "Volunteers",   icon: Users },
+    { href: "/activity",   label: "Activity Log", icon: ClipboardList },
+    { href: "/staff",      label: "Staff",        icon: ShieldCheck },
+    { href: "/settings",   label: "Settings",     icon: Settings },
   ]
 
   return (

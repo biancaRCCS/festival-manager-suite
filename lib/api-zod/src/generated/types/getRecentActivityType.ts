@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ActivityItemType = typeof ActivityItemType[keyof typeof ActivityItemType];
+export type GetRecentActivityType = typeof GetRecentActivityType[keyof typeof GetRecentActivityType];
 
 
-export const ActivityItemType = {
+export const GetRecentActivityType = {
   new_application: 'new_application',
   approved: 'approved',
   rejected: 'rejected',

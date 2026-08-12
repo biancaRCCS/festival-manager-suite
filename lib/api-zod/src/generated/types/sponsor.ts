@@ -20,6 +20,8 @@ export interface Sponsor {
   applicationData: SponsorApplicationData;
   agreementSigned?: boolean;
   /** @nullable */
+  sponsorshipAmount?: number | null;
+  /** @nullable */
   spotNumber?: string | null;
   /** @nullable */
   location?: string | null;

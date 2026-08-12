@@ -20,7 +20,7 @@ function formatFestivalDate(dateStr: string): string {
 export default function DashboardPage() {
   const { data: currentYear, isLoading: yearLoading } = useGetCurrentYear()
   const { data: summary, isLoading: summaryLoading } = useGetDashboardSummary({ query: { enabled: !!currentYear, queryKey: ["dashboardSummary"] } })
-  const { data: activity, isLoading: activityLoading } = useGetRecentActivity({ query: { enabled: !!currentYear, queryKey: ["recentActivity"] } })
+  const { data: activityData, isLoading: activityLoading } = useGetRecentActivity({ limit: 10 }, { query: { enabled: !!currentYear, queryKey: ["recentActivity"] } })
 
   const isLoading = yearLoading || summaryLoading || activityLoading
 
@@ -210,9 +210,9 @@ export default function DashboardPage() {
                   <CardTitle className="text-xl">Recent Activity</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {activity && activity.length > 0 ? (
+                  {activityData && activityData.items.length > 0 ? (
                     <div className="space-y-4">
-                      {activity.map((item) => (
+                      {activityData.items.map((item) => (
                         <div key={item.id} className="flex gap-4 items-start pb-4 border-b border-border/50 last:border-0 last:pb-0">
                           <div className="mt-1">
                             {item.entityType === 'vendor' ? <Store className="w-4 h-4 text-primary" /> :

@@ -12,5 +12,6 @@ export interface VendorApplicationInput {
   businessName: string;
   email: string;
   phone: string;
+  vendorType: string;
   answers: VendorApplicationInputAnswers;
 }

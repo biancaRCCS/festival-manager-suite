@@ -24,7 +24,35 @@ export interface PortalInfo {
   festivalYear: string;
   eventDate: string;
   /** @nullable */
-  vendorPrice?: number | null;
+  tier?: string | null;
   /** @nullable */
-  sponsorPrice?: number | null;
+  vendorType?: string | null;
+  /** @nullable */
+  vendorPriceFood?: number | null;
+  /** @nullable */
+  vendorPriceCrafts?: number | null;
+  /** @nullable */
+  vendorPriceMerchandise?: number | null;
+  /** @nullable */
+  vendorPriceCultural?: number | null;
+  /** @nullable */
+  vendorPriceOther?: number | null;
+  /** @nullable */
+  sponsorPriceBronze?: number | null;
+  /** @nullable */
+  sponsorPriceSilver?: number | null;
+  /** @nullable */
+  sponsorPriceGold?: number | null;
+  /** @nullable */
+  sponsorPricePlatinum?: number | null;
+  /** @nullable */
+  sponsorPriceDiamond?: number | null;
+  /** @nullable */
+  vendorPriceMajorFood?: number | null;
+  /** @nullable */
+  vendorPriceSpecialtyFood?: number | null;
+  /** @nullable */
+  vendorPriceRetail?: number | null;
+  /** @nullable */
+  vendorPriceNonprofit?: number | null;
 }

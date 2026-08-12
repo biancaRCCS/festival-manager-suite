@@ -37,7 +37,7 @@ export const SubmitVendorApplicationBody = zod.object({
   "businessName": zod.string(),
   "email": zod.string(),
   "phone": zod.string(),
-  "vendorType": zod.string().optional(),
+  "vendorType": zod.string(),
   "answers": zod.record(zod.string(), zod.unknown())
 })
 
@@ -56,7 +56,7 @@ export const SubmitSponsorApplicationBody = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "tier": zod.string(),
-  "sponsorshipAmount": zod.number().optional(),
+  "sponsorshipAmount": zod.number().nullish(),
   "answers": zod.record(zod.string(), zod.unknown())
 })
 
@@ -102,8 +102,22 @@ export const GetPortalInfoResponse = zod.object({
   "location": zod.string().nullish(),
   "festivalYear": zod.string(),
   "eventDate": zod.string(),
-  "vendorPrice": zod.number().nullish(),
-  "sponsorPrice": zod.number().nullish()
+  "tier": zod.string().nullish(),
+  "vendorType": zod.string().nullish(),
+  "vendorPriceFood": zod.number().nullish(),
+  "vendorPriceCrafts": zod.number().nullish(),
+  "vendorPriceMerchandise": zod.number().nullish(),
+  "vendorPriceCultural": zod.number().nullish(),
+  "vendorPriceOther": zod.number().nullish(),
+  "sponsorPriceBronze": zod.number().nullish(),
+  "sponsorPriceSilver": zod.number().nullish(),
+  "sponsorPriceGold": zod.number().nullish(),
+  "sponsorPricePlatinum": zod.number().nullish(),
+  "sponsorPriceDiamond": zod.number().nullish(),
+  "vendorPriceMajorFood": zod.number().nullish(),
+  "vendorPriceSpecialtyFood": zod.number().nullish(),
+  "vendorPriceRetail": zod.number().nullish(),
+  "vendorPriceNonprofit": zod.number().nullish()
 })
 
 
@@ -142,8 +156,22 @@ export const SignPortalAgreementResponse = zod.object({
   "location": zod.string().nullish(),
   "festivalYear": zod.string(),
   "eventDate": zod.string(),
-  "vendorPrice": zod.number().nullish(),
-  "sponsorPrice": zod.number().nullish()
+  "tier": zod.string().nullish(),
+  "vendorType": zod.string().nullish(),
+  "vendorPriceFood": zod.number().nullish(),
+  "vendorPriceCrafts": zod.number().nullish(),
+  "vendorPriceMerchandise": zod.number().nullish(),
+  "vendorPriceCultural": zod.number().nullish(),
+  "vendorPriceOther": zod.number().nullish(),
+  "sponsorPriceBronze": zod.number().nullish(),
+  "sponsorPriceSilver": zod.number().nullish(),
+  "sponsorPriceGold": zod.number().nullish(),
+  "sponsorPricePlatinum": zod.number().nullish(),
+  "sponsorPriceDiamond": zod.number().nullish(),
+  "vendorPriceMajorFood": zod.number().nullish(),
+  "vendorPriceSpecialtyFood": zod.number().nullish(),
+  "vendorPriceRetail": zod.number().nullish(),
+  "vendorPriceNonprofit": zod.number().nullish()
 })
 
 
@@ -184,6 +212,9 @@ export const GetDashboardSummaryResponse = zod.object({
   "paid": zod.number(),
   "finalApproved": zod.number()
 }),
+  "festivalDate": zod.string().nullish(),
+  "vendorRevenue": zod.number().optional(),
+  "sponsorRevenue": zod.number().optional(),
   "totalRevenue": zod.number(),
   "pendingActions": zod.number().describe('Total applications needing attention')
 })
@@ -212,17 +243,36 @@ export const GetDashboardFinancialsResponse = zod.object({
 
 
 /**
- * @summary Get recent activity feed
+ * @summary Get paginated activity feed with optional filters
  */
-export const GetRecentActivityResponseItem = zod.object({
+export const getRecentActivityQueryPageDefault = 1;
+
+export const getRecentActivityQueryLimitDefault = 50;
+export const getRecentActivityQueryLimitMax = 100;
+
+
+
+export const GetRecentActivityQueryParams = zod.object({
+  "page": zod.coerce.number().min(1).default(getRecentActivityQueryPageDefault),
+  "limit": zod.coerce.number().min(1).max(getRecentActivityQueryLimitMax).default(getRecentActivityQueryLimitDefault),
+  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'deleted']).optional(),
+  "entityType": zod.enum(['vendor', 'sponsor', 'volunteer']).optional()
+})
+
+export const GetRecentActivityResponse = zod.object({
+  "items": zod.array(zod.object({
   "id": zod.number(),
-  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned']),
+  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'deleted']),
   "message": zod.string(),
   "entityType": zod.enum(['vendor', 'sponsor', 'volunteer']),
   "entityId": zod.number().optional(),
   "createdAt": zod.string()
+})),
+  "total": zod.number(),
+  "page": zod.number(),
+  "limit": zod.number(),
+  "totalPages": zod.number()
 })
-export const GetRecentActivityResponse = zod.array(GetRecentActivityResponseItem)
 
 
 /**
@@ -289,65 +339,69 @@ export const GetSettingsQueryParams = zod.object({
   "yearId": zod.coerce.number().optional()
 })
 
-const formQuestionSchema = zod.object({
+export const GetSettingsResponse = zod.object({
+  "id": zod.number(),
+  "yearId": zod.number(),
+  "vendorTypeLabelMajorFood": zod.string(),
+  "vendorTypeLabelSpecialtyFood": zod.string(),
+  "vendorTypeLabelRetail": zod.string(),
+  "vendorTypeLabelNonprofit": zod.string(),
+  "vendorPriceMajorFood": zod.number(),
+  "vendorPriceSpecialtyFood": zod.number(),
+  "vendorPriceRetail": zod.number(),
+  "vendorPriceNonprofit": zod.number(),
+  "vendorSpotLimitMajorFood": zod.number(),
+  "vendorSpotLimitSpecialtyFood": zod.number(),
+  "vendorSpotLimitRetail": zod.number(),
+  "vendorSpotLimitNonprofit": zod.number(),
+  "sponsorPriceBronze": zod.number(),
+  "sponsorPriceSilver": zod.number(),
+  "sponsorPriceGold": zod.number(),
+  "sponsorPricePlatinum": zod.number(),
+  "sponsorPriceDiamond": zod.number(),
+  "sponsorPriceMaxBronze": zod.number(),
+  "sponsorPriceMaxSilver": zod.number(),
+  "sponsorPriceMaxGold": zod.number(),
+  "sponsorPriceMaxPlatinum": zod.number(),
+  "sponsorPriceMaxDiamond": zod.number().nullish(),
+  "sponsorSpotLimitBronze": zod.number(),
+  "sponsorSpotLimitSilver": zod.number(),
+  "sponsorSpotLimitGold": zod.number(),
+  "sponsorSpotLimitPlatinum": zod.number(),
+  "sponsorSpotLimitDiamond": zod.number(),
+  "festivalDate": zod.string().nullish(),
+  "applicationDeadline": zod.string().nullish(),
+  "documentDeadline": zod.string().nullish(),
+  "paymentWindowDays": zod.number().optional(),
+  "notificationEmail": zod.string().nullish(),
+  "vendorFormQuestions": zod.array(zod.object({
   "id": zod.string(),
   "label": zod.string(),
   "type": zod.enum(['text', 'textarea', 'select', 'checkbox']),
   "required": zod.boolean(),
   "options": zod.array(zod.string()).nullish(),
   "placeholder": zod.string().nullish()
-})
-
-const settingsShape = {
-  // Vendor categories (4)
-  "vendorTypeLabelMajorFood":    zod.string(),
-  "vendorTypeLabelSpecialtyFood": zod.string(),
-  "vendorTypeLabelRetail":       zod.string(),
-  "vendorTypeLabelNonprofit":    zod.string(),
-  "vendorPriceMajorFood":    zod.number(),
-  "vendorPriceSpecialtyFood": zod.number(),
-  "vendorPriceRetail":       zod.number(),
-  "vendorPriceNonprofit":    zod.number(),
-  "vendorSpotLimitMajorFood":    zod.number(),
-  "vendorSpotLimitSpecialtyFood": zod.number(),
-  "vendorSpotLimitRetail":       zod.number(),
-  "vendorSpotLimitNonprofit":    zod.number(),
-  // Sponsor tiers — min and max prices
-  "sponsorPriceBronze":   zod.number(),
-  "sponsorPriceSilver":   zod.number(),
-  "sponsorPriceGold":     zod.number(),
-  "sponsorPricePlatinum": zod.number(),
-  "sponsorPriceDiamond":  zod.number(),
-  "sponsorPriceMaxBronze":   zod.number(),
-  "sponsorPriceMaxSilver":   zod.number(),
-  "sponsorPriceMaxGold":     zod.number(),
-  "sponsorPriceMaxPlatinum": zod.number(),
-  "sponsorPriceMaxDiamond":  zod.number().nullable(),
-  "sponsorSpotLimitBronze":   zod.number(),
-  "sponsorSpotLimitSilver":   zod.number(),
-  "sponsorSpotLimitGold":     zod.number(),
-  "sponsorSpotLimitPlatinum": zod.number(),
-  "sponsorSpotLimitDiamond":  zod.number(),
-  // Dates & operational settings
-  "festivalDate":        zod.string().nullable(),
-  "applicationDeadline": zod.string().nullable(),
-  "documentDeadline":    zod.string().nullable(),
-  "paymentWindowDays":   zod.number(),
-  "notificationEmail":   zod.string().nullable(),
-  // Form questions
-  "vendorFormQuestions":    zod.array(formQuestionSchema),
-  "sponsorFormQuestions":   zod.array(formQuestionSchema),
-  "volunteerFormQuestions": zod.array(formQuestionSchema),
-}
-
-export const GetSettingsResponse = zod.object({
-  "id": zod.number(),
-  "yearId": zod.number(),
-  ...settingsShape,
-  "sponsorFormDescription":  zod.string().nullable(),
-  "sponsorFormHeaderImage":  zod.string().nullable(),
-  "vendorFormDescription":   zod.string().nullable(),
-  "vendorFormHeaderImage":   zod.string().nullable(),
+})),
+  "sponsorFormQuestions": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "type": zod.enum(['text', 'textarea', 'select', 'checkbox']),
+  "required": zod.boolean(),
+  "options": zod.array(zod.string()).nullish(),
+  "placeholder": zod.string().nullish()
+})),
+  "volunteerFormQuestions": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "type": zod.enum(['text', 'textarea', 'select', 'checkbox']),
+  "required": zod.boolean(),
+  "options": zod.array(zod.string()).nullish(),
+  "placeholder": zod.string().nullish()
+})),
+  "sponsorFormDescription": zod.string().nullish(),
+  "sponsorFormHeaderImage": zod.string().nullish(),
+  "vendorFormDescription": zod.string().nullish(),
+  "vendorFormHeaderImage": zod.string().nullish()
 })
 
 
@@ -355,60 +409,131 @@ export const GetSettingsResponse = zod.object({
  * @summary Update settings
  */
 export const UpdateSettingsBody = zod.object({
-  // Vendor categories (4)
-  "vendorTypeLabelMajorFood":    zod.string().optional(),
+  "vendorTypeLabelMajorFood": zod.string().optional(),
   "vendorTypeLabelSpecialtyFood": zod.string().optional(),
-  "vendorTypeLabelRetail":       zod.string().optional(),
-  "vendorTypeLabelNonprofit":    zod.string().optional(),
-  "vendorPriceMajorFood":    zod.number().optional(),
+  "vendorTypeLabelRetail": zod.string().optional(),
+  "vendorTypeLabelNonprofit": zod.string().optional(),
+  "vendorPriceMajorFood": zod.number().optional(),
   "vendorPriceSpecialtyFood": zod.number().optional(),
-  "vendorPriceRetail":       zod.number().optional(),
-  "vendorPriceNonprofit":    zod.number().optional(),
-  "vendorSpotLimitMajorFood":    zod.number().optional(),
+  "vendorPriceRetail": zod.number().optional(),
+  "vendorPriceNonprofit": zod.number().optional(),
+  "vendorSpotLimitMajorFood": zod.number().optional(),
   "vendorSpotLimitSpecialtyFood": zod.number().optional(),
-  "vendorSpotLimitRetail":       zod.number().optional(),
-  "vendorSpotLimitNonprofit":    zod.number().optional(),
-  // Sponsor tiers — min and max prices
-  "sponsorPriceBronze":   zod.number().optional(),
-  "sponsorPriceSilver":   zod.number().optional(),
-  "sponsorPriceGold":     zod.number().optional(),
+  "vendorSpotLimitRetail": zod.number().optional(),
+  "vendorSpotLimitNonprofit": zod.number().optional(),
+  "sponsorPriceBronze": zod.number().optional(),
+  "sponsorPriceSilver": zod.number().optional(),
+  "sponsorPriceGold": zod.number().optional(),
   "sponsorPricePlatinum": zod.number().optional(),
-  "sponsorPriceDiamond":  zod.number().optional(),
-  "sponsorPriceMaxBronze":   zod.number().optional(),
-  "sponsorPriceMaxSilver":   zod.number().optional(),
-  "sponsorPriceMaxGold":     zod.number().optional(),
+  "sponsorPriceDiamond": zod.number().optional(),
+  "sponsorPriceMaxBronze": zod.number().optional(),
+  "sponsorPriceMaxSilver": zod.number().optional(),
+  "sponsorPriceMaxGold": zod.number().optional(),
   "sponsorPriceMaxPlatinum": zod.number().optional(),
-  "sponsorPriceMaxDiamond":  zod.number().nullable().optional(),
-  "sponsorSpotLimitBronze":   zod.number().optional(),
-  "sponsorSpotLimitSilver":   zod.number().optional(),
-  "sponsorSpotLimitGold":     zod.number().optional(),
+  "sponsorPriceMaxDiamond": zod.number().nullish(),
+  "sponsorSpotLimitBronze": zod.number().optional(),
+  "sponsorSpotLimitSilver": zod.number().optional(),
+  "sponsorSpotLimitGold": zod.number().optional(),
   "sponsorSpotLimitPlatinum": zod.number().optional(),
-  "sponsorSpotLimitDiamond":  zod.number().optional(),
-  // Dates & operational settings
-  "festivalDate":        zod.string().nullable().optional(),
-  "applicationDeadline": zod.string().nullable().optional(),
-  "documentDeadline":    zod.string().nullable().optional(),
-  "paymentWindowDays":   zod.number().optional(),
-  "notificationEmail":   zod.string().nullable().optional(),
-  // Form questions
-  "vendorFormQuestions":    zod.array(formQuestionSchema).optional(),
-  "sponsorFormQuestions":   zod.array(formQuestionSchema).optional(),
-  "volunteerFormQuestions": zod.array(formQuestionSchema).optional(),
-  // Form customisation
-  "sponsorFormDescription":  zod.string().nullable().optional(),
-  "sponsorFormHeaderImage":  zod.string().nullable().optional(),
-  "vendorFormDescription":   zod.string().nullable().optional(),
-  "vendorFormHeaderImage":   zod.string().nullable().optional(),
+  "sponsorSpotLimitDiamond": zod.number().optional(),
+  "festivalDate": zod.string().nullish(),
+  "applicationDeadline": zod.string().nullish(),
+  "documentDeadline": zod.string().nullish(),
+  "paymentWindowDays": zod.number().optional(),
+  "notificationEmail": zod.string().nullish(),
+  "vendorFormQuestions": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "type": zod.enum(['text', 'textarea', 'select', 'checkbox']),
+  "required": zod.boolean(),
+  "options": zod.array(zod.string()).nullish(),
+  "placeholder": zod.string().nullish()
+})).optional(),
+  "sponsorFormQuestions": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "type": zod.enum(['text', 'textarea', 'select', 'checkbox']),
+  "required": zod.boolean(),
+  "options": zod.array(zod.string()).nullish(),
+  "placeholder": zod.string().nullish()
+})).optional(),
+  "volunteerFormQuestions": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "type": zod.enum(['text', 'textarea', 'select', 'checkbox']),
+  "required": zod.boolean(),
+  "options": zod.array(zod.string()).nullish(),
+  "placeholder": zod.string().nullish()
+})).optional(),
+  "sponsorFormDescription": zod.string().nullish(),
+  "sponsorFormHeaderImage": zod.string().nullish(),
+  "vendorFormDescription": zod.string().nullish(),
+  "vendorFormHeaderImage": zod.string().nullish()
 })
 
 export const UpdateSettingsResponse = zod.object({
   "id": zod.number(),
   "yearId": zod.number(),
-  ...settingsShape,
-  "sponsorFormDescription":  zod.string().nullable(),
-  "sponsorFormHeaderImage":  zod.string().nullable(),
-  "vendorFormDescription":   zod.string().nullable(),
-  "vendorFormHeaderImage":   zod.string().nullable(),
+  "vendorTypeLabelMajorFood": zod.string(),
+  "vendorTypeLabelSpecialtyFood": zod.string(),
+  "vendorTypeLabelRetail": zod.string(),
+  "vendorTypeLabelNonprofit": zod.string(),
+  "vendorPriceMajorFood": zod.number(),
+  "vendorPriceSpecialtyFood": zod.number(),
+  "vendorPriceRetail": zod.number(),
+  "vendorPriceNonprofit": zod.number(),
+  "vendorSpotLimitMajorFood": zod.number(),
+  "vendorSpotLimitSpecialtyFood": zod.number(),
+  "vendorSpotLimitRetail": zod.number(),
+  "vendorSpotLimitNonprofit": zod.number(),
+  "sponsorPriceBronze": zod.number(),
+  "sponsorPriceSilver": zod.number(),
+  "sponsorPriceGold": zod.number(),
+  "sponsorPricePlatinum": zod.number(),
+  "sponsorPriceDiamond": zod.number(),
+  "sponsorPriceMaxBronze": zod.number(),
+  "sponsorPriceMaxSilver": zod.number(),
+  "sponsorPriceMaxGold": zod.number(),
+  "sponsorPriceMaxPlatinum": zod.number(),
+  "sponsorPriceMaxDiamond": zod.number().nullish(),
+  "sponsorSpotLimitBronze": zod.number(),
+  "sponsorSpotLimitSilver": zod.number(),
+  "sponsorSpotLimitGold": zod.number(),
+  "sponsorSpotLimitPlatinum": zod.number(),
+  "sponsorSpotLimitDiamond": zod.number(),
+  "festivalDate": zod.string().nullish(),
+  "applicationDeadline": zod.string().nullish(),
+  "documentDeadline": zod.string().nullish(),
+  "paymentWindowDays": zod.number().optional(),
+  "notificationEmail": zod.string().nullish(),
+  "vendorFormQuestions": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "type": zod.enum(['text', 'textarea', 'select', 'checkbox']),
+  "required": zod.boolean(),
+  "options": zod.array(zod.string()).nullish(),
+  "placeholder": zod.string().nullish()
+})),
+  "sponsorFormQuestions": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "type": zod.enum(['text', 'textarea', 'select', 'checkbox']),
+  "required": zod.boolean(),
+  "options": zod.array(zod.string()).nullish(),
+  "placeholder": zod.string().nullish()
+})),
+  "volunteerFormQuestions": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "type": zod.enum(['text', 'textarea', 'select', 'checkbox']),
+  "required": zod.boolean(),
+  "options": zod.array(zod.string()).nullish(),
+  "placeholder": zod.string().nullish()
+})),
+  "sponsorFormDescription": zod.string().nullish(),
+  "sponsorFormHeaderImage": zod.string().nullish(),
+  "vendorFormDescription": zod.string().nullish(),
+  "vendorFormHeaderImage": zod.string().nullish()
 })
 
 
@@ -427,9 +552,11 @@ export const ListVendorsResponseItem = zod.object({
   "businessName": zod.string(),
   "email": zod.string(),
   "phone": zod.string(),
+  "vendorType": zod.string(),
   "status": zod.enum(['pending', 'approved', 'rejected', 'payment_pending', 'paid', 'final_approved']),
   "applicationData": zod.record(zod.string(), zod.unknown()),
   "agreementSigned": zod.boolean().optional(),
+  "agreementSignedName": zod.string().nullish(),
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
@@ -455,9 +582,11 @@ export const GetVendorResponse = zod.object({
   "businessName": zod.string(),
   "email": zod.string(),
   "phone": zod.string(),
+  "vendorType": zod.string(),
   "status": zod.enum(['pending', 'approved', 'rejected', 'payment_pending', 'paid', 'final_approved']),
   "applicationData": zod.record(zod.string(), zod.unknown()),
   "agreementSigned": zod.boolean().optional(),
+  "agreementSignedName": zod.string().nullish(),
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
@@ -466,6 +595,16 @@ export const GetVendorResponse = zod.object({
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
 })
+
+
+/**
+ * @summary Delete a vendor
+ */
+export const DeleteVendorParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteVendorResponse = zod.void()
 
 
 /**
@@ -487,9 +626,11 @@ export const ReviewVendorResponse = zod.object({
   "businessName": zod.string(),
   "email": zod.string(),
   "phone": zod.string(),
+  "vendorType": zod.string(),
   "status": zod.enum(['pending', 'approved', 'rejected', 'payment_pending', 'paid', 'final_approved']),
   "applicationData": zod.record(zod.string(), zod.unknown()),
   "agreementSigned": zod.boolean().optional(),
+  "agreementSignedName": zod.string().nullish(),
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
@@ -514,9 +655,11 @@ export const FinalApproveVendorResponse = zod.object({
   "businessName": zod.string(),
   "email": zod.string(),
   "phone": zod.string(),
+  "vendorType": zod.string(),
   "status": zod.enum(['pending', 'approved', 'rejected', 'payment_pending', 'paid', 'final_approved']),
   "applicationData": zod.record(zod.string(), zod.unknown()),
   "agreementSigned": zod.boolean().optional(),
+  "agreementSignedName": zod.string().nullish(),
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
@@ -546,9 +689,11 @@ export const AssignVendorSpotResponse = zod.object({
   "businessName": zod.string(),
   "email": zod.string(),
   "phone": zod.string(),
+  "vendorType": zod.string(),
   "status": zod.enum(['pending', 'approved', 'rejected', 'payment_pending', 'paid', 'final_approved']),
   "applicationData": zod.record(zod.string(), zod.unknown()),
   "agreementSigned": zod.boolean().optional(),
+  "agreementSignedName": zod.string().nullish(),
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
@@ -578,6 +723,7 @@ export const ListSponsorsResponseItem = zod.object({
   "status": zod.enum(['pending', 'approved', 'rejected', 'payment_pending', 'paid', 'final_approved']),
   "applicationData": zod.record(zod.string(), zod.unknown()),
   "agreementSigned": zod.boolean().optional(),
+  "sponsorshipAmount": zod.number().nullish(),
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
@@ -607,6 +753,7 @@ export const GetSponsorResponse = zod.object({
   "status": zod.enum(['pending', 'approved', 'rejected', 'payment_pending', 'paid', 'final_approved']),
   "applicationData": zod.record(zod.string(), zod.unknown()),
   "agreementSigned": zod.boolean().optional(),
+  "sponsorshipAmount": zod.number().nullish(),
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
@@ -615,6 +762,16 @@ export const GetSponsorResponse = zod.object({
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
 })
+
+
+/**
+ * @summary Delete a sponsor
+ */
+export const DeleteSponsorParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteSponsorResponse = zod.void()
 
 
 /**
@@ -640,6 +797,7 @@ export const ReviewSponsorResponse = zod.object({
   "status": zod.enum(['pending', 'approved', 'rejected', 'payment_pending', 'paid', 'final_approved']),
   "applicationData": zod.record(zod.string(), zod.unknown()),
   "agreementSigned": zod.boolean().optional(),
+  "sponsorshipAmount": zod.number().nullish(),
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
@@ -668,6 +826,7 @@ export const FinalApproveSponsorResponse = zod.object({
   "status": zod.enum(['pending', 'approved', 'rejected', 'payment_pending', 'paid', 'final_approved']),
   "applicationData": zod.record(zod.string(), zod.unknown()),
   "agreementSigned": zod.boolean().optional(),
+  "sponsorshipAmount": zod.number().nullish(),
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
@@ -701,6 +860,7 @@ export const AssignSponsorSpotResponse = zod.object({
   "status": zod.enum(['pending', 'approved', 'rejected', 'payment_pending', 'paid', 'final_approved']),
   "applicationData": zod.record(zod.string(), zod.unknown()),
   "agreementSigned": zod.boolean().optional(),
+  "sponsorshipAmount": zod.number().nullish(),
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
@@ -755,6 +915,16 @@ export const GetVolunteerResponse = zod.object({
   "reviewNote": zod.string().nullish(),
   "createdAt": zod.string()
 })
+
+
+/**
+ * @summary Delete a volunteer
+ */
+export const DeleteVolunteerParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteVolunteerResponse = zod.void()
 
 
 /**

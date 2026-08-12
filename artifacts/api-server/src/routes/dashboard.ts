@@ -166,15 +166,47 @@ router.get("/dashboard/financials", requireStaff, async (req, res): Promise<void
 });
 
 router.get("/dashboard/activity", requireStaff, async (req, res): Promise<void> => {
-  const items = await db.select().from(activityLogTable).orderBy(desc(activityLogTable.createdAt)).limit(20);
-  res.json(items.map(i => ({
-    id: i.id,
-    type: i.type,
-    message: i.message,
-    entityType: i.entityType,
-    entityId: i.entityId,
-    createdAt: i.createdAt.toISOString(),
-  })));
+  const page   = Math.max(1, parseInt((req.query.page  as string) || "1",  10) || 1);
+  const limit  = Math.min(100, Math.max(1, parseInt((req.query.limit as string) || "50", 10) || 50));
+  const offset = (page - 1) * limit;
+
+  const typeFilter       = req.query.type       as string | undefined;
+  const entityTypeFilter = req.query.entityType as string | undefined;
+
+  // Build WHERE conditions dynamically
+  const conditions: ReturnType<typeof eq>[] = [];
+  if (typeFilter)       conditions.push(eq(activityLogTable.type,       typeFilter));
+  if (entityTypeFilter) conditions.push(eq(activityLogTable.entityType, entityTypeFilter));
+
+  const whereClause = conditions.length > 0
+    ? and(...conditions as [ReturnType<typeof eq>, ...ReturnType<typeof eq>[]])
+    : undefined;
+
+  const [rows, countResult] = await Promise.all([
+    db.select().from(activityLogTable)
+      .where(whereClause)
+      .orderBy(desc(activityLogTable.createdAt))
+      .limit(limit)
+      .offset(offset),
+    db.select({ count: sql<number>`count(*)::int` }).from(activityLogTable).where(whereClause),
+  ]);
+
+  const total = countResult[0]?.count ?? 0;
+
+  res.json({
+    items: rows.map(i => ({
+      id: i.id,
+      type: i.type,
+      message: i.message,
+      entityType: i.entityType,
+      entityId: i.entityId,
+      createdAt: i.createdAt.toISOString(),
+    })),
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  });
 });
 
 export default router;

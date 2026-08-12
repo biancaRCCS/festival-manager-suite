@@ -15,6 +15,10 @@ export interface DashboardSummary {
   vendorStats: ApplicationStats;
   sponsorStats: ApplicationStats;
   volunteerStats: ApplicationStats;
+  /** @nullable */
+  festivalDate?: string | null;
+  vendorRevenue?: number;
+  sponsorRevenue?: number;
   totalRevenue: number;
   /** Total applications needing attention */
   pendingActions: number;
