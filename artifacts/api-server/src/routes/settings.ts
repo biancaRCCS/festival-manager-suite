@@ -3,6 +3,7 @@ import { db, festivalYearsTable, festivalSettingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireStaff } from "../lib/auth";
 import { GetSettingsQueryParams, UpdateSettingsBody } from "@workspace/api-zod";
+import { sendTestEmail } from "../lib/email";
 
 const router: IRouter = Router();
 
@@ -177,6 +178,36 @@ router.patch("/settings", requireStaff, async (req, res): Promise<void> => {
   }
 
   res.json(formatSettings(updated));
+});
+
+router.post("/settings/test-email", requireStaff, async (req, res): Promise<void> => {
+  // Get the notification email from settings for the active year
+  const years = await db.select().from(festivalYearsTable).where(eq(festivalYearsTable.isActive, true)).limit(1);
+  if (years.length === 0) {
+    res.status(404).json({ error: "No active festival year" });
+    return;
+  }
+  const yearId = years[0].id;
+
+  const settingsRows = await db.select().from(festivalSettingsTable).where(eq(festivalSettingsTable.yearId, yearId)).limit(1);
+  if (settingsRows.length === 0) {
+    res.status(404).json({ error: "Settings not found for active year" });
+    return;
+  }
+
+  const notificationEmail = settingsRows[0].notificationEmail;
+  if (!notificationEmail) {
+    res.status(400).json({ error: "No notification email configured in Settings" });
+    return;
+  }
+
+  try {
+    await sendTestEmail(notificationEmail);
+    res.json({ ok: true, sentTo: notificationEmail });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
 });
 
 export default router;

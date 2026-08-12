@@ -84,6 +84,26 @@ const TIER_LABELS: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
+// 0. Test email — throws on failure so callers can surface the error
+// ---------------------------------------------------------------------------
+export async function sendTestEmail(to: string): Promise<void> {
+  const transporter = getTransporter();
+  if (!transporter) {
+    throw new Error("No SMTP credentials configured (SMTP_USER and SMTP_PASS are required)");
+  }
+  const subject = "Romanian Festival — Test Email";
+  const html = `
+    <div style="${BASE_STYLE}">
+      <h2 style="color: #8b1a1a;">Email is working ✓</h2>
+      <p>This is a test message sent from the Romanian Festival admin panel to confirm that SMTP email delivery is configured correctly.</p>
+      <p>If you received this, email notifications are working and will be delivered when applications are submitted.</p>
+      ${FOOTER}
+    </div>`;
+  await transporter.sendMail({ from: FROM(), to, subject, html });
+  logger.info({ to, subject }, "Test email sent");
+}
+
+// ---------------------------------------------------------------------------
 // 1. Portal invite (existing)
 // ---------------------------------------------------------------------------
 export async function sendPortalInviteEmail(params: {

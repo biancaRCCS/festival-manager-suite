@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useGetCurrentYear, useGetSettings, useUpdateSettings, getGetSettingsQueryKey } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AdminLayout } from "@/components/layout/admin-layout"
@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Save, Plus, Trash2, GripVertical, ImageIcon, X } from "lucide-react"
+import { Save, Plus, Trash2, GripVertical, ImageIcon, X, Send } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { FestivalSettings, FormQuestion } from "@workspace/api-client-react"
@@ -41,6 +41,24 @@ export default function SettingsPage() {
 
   const [localSettings, setLocalSettings] = useState<Partial<FestivalSettings>>({})
   const initialized = useRef(false)
+  const [isSendingTestEmail, setIsSendingTestEmail] = useState(false)
+
+  const handleSendTestEmail = useCallback(async () => {
+    setIsSendingTestEmail(true)
+    try {
+      const res = await fetch("/api/settings/test-email", { method: "POST" })
+      const data = await res.json()
+      if (!res.ok) {
+        toast({ title: "Failed to send test email", description: data.error ?? "Unknown error", variant: "destructive" })
+      } else {
+        toast({ title: "Test email sent", description: `Check the inbox for ${data.sentTo}` })
+      }
+    } catch {
+      toast({ title: "Failed to send test email", description: "Network error — check server logs", variant: "destructive" })
+    } finally {
+      setIsSendingTestEmail(false)
+    }
+  }, [toast])
 
   useEffect(() => {
     if (settings && !initialized.current) {
@@ -215,12 +233,25 @@ export default function SettingsPage() {
                   </div>
                   <div className="space-y-2 md:col-span-2">
                     <Label>Notification Email</Label>
-                    <Input
-                      type="email"
-                      value={localSettings.notificationEmail ?? ""}
-                      onChange={e => set("notificationEmail", e.target.value || null)}
-                      placeholder="vendors@romaniancenter.org"
-                    />
+                    <div className="flex gap-2">
+                      <Input
+                        type="email"
+                        value={localSettings.notificationEmail ?? ""}
+                        onChange={e => set("notificationEmail", e.target.value || null)}
+                        placeholder="vendors@romaniancenter.org"
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={isSendingTestEmail || !localSettings.notificationEmail}
+                        onClick={handleSendTestEmail}
+                        className="shrink-0"
+                      >
+                        <Send className="w-4 h-4 mr-2" />
+                        {isSendingTestEmail ? "Sending…" : "Send Test Email"}
+                      </Button>
+                    </div>
                     <p className="text-xs text-muted-foreground">All new vendor, sponsor, and volunteer applications are emailed here.</p>
                   </div>
                 </CardContent>
