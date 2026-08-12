@@ -195,11 +195,12 @@ function LandingPage() {
                 </span>
               </div>
 
-              <Link href="/apply/vendor">
-                <Button className="bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-sm px-8 h-12 shadow-lg">
-                  Get Involved
-                </Button>
-              </Link>
+              <Button
+                className="bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-sm px-8 h-12 shadow-lg"
+                onClick={() => document.getElementById("apply-section")?.scrollIntoView({ behavior: "smooth" })}
+              >
+                Get Involved
+              </Button>
             </div>
 
             {/* Right — dancers logo (desktop: right column; mobile: below button, centered) */}
@@ -224,7 +225,7 @@ function LandingPage() {
             <ApplicationDeadlineCountdown deadline={deadline} />
           )}
 
-          <div className="mb-10">
+          <div id="apply-section" className="mb-10">
             <h2 className="font-serif text-3xl md:text-4xl font-bold text-secondary section-underline">
               Apply to Participate
             </h2>
