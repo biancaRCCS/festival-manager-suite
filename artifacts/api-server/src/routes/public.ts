@@ -72,7 +72,7 @@ router.post("/public/apply/sponsor", async (req, res): Promise<void> => {
     return;
   }
 
-  const { name, orgName, email, phone, tier, answers } = parsed.data;
+  const { name, orgName, email, phone, tier, sponsorshipAmount, answers } = parsed.data;
   const [sponsor] = await db.insert(sponsorsTable).values({
     yearId: years[0].id,
     name,
@@ -80,6 +80,7 @@ router.post("/public/apply/sponsor", async (req, res): Promise<void> => {
     email,
     phone: phone ?? "",
     tier: tier ?? "bronze",
+    sponsorshipAmount: sponsorshipAmount != null ? String(sponsorshipAmount) : undefined,
     status: "pending",
     applicationData: answers as Record<string, unknown>,
   }).returning();
@@ -157,7 +158,14 @@ router.get("/public/form-questions", async (req, res): Promise<void> => {
   if (type === "vendor") {
     res.json({ questions: s.vendorFormQuestions, applicationDeadline: deadline, vendorTypes });
   } else if (type === "sponsor") {
-    res.json({ questions: s.sponsorFormQuestions, applicationDeadline: deadline });
+    const sponsorTiers = [
+      { key: "bronze",   label: "Bronze",   min: parseFloat(s.sponsorPriceBronze ?? "750"),   max: s.sponsorPriceMaxBronze   != null ? parseFloat(s.sponsorPriceMaxBronze)   : 1499,  spotLimit: s.sponsorSpotLimitBronze   ?? 10 },
+      { key: "silver",   label: "Silver",   min: parseFloat(s.sponsorPriceSilver ?? "1500"),  max: s.sponsorPriceMaxSilver   != null ? parseFloat(s.sponsorPriceMaxSilver)   : 2999,  spotLimit: s.sponsorSpotLimitSilver   ?? 10 },
+      { key: "gold",     label: "Gold",     min: parseFloat(s.sponsorPriceGold ?? "3000"),    max: s.sponsorPriceMaxGold     != null ? parseFloat(s.sponsorPriceMaxGold)     : 4999,  spotLimit: s.sponsorSpotLimitGold     ?? 10 },
+      { key: "platinum", label: "Platinum", min: parseFloat(s.sponsorPricePlatinum ?? "5000"),max: s.sponsorPriceMaxPlatinum != null ? parseFloat(s.sponsorPriceMaxPlatinum) : 9999,  spotLimit: s.sponsorSpotLimitPlatinum ?? 5  },
+      { key: "diamond",  label: "Diamond",  min: parseFloat(s.sponsorPriceDiamond ?? "10000"),max: null,                                                                               spotLimit: s.sponsorSpotLimitDiamond  ?? 3  },
+    ];
+    res.json({ questions: s.sponsorFormQuestions, applicationDeadline: deadline, sponsorTiers });
   } else if (type === "volunteer") {
     res.json({ questions: s.volunteerFormQuestions, applicationDeadline: deadline });
   } else {

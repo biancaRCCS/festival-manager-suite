@@ -56,6 +56,7 @@ export const SubmitSponsorApplicationBody = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "tier": zod.string(),
+  "sponsorshipAmount": zod.number().optional(),
   "answers": zod.record(zod.string(), zod.unknown())
 })
 
