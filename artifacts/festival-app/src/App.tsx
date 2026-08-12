@@ -2,7 +2,7 @@ import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser } from '@clerk/r
 import { publishableKeyFromHost } from '@clerk/react/internal';
 import { shadcn } from '@clerk/themes';
 import { Route, Switch, Router as WouterRouter, useLocation, Redirect } from 'wouter';
-import { QueryClientProvider, useQueryClient } from '@tanstack/react-query';
+import { QueryClientProvider, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 
 import { queryClient } from './lib/queryClient';
@@ -29,7 +29,8 @@ import PortalSuccessPage from '@/pages/portal/success';
 
 import { Button } from '@/components/ui/button';
 import { Link } from 'wouter';
-import { CalendarDays, HandHeart, Store } from 'lucide-react';
+import { CalendarDays, HandHeart, Store, MapPin, Clock } from 'lucide-react';
+import { ApplicationDeadlineCountdown } from '@/components/application-deadline-countdown';
 
 const clerkPubKey = publishableKeyFromHost(
   window.location.hostname,
@@ -126,9 +127,21 @@ function SignUpPage() {
 }
 
 function LandingPage() {
+  const { data: formConfig } = useQuery({
+    queryKey: ["landingDeadline"],
+    queryFn: async () => {
+      const res = await fetch("/api/public/form-questions")
+      if (!res.ok) return null
+      return res.json() as Promise<{ applicationDeadline: string | null }>
+    },
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const deadline = formConfig?.applicationDeadline ?? null
+
   return (
     <div className="min-h-screen bg-background font-sans flex flex-col">
-      {/* Navy header — exact RCCS style */}
+      {/* Navy header */}
       <header className="bg-secondary shadow-md">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -145,18 +158,39 @@ function LandingPage() {
         </div>
       </header>
 
-      {/* Hero — dark navy banner with white text, RCCS-style */}
+      {/* Hero */}
       <section className="bg-secondary text-white">
-        <div className="max-w-6xl mx-auto px-6 py-20 md:py-28">
-          <h1 className="font-serif text-5xl md:text-7xl font-bold leading-tight mb-6 max-w-3xl">
+        <div className="max-w-6xl mx-auto px-6 py-16 md:py-24">
+
+          {/* Theme — year's creative concept */}
+          <p className="font-serif italic text-white/60 text-base md:text-lg mb-5 tracking-wide leading-snug">
+            150 Years of Constantin Brâncuși — Tradition, Art, and Romanian Spirit
+          </p>
+
+          {/* Main heading */}
+          <h1 className="font-serif text-5xl md:text-7xl font-bold leading-tight mb-8 max-w-3xl">
             Preserving Culture.<br />
-            Strengthening Community.<br />
+            Strengthening<br />
+            Community.<br />
             Connecting Generations.
           </h1>
-          <p className="text-white/75 text-lg md:text-xl max-w-2xl mb-10 leading-relaxed">
-            Join us for a day of music, food, and culture. We are currently accepting
-            applications for vendors, sponsors, and volunteers.
-          </p>
+
+          {/* Event details */}
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-y-3 gap-x-8 mb-10 text-white/80 text-sm md:text-base">
+            <span className="flex items-center gap-2.5">
+              <CalendarDays className="w-4 h-4 text-white/45 shrink-0" />
+              Saturday, September 26, 2026
+            </span>
+            <span className="flex items-center gap-2.5">
+              <Clock className="w-4 h-4 text-white/45 shrink-0" />
+              12:00 PM – 9:00 PM
+            </span>
+            <span className="flex items-center gap-2.5">
+              <MapPin className="w-4 h-4 text-white/45 shrink-0" />
+              Vernon Street Town Square, Downtown Roseville, CA
+            </span>
+          </div>
+
           <Link href="/apply/vendor">
             <Button className="bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-sm px-8 h-12 shadow-lg">
               Get Involved
@@ -165,20 +199,29 @@ function LandingPage() {
         </div>
       </section>
 
-      {/* Apply cards — clean white section, RCCS pattern */}
+      {/* Cards section */}
       <section className="bg-background flex-1">
         <div className="max-w-6xl mx-auto px-6 py-16">
+
+          {/* Application deadline countdown — from settings */}
+          {deadline && (
+            <ApplicationDeadlineCountdown deadline={deadline} />
+          )}
+
           <div className="mb-10">
             <h2 className="font-serif text-3xl md:text-4xl font-bold text-secondary section-underline">
               Apply to Participate
             </h2>
             <p className="mt-5 text-muted-foreground text-base max-w-xl">
-              Applications are open for this year's festival. Choose your participation type below.
+              Applications are open for this year's festival. Vendor and sponsor
+              applications are due{" "}
+              <span className="font-semibold text-foreground">September 10, 2026</span>.
+              Choose your participation type below.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Sponsors — navy/blue */}
+            {/* Sponsors — navy */}
             <Link href="/apply/sponsor">
               <div className="bg-white border border-border rounded hover:shadow-md transition-all cursor-pointer group overflow-hidden">
                 <div className="h-1.5 bg-secondary w-full" />
@@ -195,7 +238,7 @@ function LandingPage() {
               </div>
             </Link>
 
-            {/* Vendors — golden yellow */}
+            {/* Vendors — golden */}
             <Link href="/apply/vendor">
               <div className="bg-white border border-border rounded hover:shadow-md transition-all cursor-pointer group overflow-hidden">
                 <div className="h-1.5 w-full" style={{ backgroundColor: "#C89A2A" }} />
@@ -212,7 +255,7 @@ function LandingPage() {
               </div>
             </Link>
 
-            {/* Volunteers — crimson red */}
+            {/* Volunteers — crimson */}
             <Link href="/apply/volunteer">
               <div className="bg-white border border-border rounded hover:shadow-md transition-all cursor-pointer group overflow-hidden">
                 <div className="h-1.5 bg-primary w-full" />
