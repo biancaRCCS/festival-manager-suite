@@ -1,18 +1,48 @@
 import Stripe from 'stripe';
 import { StripeSync } from 'stripe-replit-sync';
+import { db, systemConfigTable } from '@workspace/db';
+import { eq } from 'drizzle-orm';
 
 /**
- * Fetches the Stripe secret key.
- * Priority:
+ * Read a single value from the system_config table.
+ * Returns null if the key is not found or the table doesn't exist yet.
+ */
+async function readSystemConfig(key: string): Promise<string | null> {
+  try {
+    const rows = await db
+      .select({ value: systemConfigTable.value })
+      .from(systemConfigTable)
+      .where(eq(systemConfigTable.key, key))
+      .limit(1);
+    return rows[0]?.value ?? null;
+  } catch {
+    // Table may not exist on very first startup before migrations run
+    return null;
+  }
+}
+
+/**
+ * Fetches the Stripe secret key and webhook signing secret.
+ *
+ * Priority for secret key:
  *   1. STRIPE_SK_API_KEY env var (user-supplied key)
  *   2. Replit Stripe connector API (managed integration)
+ *
+ * Priority for webhook secret:
+ *   1. STRIPE_WEBHOOK_SECRET env var (explicit override)
+ *   2. system_config DB row with key = 'stripe_webhook_secret'
+ *      (persisted at startup when findOrCreateManagedWebhook() first returned a secret)
+ *   3. Replit connector's stored webhook_secret (fallback)
  */
-async function getStripeCredentials(): Promise<{ secretKey: string; webhookSecret?: string }> {
+async function getStripeCredentials(): Promise<{ secretKey: string; webhookSecret: string }> {
+  const envWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET ?? '';
+  const dbWebhookSecret = envWebhookSecret ? null : await readSystemConfig('stripe_webhook_secret');
+
   // 1. User-supplied secret key takes priority
   if (process.env.STRIPE_SK_API_KEY) {
     return {
       secretKey: process.env.STRIPE_SK_API_KEY,
-      webhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? '',
+      webhookSecret: envWebhookSecret || dbWebhookSecret || '',
     };
   }
 
@@ -52,10 +82,32 @@ async function getStripeCredentials(): Promise<{ secretKey: string; webhookSecre
     );
   }
 
+  // Prefer the DB-persisted managed webhook secret over the connector's stored value,
+  // since the connector value may not match the managed webhook created at startup.
+  const webhookSecret =
+    envWebhookSecret ||
+    dbWebhookSecret ||
+    settings.webhook_secret ||
+    '';
+
   return {
     secretKey: settings.secret,
-    webhookSecret: settings.webhook_secret ?? '',
+    webhookSecret,
   };
+}
+
+/**
+ * Returns the active webhook signing secret using the standard priority chain:
+ *   1. STRIPE_WEBHOOK_SECRET env var (explicit override)
+ *   2. system_config DB row with key = 'stripe_webhook_secret'
+ *   3. Empty string (no verification — acceptable in dev without a webhook secret)
+ *
+ * Use this when you need the raw secret without a full StripeSync instance.
+ */
+export async function getWebhookSecret(): Promise<string> {
+  const envSecret = process.env.STRIPE_WEBHOOK_SECRET ?? '';
+  if (envSecret) return envSecret;
+  return (await readSystemConfig('stripe_webhook_secret')) ?? '';
 }
 
 /**
@@ -81,6 +133,21 @@ export async function getStripeSync(): Promise<StripeSync> {
   return new StripeSync({
     poolConfig: { connectionString: databaseUrl },
     stripeSecretKey: secretKey,
-    stripeWebhookSecret: webhookSecret ?? '',
+    stripeWebhookSecret: webhookSecret,
   });
+}
+
+/**
+ * Persists the Stripe managed-webhook signing secret to system_config.
+ * Called once at startup when findOrCreateManagedWebhook() returns a new secret.
+ * The secret is only present in the Stripe API response at creation time.
+ */
+export async function persistWebhookSecret(secret: string): Promise<void> {
+  await db
+    .insert(systemConfigTable)
+    .values({ key: 'stripe_webhook_secret', value: secret })
+    .onConflictDoUpdate({
+      target: systemConfigTable.key,
+      set: { value: secret, updatedAt: new Date() },
+    });
 }

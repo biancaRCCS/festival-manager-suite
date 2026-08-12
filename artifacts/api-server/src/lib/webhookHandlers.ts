@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { getStripeSync, getUncachableStripeClient } from './stripeClient';
+import { getStripeSync, getUncachableStripeClient, getWebhookSecret } from './stripeClient';
 import { handleCheckoutComplete } from '../routes/stripe';
 
 export class WebhookHandlers {
@@ -13,24 +13,28 @@ export class WebhookHandlers {
       );
     }
 
-    // stripe-replit-sync handles signature verification and syncs data to the stripe schema
+    // stripe-replit-sync handles signature verification and syncs data to the stripe schema.
+    // getStripeSync() reads the webhook secret from system_config (persisted at startup when
+    // findOrCreateManagedWebhook() first returned the secret) or STRIPE_WEBHOOK_SECRET env var,
+    // so it will always match the managed webhook that was registered.
     const sync = await getStripeSync();
     await sync.processWebhook(payload, signature);
 
     // Additionally parse the event ourselves to run application-level side effects
     // (marking vendors/sponsors as paid in our public schema tables).
-    // We re-verify the signature here using our own Stripe client.
+    // We re-verify the signature using the same persisted secret so both paths
+    // use the same source of truth (system_config or STRIPE_WEBHOOK_SECRET).
     try {
       const stripe = await getUncachableStripeClient();
-      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET ?? '';
+      const webhookSecret = await getWebhookSecret();
 
       let event: Stripe.Event;
       if (webhookSecret) {
         // Verify signature when a webhook secret is configured
         event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
       } else {
-        // No local webhook secret — parse the raw JSON (acceptable in dev/test mode
-        // where stripe-replit-sync's managed webhook handles verification above)
+        // No webhook secret available — parse raw JSON.
+        // Acceptable in dev/test mode where stripe-replit-sync already verified above.
         event = JSON.parse(payload.toString()) as Stripe.Event;
       }
 

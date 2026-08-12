@@ -1,5 +1,5 @@
 import { runMigrations } from "stripe-replit-sync";
-import { getStripeSync } from "./lib/stripeClient";
+import { getStripeSync, persistWebhookSecret } from "./lib/stripeClient";
 import app from "./app";
 import { logger } from "./lib/logger";
 
@@ -25,6 +25,14 @@ async function initStripe() {
     `${webhookBaseUrl}/api/stripe/webhook`
   );
   logger.info({ url: webhook?.url }, "Stripe webhook configured.");
+
+  // Stripe only includes the signing secret in the creation response (never on retrieval).
+  // Persist it immediately so every subsequent server restart can verify webhook signatures.
+  if (webhook?.secret) {
+    logger.info("Persisting managed webhook signing secret to system_config…");
+    await persistWebhookSecret(webhook.secret);
+    logger.info("Webhook signing secret persisted.");
+  }
 
   // Backfill runs in background — don't await so the server starts immediately
   stripeSync.syncBackfill()

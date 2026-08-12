@@ -5,3 +5,4 @@ export * from "./vendors";
 export * from "./sponsors";
 export * from "./volunteers";
 export * from "./activityLog";
+export * from "./systemConfig";
