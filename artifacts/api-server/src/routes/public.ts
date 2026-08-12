@@ -33,15 +33,20 @@ router.post("/public/apply/vendor", async (req, res): Promise<void> => {
   }
 
   const { name, businessName, email, phone, vendorType, answers } = parsed.data;
+  const answerData = (answers ?? {}) as Record<string, unknown>;
+  const signatureName = typeof answerData.signatureName === "string" ? answerData.signatureName : null;
+
   const [vendor] = await db.insert(vendorsTable).values({
     yearId: years[0].id,
     name,
     businessName,
     email,
     phone: phone ?? "",
-    vendorType: vendorType ?? "other",
+    vendorType: vendorType ?? "retail",
     status: "pending",
-    applicationData: answers as Record<string, unknown>,
+    applicationData: answerData,
+    agreementSigned: !!signatureName,
+    agreementSignedName: signatureName ?? undefined,
   }).returning();
 
   await db.insert(activityLogTable).values({
