@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, vendorsTable, sponsorsTable, festivalYearsTable, festivalSettingsTable, activityLogTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { SignPortalAgreementBody } from "@workspace/api-zod";
 import { logger } from "../lib/logger";
 
@@ -85,12 +85,16 @@ router.post("/portal/:token/sign-agreement", async (req, res): Promise<void> => 
     return;
   }
 
-  const vendors = await db.select().from(vendorsTable).where(eq(vendorsTable.portalToken, token)).limit(1);
-  if (vendors.length > 0) {
-    const [updated] = await db.update(vendorsTable)
-      .set({ agreementSigned: true, agreementSignedName: parsed.data.signedName })
-      .where(eq(vendorsTable.portalToken, token))
-      .returning();
+  // --- Vendors ---
+  // Atomic update: only update when agreementSigned is still false.
+  // If no row is returned, either the token doesn't exist OR it was already signed.
+  const updatedVendors = await db.update(vendorsTable)
+    .set({ agreementSigned: true, agreementSignedName: parsed.data.signedName })
+    .where(and(eq(vendorsTable.portalToken, token), eq(vendorsTable.agreementSigned, false)))
+    .returning();
+
+  if (updatedVendors.length > 0) {
+    const updated = updatedVendors[0];
     const years = await db.select().from(festivalYearsTable).where(eq(festivalYearsTable.id, updated.yearId)).limit(1);
     const settingsRows = await db.select().from(festivalSettingsTable).where(eq(festivalSettingsTable.yearId, updated.yearId)).limit(1);
     res.json({
@@ -120,12 +124,22 @@ router.post("/portal/:token/sign-agreement", async (req, res): Promise<void> => 
     return;
   }
 
-  const sponsors = await db.select().from(sponsorsTable).where(eq(sponsorsTable.portalToken, token)).limit(1);
-  if (sponsors.length > 0) {
-    const [updated] = await db.update(sponsorsTable)
-      .set({ agreementSigned: true, agreementSignedName: parsed.data.signedName })
-      .where(eq(sponsorsTable.portalToken, token))
-      .returning();
+  // Check if the token exists as a vendor with already-signed agreement (→ 409)
+  const existingVendors = await db.select({ agreementSigned: vendorsTable.agreementSigned })
+    .from(vendorsTable).where(eq(vendorsTable.portalToken, token)).limit(1);
+  if (existingVendors.length > 0) {
+    res.status(409).json({ error: "Agreement already signed" });
+    return;
+  }
+
+  // --- Sponsors ---
+  const updatedSponsors = await db.update(sponsorsTable)
+    .set({ agreementSigned: true, agreementSignedName: parsed.data.signedName })
+    .where(and(eq(sponsorsTable.portalToken, token), eq(sponsorsTable.agreementSigned, false)))
+    .returning();
+
+  if (updatedSponsors.length > 0) {
+    const updated = updatedSponsors[0];
     const years = await db.select().from(festivalYearsTable).where(eq(festivalYearsTable.id, updated.yearId)).limit(1);
     const settingsRows = await db.select().from(festivalSettingsTable).where(eq(festivalSettingsTable.yearId, updated.yearId)).limit(1);
     const s = settingsRows[0];
@@ -153,6 +167,14 @@ router.post("/portal/:token/sign-agreement", async (req, res): Promise<void> => 
       sponsorPricePlatinum: s ? parseFloat(s.sponsorPricePlatinum) : null,
       sponsorPriceDiamond: s ? parseFloat(s.sponsorPriceDiamond) : null,
     });
+    return;
+  }
+
+  // Check if the token exists as a sponsor with already-signed agreement (→ 409)
+  const existingSponsors = await db.select({ agreementSigned: sponsorsTable.agreementSigned })
+    .from(sponsorsTable).where(eq(sponsorsTable.portalToken, token)).limit(1);
+  if (existingSponsors.length > 0) {
+    res.status(409).json({ error: "Agreement already signed" });
     return;
   }
 
