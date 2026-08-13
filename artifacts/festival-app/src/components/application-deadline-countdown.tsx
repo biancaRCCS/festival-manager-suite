@@ -55,15 +55,14 @@ export function ApplicationDeadlineCountdown({ deadline }: Props) {
       {/* Header bar */}
       <div className={`flex items-center gap-2 px-5 py-3 border-b ${urgent ? "border-primary/15" : "border-secondary/15"}`}>
         <Clock className={`h-4 w-4 ${urgent ? "text-primary" : "text-secondary"}`} />
-        <p className={`text-xs font-bold uppercase tracking-widest ${urgent ? "text-primary" : "text-secondary"}`}>
+        <p className="font-bold uppercase tracking-widest text-[22px] text-ring">
           Application Deadline
         </p>
       </div>
-
       <div className="px-5 py-5">
         <p className="mb-4 text-sm text-muted-foreground">
           Applications close on{" "}
-          <span className="font-semibold text-foreground">
+          <span className="font-semibold text-foreground text-[18px]">
             {parseDateOnly(deadline).toLocaleDateString("en-US", {
               weekday: "long",
               year: "numeric",
@@ -84,7 +83,7 @@ export function ApplicationDeadlineCountdown({ deadline }: Props) {
               key={label}
               className={`flex flex-col items-center rounded border py-4 bg-white shadow-sm ${urgent ? "border-primary/20" : "border-secondary/20"}`}
             >
-              <span className={`font-serif text-4xl font-bold leading-none ${urgent ? "text-primary" : "text-secondary"}`}>
+              <span className={`font-serif font-bold ${urgent ? "text-primary" : "text-secondary"} text-[62px]`}>
                 {pad(value)}
               </span>
               <span className="mt-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -101,5 +100,5 @@ export function ApplicationDeadlineCountdown({ deadline }: Props) {
         )}
       </div>
     </div>
-  )
+  );
 }

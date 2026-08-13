@@ -243,7 +243,7 @@ function LandingPage() {
                 <div className="h-1.5 bg-secondary w-full" />
                 <div className="p-8">
                   <HandHeart className="w-9 h-9 text-secondary mb-5" />
-                  <h3 className="font-serif text-xl font-bold text-secondary mb-2">Sponsors</h3>
+                  <h3 className="font-serif font-bold text-secondary mb-2 text-[30px]">Sponsors</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     Support the event and reach the Romanian community.
                   </p>
@@ -260,7 +260,7 @@ function LandingPage() {
                 <div className="h-1.5 w-full" style={{ backgroundColor: "#C89A2A" }} />
                 <div className="p-8">
                   <Store className="w-9 h-9 mb-5" style={{ color: "#C89A2A" }} />
-                  <h3 className="font-serif text-xl font-bold text-secondary mb-2">Vendors</h3>
+                  <h3 className="font-serif font-bold text-secondary mb-2 text-[30px]">Vendors</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     Book a booth to sell your goods and food at the festival.
                   </p>
@@ -277,10 +277,9 @@ function LandingPage() {
                 <div className="h-1.5 bg-primary w-full" />
                 <div className="p-8">
                   <CalendarDays className="w-9 h-9 text-primary mb-5" />
-                  <h3 className="font-serif text-xl font-bold text-secondary mb-2">Volunteers</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Help us run the festival and make it a success.
-                  </p>
+                  <h3 className="font-serif font-bold text-secondary mb-2 text-[30px]">Volunteers</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">Help us run the festival and make it 
+                  a success.</p>
                   <div className="mt-5 text-primary text-xs font-bold uppercase tracking-widest group-hover:underline">
                     Apply Now →
                   </div>
@@ -300,7 +299,7 @@ function LandingPage() {
           />
         </div>
         <div>Romanian Festival &copy; {new Date().getFullYear()}</div>
-        <div className="mt-2">
+        <div className="text-[14px]">
           <Link href="/sign-in" className="text-white/25 hover:text-white/50 transition-colors text-[10px]">
             Staff Login
           </Link>
