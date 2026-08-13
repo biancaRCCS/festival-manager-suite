@@ -23,7 +23,32 @@ export async function requireStaff(req: Request, res: Response, next: NextFuncti
   }
 
   // Check staff table for this Clerk user
-  const staffMembers = await db.select().from(staffTable).where(eq(staffTable.clerkUserId, userId));
+  let staffMembers = await db.select().from(staffTable).where(eq(staffTable.clerkUserId, userId));
+
+  // If not found by Clerk ID, try to link an existing email-only invitation
+  if (staffMembers.length === 0) {
+    const sessionEmail =
+      (getAuth(req) as any)?.sessionClaims?.email ??
+      (getAuth(req) as any)?.sessionClaims?.primary_email_address ??
+      null;
+    if (sessionEmail) {
+      const { isNull, and } = await import("drizzle-orm");
+      const emailMatch = await db
+        .select()
+        .from(staffTable)
+        .where(and(eq(staffTable.email, sessionEmail), isNull(staffTable.clerkUserId)));
+      if (emailMatch.length > 0) {
+        // Link their Clerk ID so future lookups are instant
+        const updated = await db
+          .update(staffTable)
+          .set({ clerkUserId: userId })
+          .where(eq(staffTable.id, emailMatch[0].id!))
+          .returning();
+        staffMembers = updated;
+      }
+    }
+  }
+
   if (staffMembers.length === 0) {
     const allStaff = await db.select().from(staffTable);
 
