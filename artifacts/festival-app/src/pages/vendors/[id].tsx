@@ -46,7 +46,7 @@ const ACK_LABELS: Record<string, string> = {
   ack_electricity:       "Electrical outlets available in prime/VIP locations only; responsible for own power if required.",
   ack_permits:           "Responsible for all permits, licenses, insurance, and approvals required to operate.",
   ack_foodCompliance:    "Food vendors must comply with all applicable Placer County Health Department requirements.",
-  ack_fireMarshal:       "Food trucks/trailers not permitted; any tent larger than 10′×10′ requires Roseville Fire Marshal approval.",
+  ack_fireMarshal:       "Any tent larger than 10′×10′ requires Roseville Fire Marshal approval.",
   ack_loadIn:            "Assigned a load-in time with 30 minutes to unload; no vehicles on grounds after unloading.",
   ack_cleanBooth:        "Responsible for a clean booth and removing all trash before leaving the event.",
   ack_notResponsible:    "RCCS is not responsible for lost, stolen, or damaged property.",

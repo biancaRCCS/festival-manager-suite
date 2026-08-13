@@ -573,7 +573,7 @@ export default function ApplyVendorPage() {
                       />
                     )}
                     <FieldNote>
-                      Only 10′×10′ pop-up tents are permitted. Food trucks and food trailers are not allowed.
+                      Only 10′×10′ pop-up tents are permitted.
                       Major Food Vendors receive a 10′×20′ footprint, which may be used as two 10′×10′ tents
                       or a single tent within the larger space. Any tent larger than 10′×10′ must be approved
                       by the Roseville Fire Marshal, and it is the vendor's responsibility to obtain that approval.
@@ -895,7 +895,7 @@ export default function ApplyVendorPage() {
                     </AckRow>
                   )}
                   <AckRow id="ack_fireMarshal" checked={form.ack_fireMarshal} onChange={v => set("ack_fireMarshal", v)}>
-                    I understand that food trucks and food trailers are not permitted, and that any tent larger than 10′×10′ requires approval from the Roseville Fire Marshal, which I am responsible for obtaining.
+                    I understand that any tent larger than 10′×10′ requires approval from the Roseville Fire Marshal, which I am responsible for obtaining.
                   </AckRow>
                   <AckRow id="ack_loadIn" checked={form.ack_loadIn} onChange={v => set("ack_loadIn", v)}>
                     I understand I will be assigned a load-in time, that I will have 30 minutes to unload, and that no vehicles may remain on the festival grounds. Vehicles must be moved to the free parking structure.
