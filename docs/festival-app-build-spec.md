@@ -1,6 +1,6 @@
 # Festival Manager Suite — Build Specification
 
-**Version 11 · 12 August 2026**
+**Version 13 · 14 August 2026**
 Source: Bia (RCCS) · Sponsor & Vendor Guide 2026, pages 2–3 · working session decisions
 
 This document is the single source of truth for the vendor and sponsor application
@@ -24,7 +24,9 @@ These are unresolved or unknown. Nothing below invents an answer for them.
 | 9 | ~~Document deadline~~ | **Resolved** — 18 September 2026 |
 | 10 | ~~Spot limits per category~~ | **Resolved** — 5 / 15 / 30 / 20, as soft targets (section 3) |
 | 11 | **Printed guide correction** — pages 1 and 3 state applications are due 31 August; the deadline is now 10 September. | Needs updating and re-issuing |
-| 12 | **Printed guide corrections needed** — page 3 lists food trucks under Major Food Vendor (not permitted), and the Nonprofit category wording should state that food sales are not allowed in that category. Removed from this spec; the guide file is Bia's to update. | Bia to update guide |
+| 12 | **Printed guide correction** — the Nonprofit category wording should state that food sales are not permitted in that category. *(The food-truck correction is withdrawn — trucks are no longer excluded.)* | Bia to update guide |
+| 13 | **Email sending not working.** Notification and confirmation emails are built and wired into all three forms, but a test submission produced no email. Config is present (SMTP_FROM=vendors@romaniancenter.org, host smtp.gmail.com:587) and SMTP_USER/SMTP_PASS are Boris's. Most likely cause: SMTP_PASS is not a valid Gmail App Password, or Gmail is not authorised to send as vendors@. **Needs Boris.** Diagnose by checking the API server log for "Failed to send email". | Blocked on Boris |
+| 14 | **Stripe is in live mode** (`pk_live_…`). Any checkout is a real charge. Switch to test keys before testing payment flows in September. | Before Stripe work |
 | 7 | **Font web licensing** for Zamolxis I and Arhaic Romanesc. Neither file carries an embedded license. | Confirm before launch |
 | 8 | Legal review of all acknowledgement and agreement language. | Bia confirmed someone will review |
 
@@ -115,7 +117,7 @@ filing. Uploads get built properly in September, well before permits are needed.
 - File uploads are deferred for 2026; documents are emailed instead (section 1A).
 - The festival is **free to attend in 2026**. Ticketing is a 2027 goal and out of scope.
 - **Booth sizes.** Only 10′×10′ pop-up tents are permitted. Major Food Vendors receive a 10′×20′ footprint — either two 10′×10′ tents, or one tent within the larger footprint. All other categories receive a single 10′×10′.
-- **Food trucks and food trailers are not permitted.** Only 10′×10′ pop-up tents.
+- **Trucks and trailers are not excluded.** Standard booths are 10′×10′ pop-up tents and trucks are not listed as an option, but applicants describe them under "Other" and RCCS decides case by case. *(Changed 14 Aug.)*
 - **Tents larger than 10′×10′ require Roseville Fire Marshal approval**, obtained by the vendor.
 - **Alcohol vendors are excluded from the public application.** They are managed under individual agreements (revenue share, not a booth fee) via the invited-vendor flow in section 5A.
 - No vehicles remain on site. Assigned load-in time, 30 minutes to unload, then move to the free parking structure.
@@ -239,7 +241,7 @@ Each option must state the physical space included, which differs by category:
 ### 4.5 Booth & Operational Information
 
 - **What type of setup will you have?** — **required** — Standard 10′×10′ Tent · Other (describe)
-  - **Food trailers and food trucks are not permitted** and must not appear as options.
+  - Options are **Standard 10′×10′ Tent** and **Other (describe)**. Trucks and trailers are not listed as options, but are no longer refused — an applicant with one selects "Other" and describes it, and RCCS decides case by case. *(Changed 14 Aug, per Bia and Boris: better to hear from a vendor than exclude them at the form.)*
   - Standing note: *"Only 10′×10′ pop-up tents are permitted. Major Food Vendors receive a 10′×20′ footprint, which may be used as two 10′×10′ tents or a single tent within the larger space. Any tent larger than 10′×10′ must be approved by the Roseville Fire Marshal, and it is the vendor's responsibility to obtain that approval."*
 - **Will you be preparing food on-site?** — Yes / No — *cooking categories only*
 - **Will you be using propane?** — Yes / No — *cooking categories only*
@@ -346,7 +348,7 @@ Each is a separate required checkbox.
 - ☐ I understand payment is due within 7 days of approval, and that my space may be released if payment is not received.
 - ☐ I understand booth fees are non-refundable after payment unless otherwise stated by RCCS.
 - ☐ I understand I am responsible for providing my own tent, tables, chairs, signage, and all other booth equipment unless otherwise approved by RCCS.
-- ☐ I understand that food trucks and food trailers are not permitted, and that any tent larger than 10′×10′ requires approval from the Roseville Fire Marshal, which I am responsible for obtaining.
+- ☐ I understand that any tent larger than 10′×10′ requires approval from the Roseville Fire Marshal, which I am responsible for obtaining.
 - ☐ I understand running water is not provided.
 - ☐ I understand electrical outlets are available in prime and VIP sponsor locations only, and that I am responsible for my own power if required.
 - ☐ I understand I am responsible for obtaining all permits, licenses, insurance, and approvals required to operate at this event.
@@ -613,8 +615,9 @@ operating large-scale prepared food service.
 Romanian entrées · Multiple hot meal items · Full-service food vendors · Large prepared
 food operations
 
-*Food trucks and food trailers are not permitted at the festival. All vendors operate from
-10′×10′ pop-up tents; Major Food Vendors receive a 10′×20′ footprint.*
+*Standard booths are 10′×10′ pop-up tents; Major Food Vendors receive a 10′×20′ footprint.
+Vendors operating from a truck or trailer should select "Other" on the application and
+describe their setup.*
 
 **Typical characteristics.** Complete meal service · Multiple menu items · High customer
 volume · Larger staffing requirements · Expanded equipment (grills, smokers, fryers) ·
