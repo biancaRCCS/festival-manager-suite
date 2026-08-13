@@ -720,7 +720,7 @@ export default function ApplyVendorPage() {
                     <a href="mailto:vendors@romaniancenter.org" className="text-primary underline underline-offset-2">
                       vendors@romaniancenter.org
                     </a>{" "}
-                    by <strong>18 September 2026</strong>. Include your business name in the subject line.
+                    by <strong> September 18th, 2026</strong>. Include your business name in the subject line.
                     Document uploads will be available directly in this form in future years.
                   </p>
                 </div>
@@ -805,7 +805,7 @@ export default function ApplyVendorPage() {
                     <AckRow id="ack_documents" checked={form.ack_documents} onChange={v => set("ack_documents", v)}>
                       I understand I must email my required documents to{" "}
                       <strong>vendors@romaniancenter.org</strong> by{" "}
-                      <strong>18 September 2026</strong>, and that my space may be released if they are not received.
+                      <strong>September 18th, 2026</strong>, and that my space may be released if they are not received.
                     </AckRow>
                   </div>
                 </div>
@@ -953,5 +953,5 @@ export default function ApplyVendorPage() {
         </CardContent>
       </Card>
     </PublicLayout>
-  )
+  );
 }
