@@ -1,31 +1,20 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import { logger } from "./logger";
 import { db, activityLogTable } from "@workspace/db";
 
 // ---------------------------------------------------------------------------
-// Transporter
+// Resend client
 // ---------------------------------------------------------------------------
-// Uses explicit SMTP_HOST when set; falls back to Gmail when SMTP_USER/PASS
-// are present (the project uses Gmail — smtp.gmail.com:587 with App Password).
-// Returns null in development when no credentials are available, and logs
-// what would have been sent so nothing is silently lost.
-function getTransporter() {
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-
-  if (!user || !pass) {
-    return null;
-  }
-
-  const host = process.env.SMTP_HOST ?? "smtp.gmail.com";
-  const port = parseInt(process.env.SMTP_PORT ?? "587");
-  const secure = process.env.SMTP_SECURE === "true"; // false for port 587 (STARTTLS)
-
-  return nodemailer.createTransport({ host, port, secure, auth: { user, pass } });
+// Reads RESEND_API_KEY from the environment. Returns null when the key is
+// absent so callers can skip sending gracefully (fire-and-forget, never throws).
+function getResendClient(): Resend | null {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return null;
+  return new Resend(key);
 }
 
-const FROM = () =>
-  `Romanian Festival <${process.env.SMTP_FROM ?? process.env.SMTP_USER ?? "festival@example.com"}>`;
+const FROM = () => process.env.EMAIL_FROM ?? "Romanian Festival <festival@example.com>";
+const REPLY_TO = () => process.env.EMAIL_REPLY_TO ?? "vendors@romaniancenter.org";
 
 function getAppBaseUrl(): string {
   if (process.env.APP_BASE_URL) return process.env.APP_BASE_URL;
@@ -33,16 +22,25 @@ function getAppBaseUrl(): string {
   return "";
 }
 
+// ---------------------------------------------------------------------------
 // Shared send helper — fire-and-forget, never throws.
-// On SMTP failure, the error is written to the activity_log so admins can see it.
+// On failure the error is written to activity_log so admins can see it.
+// ---------------------------------------------------------------------------
 async function send(to: string, subject: string, html: string): Promise<void> {
   try {
-    const transporter = getTransporter();
-    if (!transporter) {
-      logger.info({ to, subject }, "Email would be sent (no SMTP credentials configured)");
+    const resend = getResendClient();
+    if (!resend) {
+      logger.info({ to, subject }, "Email would be sent (no RESEND_API_KEY configured)");
       return;
     }
-    await transporter.sendMail({ from: FROM(), to, subject, html });
+    const { error } = await resend.emails.send({
+      from: FROM(),
+      to,
+      reply_to: REPLY_TO(),
+      subject,
+      html,
+    });
+    if (error) throw new Error(error.message);
     logger.info({ to, subject }, "Email sent");
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err);
@@ -98,47 +96,47 @@ const TIER_LABELS: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// 0a. SMTP status — never exposes the password
+// 0a. Email status — never exposes the full API key
 // ---------------------------------------------------------------------------
-export function getSmtpStatus(): {
+export function getEmailStatus(): {
   configured: boolean;
-  host: string | null;
-  port: number | null;
-  user: string | null;
   from: string | null;
+  apiKeyHint: string | null;
 } {
-  const user = process.env.SMTP_USER ?? null;
-  const pass = process.env.SMTP_PASS ?? null;
-  const configured = !!(user && pass);
-
-  if (!configured) {
-    return { configured: false, host: null, port: null, user: null, from: null };
+  const key = process.env.RESEND_API_KEY ?? null;
+  const from = process.env.EMAIL_FROM ?? null;
+  if (!key) {
+    return { configured: false, from: null, apiKeyHint: null };
   }
-
-  const host = process.env.SMTP_HOST ?? "smtp.gmail.com";
-  const port = parseInt(process.env.SMTP_PORT ?? "587");
-  const from = process.env.SMTP_FROM ?? user;
-
-  return { configured: true, host, port, user, from };
+  // Show only the first 8 chars of the key so admins can confirm which key is loaded
+  const apiKeyHint = key.length > 8 ? `${key.slice(0, 8)}…` : key;
+  return { configured: true, from: from ?? "Romanian Festival <festival@example.com>", apiKeyHint };
 }
 
 // ---------------------------------------------------------------------------
 // 0. Test email — throws on failure so callers can surface the error
 // ---------------------------------------------------------------------------
 export async function sendTestEmail(to: string): Promise<void> {
-  const transporter = getTransporter();
-  if (!transporter) {
-    throw new Error("No SMTP credentials configured (SMTP_USER and SMTP_PASS are required)");
+  const resend = getResendClient();
+  if (!resend) {
+    throw new Error("No Resend API key configured — set the RESEND_API_KEY environment variable");
   }
   const subject = "Romanian Festival — Test Email";
   const html = `
     <div style="${BASE_STYLE}">
       <h2 style="color: #8b1a1a;">Email is working ✓</h2>
-      <p>This is a test message sent from the Romanian Festival admin panel to confirm that SMTP email delivery is configured correctly.</p>
+      <p>This is a test message sent from the Romanian Festival admin panel to confirm that Resend email delivery is configured correctly.</p>
       <p>If you received this, email notifications are working and will be delivered when applications are submitted.</p>
       ${FOOTER}
     </div>`;
-  await transporter.sendMail({ from: FROM(), to, subject, html });
+  const { error } = await resend.emails.send({
+    from: FROM(),
+    to,
+    reply_to: REPLY_TO(),
+    subject,
+    html,
+  });
+  if (error) throw new Error(error.message);
   logger.info({ to, subject }, "Test email sent");
 }
 

@@ -43,20 +43,18 @@ export default function SettingsPage() {
   const initialized = useRef(false)
   const [isSendingTestEmail, setIsSendingTestEmail] = useState(false)
 
-  // SMTP status
+  // Email status (Resend)
   const [smtpStatus, setSmtpStatus] = useState<{
     configured: boolean;
-    host: string | null;
-    port: number | null;
-    user: string | null;
     from: string | null;
+    apiKeyHint: string | null;
   } | null>(null)
 
   // Email failure log
   const [emailFailures, setEmailFailures] = useState<{ id: number; message: string; createdAt: string }[]>([])
 
   useEffect(() => {
-    fetch("/api/settings/smtp-status")
+    fetch("/api/settings/email-status")
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data) setSmtpStatus(data) })
       .catch(() => {})
@@ -281,7 +279,7 @@ export default function SettingsPage() {
                     <p className="text-xs text-muted-foreground">All new vendor, sponsor, and volunteer applications are emailed here.</p>
                   </div>
 
-                  {/* SMTP status row */}
+                  {/* Email status row */}
                   <div className="md:col-span-2">
                     <Label className="mb-2 block">Email Sending Account</Label>
                     {smtpStatus === null ? (
@@ -293,13 +291,13 @@ export default function SettingsPage() {
                       <div className="flex items-start gap-2 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
                         <CheckCircle className="w-4 h-4 shrink-0 mt-0.5 text-green-600" />
                         <span>
-                          Sending as <strong>{smtpStatus.from}</strong> via <strong>{smtpStatus.host}:{smtpStatus.port}</strong>
+                          Sending via Resend as <strong>{smtpStatus.from}</strong>
                         </span>
                       </div>
                     ) : (
                       <div className="flex items-start gap-2 rounded-md border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
                         <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-yellow-600" />
-                        <span>No credentials configured — set <code className="font-mono text-xs">SMTP_USER</code> and <code className="font-mono text-xs">SMTP_PASS</code> to enable email delivery.</span>
+                        <span>No API key configured — set <code className="font-mono text-xs">RESEND_API_KEY</code> to enable email delivery.</span>
                       </div>
                     )}
                   </div>
@@ -318,7 +316,7 @@ export default function SettingsPage() {
                       {emailFailures.length === 1
                         ? "1 email failed to deliver."
                         : `${emailFailures.length} emails failed to deliver.`}{" "}
-                      Check your SMTP credentials and use the test button above to verify delivery is working.
+                      Check your Resend API key and use the test button above to verify delivery is working.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>

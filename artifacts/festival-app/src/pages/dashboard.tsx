@@ -26,7 +26,7 @@ export default function DashboardPage() {
   const [smtpConfigured, setSmtpConfigured] = useState<boolean | null>(null)
 
   useEffect(() => {
-    fetch("/api/settings/smtp-status")
+    fetch("/api/settings/email-status")
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data) setSmtpConfigured(data.configured) })
       .catch(() => {})
@@ -46,7 +46,7 @@ export default function DashboardPage() {
           <div className="flex items-start gap-3 rounded-md border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-yellow-600" />
             <span>
-              <strong>Email not configured.</strong> Approval emails won't be delivered until SMTP credentials are set up.{" "}
+              <strong>Email not configured.</strong> Approval emails won't be delivered until a Resend API key is set up.{" "}
               <Link href="/settings" className="font-medium underline underline-offset-2 hover:text-yellow-900">
                 Go to Settings to fix this.
               </Link>
