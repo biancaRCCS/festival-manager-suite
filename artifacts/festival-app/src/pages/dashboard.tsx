@@ -1,9 +1,10 @@
+import { useState, useEffect } from "react"
 import { useGetDashboardSummary, useGetRecentActivity, useGetCurrentYear } from "@workspace/api-client-react"
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Link } from "wouter"
-import { Store, HandHeart, Users, Calendar, ArrowRight, Activity, Clock, DollarSign } from "lucide-react"
+import { Store, HandHeart, Users, Calendar, ArrowRight, Activity, Clock, DollarSign, AlertTriangle } from "lucide-react"
 
 function formatFestivalDate(dateStr: string): string {
   const date = new Date(dateStr + "T12:00:00")
@@ -22,6 +23,15 @@ export default function DashboardPage() {
   const { data: summary, isLoading: summaryLoading } = useGetDashboardSummary({ query: { enabled: !!currentYear, queryKey: ["dashboardSummary"] } })
   const { data: activityData, isLoading: activityLoading } = useGetRecentActivity({ limit: 10 }, { query: { enabled: !!currentYear, queryKey: ["recentActivity"] } })
 
+  const [smtpConfigured, setSmtpConfigured] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    fetch("/api/settings/smtp-status")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setSmtpConfigured(data.configured) })
+      .catch(() => {})
+  }, [])
+
   const isLoading = yearLoading || summaryLoading || activityLoading
 
   return (
@@ -31,6 +41,18 @@ export default function DashboardPage() {
           <h1 className="text-4xl font-serif text-primary mb-2">Festival Dashboard</h1>
           <p className="text-muted-foreground text-lg">Welcome back. Here is what's happening today.</p>
         </div>
+
+        {smtpConfigured === false && (
+          <div className="flex items-start gap-3 rounded-md border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-yellow-600" />
+            <span>
+              <strong>Email not configured.</strong> Approval emails won't be delivered until SMTP credentials are set up.{" "}
+              <Link href="/settings" className="font-medium underline underline-offset-2 hover:text-yellow-900">
+                Go to Settings to fix this.
+              </Link>
+            </span>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="h-64 flex items-center justify-center">
