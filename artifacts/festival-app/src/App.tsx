@@ -159,7 +159,6 @@ function LandingPage() {
           </div>
         </div>
       </header>
-
       {/* Hero */}
       <section className="bg-secondary text-white">
         <div className="max-w-6xl mx-auto px-6 py-16 md:py-24">
@@ -168,12 +167,12 @@ function LandingPage() {
             {/* Left — text */}
             <div className="flex-1 min-w-0">
               {/* Theme — year's creative concept */}
-              <p className="font-serif italic text-white/60 text-base md:text-lg mb-5 tracking-wide leading-snug">
-                150 Years of Constantin Brâncuși — Tradition, Art, and Romanian Spirit
+              <p className="font-serif italic text-white/60 md:text-lg mb-5 tracking-wide text-[20px]">
+                150 Years of Constantin Brâncuși:<br />Tradition, Art, and Romanian Spirit
               </p>
 
               {/* Main heading */}
-              <h1 className="font-serif text-5xl md:text-7xl font-bold leading-tight mb-8">
+              <h1 className="font-serif md:text-7xl font-bold mb-8 text-[40px]">
                 Preserving Culture.<br />
                 Strengthening<br />
                 Community.<br />
@@ -181,7 +180,7 @@ function LandingPage() {
               </h1>
 
               {/* Event details */}
-              <div className="flex flex-col sm:flex-row sm:flex-wrap gap-y-3 gap-x-8 mb-10 text-white/80 text-sm md:text-base">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap gap-y-3 gap-x-8 mb-10 text-white/80 md:text-base text-[24px] font-bold">
                 <span className="flex items-center gap-2.5">
                   <CalendarDays className="w-4 h-4 text-white/45 shrink-0" />
                   Saturday, September 26, 2026
@@ -190,7 +189,7 @@ function LandingPage() {
                   <Clock className="w-4 h-4 text-white/45 shrink-0" />
                   12:00 PM – 9:00 PM
                 </span>
-                <span className="flex items-center gap-2.5">
+                <span className="flex items-center gap-2.5 text-[22px]">
                   <MapPin className="w-4 h-4 text-white/45 shrink-0" />
                   Vernon Street Town Square, Downtown Roseville, CA
                 </span>
@@ -209,14 +208,13 @@ function LandingPage() {
               <img
                 src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/festival-dancers.png`}
                 alt="Romanian Festival — dancing figures"
-                className="w-44 sm:w-56 md:w-full md:max-w-[480px] h-auto"
+                className="w-44 sm:w-56 md:w-full md:max-w-[480px] h-auto ml-[0px] mr-[0px] pt-[0px] pb-[0px]"
               />
             </div>
 
           </div>
         </div>
       </section>
-
       {/* Cards section */}
       <section className="bg-background flex-1">
         <div className="max-w-6xl mx-auto px-6 py-16">
@@ -292,7 +290,6 @@ function LandingPage() {
           </div>
         </div>
       </section>
-
       {/* Footer */}
       <footer className="bg-secondary text-white/60 text-xs text-center py-6 tracking-wide">
         <div className="flex justify-center mb-4">
@@ -310,7 +307,7 @@ function LandingPage() {
         </div>
       </footer>
     </div>
-  )
+  );
 }
 
 function HomeRedirect() {
