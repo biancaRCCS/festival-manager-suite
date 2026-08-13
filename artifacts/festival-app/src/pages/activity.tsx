@@ -27,6 +27,7 @@ import {
   Filter,
   X,
   Download,
+  User,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -296,6 +297,12 @@ export default function ActivityPage() {
                           <Badge variant="outline" className="text-xs py-0 h-5 text-muted-foreground">
                             {ENTITY_LABELS[item.entityType] ?? item.entityType}
                           </Badge>
+                          {item.performedBy && (
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <User className="w-3 h-3" />
+                              {item.performedBy}
+                            </span>
+                          )}
                           <span className="text-xs text-muted-foreground">
                             {formatDate(item.createdAt)}
                           </span>

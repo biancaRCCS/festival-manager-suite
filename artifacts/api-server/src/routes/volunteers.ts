@@ -83,6 +83,7 @@ router.patch("/volunteers/:id/review", requireStaff, async (req, res): Promise<v
     message: `Volunteer ${updated.name} ${status === "approved" ? "approved" : "rejected"}${assignedRole ? ` for role: ${assignedRole}` : ""}`,
     entityType: "volunteer",
     entityId: updated.id,
+    performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
   });
 
   res.json(formatVolunteer(updated));
@@ -104,6 +105,7 @@ router.delete("/volunteers/:id", requireStaff, async (req, res): Promise<void> =
     message: `Volunteer record deleted: ${deleted.name}`,
     entityType: "volunteer",
     entityId: deleted.id,
+    performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
   });
   res.status(204).send();
 });

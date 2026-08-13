@@ -226,6 +226,7 @@ router.get("/dashboard/activity", requireStaff, async (req, res): Promise<void> 
       message: i.message,
       entityType: i.entityType,
       entityId: i.entityId,
+      performedBy: i.performedBy ?? null,
       createdAt: i.createdAt.toISOString(),
     })),
     total,
@@ -266,7 +267,7 @@ router.get("/dashboard/activity/export", requireStaff, async (req, res): Promise
     return s;
   };
 
-  const header = ["Date", "Type", "Entity Type", "Entity ID", "Message"].join(",");
+  const header = ["Date", "Type", "Entity Type", "Entity ID", "Message", "Performed By"].join(",");
   const csvRows = rows.map(r =>
     [
       escape(r.createdAt.toISOString()),
@@ -274,6 +275,7 @@ router.get("/dashboard/activity/export", requireStaff, async (req, res): Promise
       escape(r.entityType),
       escape(r.entityId),
       escape(r.message),
+      escape(r.performedBy),
     ].join(",")
   );
 

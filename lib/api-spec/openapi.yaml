@@ -1350,6 +1350,9 @@ components:
           enum: [vendor, sponsor, volunteer]
         entityId:
           type: integer
+        performedBy:
+          type: string
+          nullable: true
         createdAt:
           type: string
 

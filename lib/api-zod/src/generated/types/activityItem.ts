@@ -14,5 +14,6 @@ export interface ActivityItem {
   message: string;
   entityType: ActivityItemEntityType;
   entityId?: number;
+  performedBy?: string | null;
   createdAt: string;
 }

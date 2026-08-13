@@ -106,6 +106,7 @@ router.patch("/vendors/:id/review", requireStaff, async (req, res): Promise<void
     message: `Vendor ${updated.name} (${updated.businessName}) ${status === "approved" ? "approved" : "rejected"}`,
     entityType: "vendor",
     entityId: updated.id,
+    performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
   });
 
   // Send portal invite email if approved
@@ -147,6 +148,7 @@ router.patch("/vendors/:id/final-approve", requireStaff, async (req, res): Promi
     message: `Vendor ${updated.name} (${updated.businessName}) final approved`,
     entityType: "vendor",
     entityId: updated.id,
+    performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
   });
 
   res.json(formatVendor(updated));
@@ -175,6 +177,7 @@ router.patch("/vendors/:id/assign", requireStaff, async (req, res): Promise<void
     message: `Vendor ${updated.name} assigned spot ${bodyParsed.data.spotNumber} at ${bodyParsed.data.location}`,
     entityType: "vendor",
     entityId: updated.id,
+    performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
   });
 
   res.json(formatVendor(updated));
@@ -196,6 +199,7 @@ router.delete("/vendors/:id", requireStaff, async (req, res): Promise<void> => {
     message: `Vendor record deleted: ${deleted.name} (${deleted.businessName})`,
     entityType: "vendor",
     entityId: deleted.id,
+    performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
   });
   res.status(204).send();
 });

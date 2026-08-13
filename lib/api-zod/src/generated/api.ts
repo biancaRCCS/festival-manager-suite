@@ -266,6 +266,7 @@ export const GetRecentActivityResponse = zod.object({
   "message": zod.string(),
   "entityType": zod.enum(['vendor', 'sponsor', 'volunteer']),
   "entityId": zod.number().optional(),
+  "performedBy": zod.string().nullish(),
   "createdAt": zod.string()
 })),
   "total": zod.number(),

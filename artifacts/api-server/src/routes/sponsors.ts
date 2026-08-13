@@ -96,6 +96,7 @@ router.patch("/sponsors/:id/review", requireStaff, async (req, res): Promise<voi
     message: `Sponsor ${updated.name} (${updated.orgName}) ${status === "approved" ? "approved" : "rejected"}`,
     entityType: "sponsor",
     entityId: updated.id,
+    performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
   });
 
   if (status === "approved" && updated.portalToken) {
@@ -136,6 +137,7 @@ router.patch("/sponsors/:id/final-approve", requireStaff, async (req, res): Prom
     message: `Sponsor ${updated.name} (${updated.orgName}) final approved`,
     entityType: "sponsor",
     entityId: updated.id,
+    performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
   });
 
   res.json(formatSponsor(updated));
@@ -164,6 +166,7 @@ router.patch("/sponsors/:id/assign", requireStaff, async (req, res): Promise<voi
     message: `Sponsor ${updated.name} assigned spot ${bodyParsed.data.spotNumber} at ${bodyParsed.data.location}`,
     entityType: "sponsor",
     entityId: updated.id,
+    performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
   });
 
   res.json(formatSponsor(updated));
@@ -186,6 +189,7 @@ router.delete("/sponsors/:id", requireStaff, async (req, res): Promise<void> => 
     message: `Sponsor record deleted: ${deleted.name} (${deleted.orgName})`,
     entityType: "sponsor",
     entityId: deleted.id,
+    performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
   });
   res.status(204).send();
 });

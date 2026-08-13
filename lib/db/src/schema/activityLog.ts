@@ -8,6 +8,7 @@ export const activityLogTable = pgTable("activity_log", {
   message: text("message").notNull(),
   entityType: text("entity_type").notNull(),
   entityId: integer("entity_id").notNull(),
+  performedBy: text("performed_by"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
