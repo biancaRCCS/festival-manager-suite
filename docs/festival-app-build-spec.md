@@ -1,6 +1,6 @@
 # Festival Manager Suite — Build Specification
 
-**Version 13 · 14 August 2026**
+**Version 15 · 14 August 2026**
 Source: Bia (RCCS) · Sponsor & Vendor Guide 2026, pages 2–3 · working session decisions
 
 This document is the single source of truth for the vendor and sponsor application
@@ -23,9 +23,11 @@ These are unresolved or unknown. Nothing below invents an answer for them.
 | 6 | ~~Liquor liability requirement~~ | **Resolved** — $1M per occurrence / $2M aggregate, primary and non-contributory (City of Roseville permit application) |
 | 9 | ~~Document deadline~~ | **Resolved** — 18 September 2026 |
 | 10 | ~~Spot limits per category~~ | **Resolved** — 5 / 15 / 30 / 20, as soft targets (section 3) |
-| 11 | **Printed guide correction** — pages 1 and 3 state applications are due 31 August; the deadline is now 10 September. | Needs updating and re-issuing |
+| 11 | ~~Printed guide deadline~~ | **Resolved** — guide reissued with 10 September |
+| 15 | **`romanianfestival.org/apply` returns 404.** This is the URL printed on page 7 of the guide. `apply.romanianfestival.org` works; the `/apply` path needs a redirect on the main site. | **Blocked on Boris — highest priority** |
+| 16 | `www.apply.romanianfestival.org` does not resolve. Worth a CNAME so habitual "www." typers land correctly. | Minor, Boris |
 | 12 | **Printed guide correction** — the Nonprofit category wording should state that food sales are not permitted in that category. *(The food-truck correction is withdrawn — trucks are no longer excluded.)* | Bia to update guide |
-| 13 | **Email sending not working.** Notification and confirmation emails are built and wired into all three forms, but a test submission produced no email. Config is present (SMTP_FROM=vendors@romaniancenter.org, host smtp.gmail.com:587) and SMTP_USER/SMTP_PASS are Boris's. Most likely cause: SMTP_PASS is not a valid Gmail App Password, or Gmail is not authorised to send as vendors@. **Needs Boris.** Diagnose by checking the API server log for "Failed to send email". | Blocked on Boris |
+| 13 | ~~Email sending~~ | **Resolved 14 Aug** — root cause: vendors@romaniancenter.org is a Google Group, not a mailbox, so SMTP login could never work. Migrated to the Resend API (domain-authenticated, sends *as* the Group while the Group keeps receiving). Two gotchas hit on the way: the notification email must be saved in Settings before testing, and `EMAIL_FROM` must be formatted `Romanian Festival <vendors@romaniancenter.org>` with angle brackets. |
 | 14 | **Stripe is in live mode** (`pk_live_…`). Any checkout is a real charge. Switch to test keys before testing payment flows in September. | Before Stripe work |
 | 7 | **Font web licensing** for Zamolxis I and Arhaic Romanesc. Neither file carries an embedded license. | Confirm before launch |
 | 8 | Legal review of all acknowledgement and agreement language. | Bia confirmed someone will review |
@@ -270,63 +272,33 @@ Each option must state the physical space included, which differs by category:
 - **Day-of on-site contact** — name and mobile — **required**
 - **Backup contact** — name and mobile — **required**
 
-### 4.7 Required Documents — 2026 email version
+### 4.7 Permits & Insurance
 
-**For 2026, no files are uploaded through the form.** Section header text:
+*Simplified 14 Aug 2026, per Bia and Boris. The detailed insurance requirement previously
+displayed on the form (limits, additional insured, endorsements, liquor liability) is
+removed from the application. RCCS now provides applicable requirements to vendors at
+approval instead. The full requirement text is preserved in section 4.7A for use in the
+approval email and for reference.*
 
-> **Required Documents**
->
-> Please email the documents below to **vendors@romaniancenter.org** by
-> **18 September 2026**. Include your business name in the subject line.
-> Document uploads will be available directly in this form in future years.
+Section intro text:
 
-- **Seller's Permit** — required where applicable
-  - **Permit number** — text field *(stays on the form; keeps records searchable)*
-- **Health Permit** — *cooking categories only* (Major Food and Specialty Food)
-  - Link shown here: [Placer County TFF Authorization Form](https://www.placer.ca.gov/DocumentCenter/View/9479/Application-for-TFF-Food-Vendor-Authorization-PDF-Fillable-Form?bidId=)
-  - Note: *"Each vendor is responsible for obtaining their own Placer County health permit."*
-- **Certificate of Insurance** — see section 4.7A for the full requirement text to display
-- **Nonprofit** — *Verified Nonprofit category only*
-  - Employer Identification Number (EIN) — **required**
-  - IRS Determination Letter — email with the other documents
+> Vendors are responsible for obtaining any licenses, permits, and insurance required for
+> their participation. Requirements may vary based on vendor type and activities. RCCS will
+> provide applicable requirements to approved vendors prior to the event.
 
-**Required checkbox:**
+Contents, in order:
 
-- ☐ I understand I must email my required documents to vendors@romaniancenter.org by **18 September 2026**, and that my space may be released if they are not received.
+1. **Health Permit** — *cooking categories only* (Major Food and Specialty Food)
+   - Note: *"Each vendor is responsible for obtaining their own Placer County health permit."*
+   - Link: [Placer County TFF Authorization Form](https://www.placer.ca.gov/DocumentCenter/View/9479/Application-for-TFF-Food-Vendor-Authorization-PDF-Fillable-Form?bidId=)
+   - *"Please email your health permit to vendors@romaniancenter.org by September 18, 2026."*
+2. **Seller's Permit Number** — optional text field *(keeps records searchable)*
+3. **Employer Identification Number (EIN)** — **required**, Verified Nonprofit category only
+4. **Required checkbox:** ☐ I understand that additional permits, licenses, or proof of insurance may be required before participating.
 
-### 4.7A Insurance requirement — text to display on the form
-
-Derived from the City of Roseville Special Event Permit Application, which governs the
-event itself. Vendor certificates should satisfy the same standard the City imposes on RCCS.
-
-> **Certificate of Insurance**
->
-> All vendors must carry commercial general liability insurance of at least
-> **$1,000,000 per occurrence** and **$2,000,000 general aggregate**.
->
-> Your certificate must name as additional insured:
->
-> - **Romanian Community Center of Sacramento Inc.**
-> - **The City of Roseville, its officers, agents, employees and volunteers**
->
-> The certificate must be accompanied by an **Additional Insured Endorsement**
-> (form CG 20 12 07 98 or equivalent — a blanket endorsement or the relevant section of
-> your policy is acceptable). A statement on the certificate alone is **not** sufficient;
-> the City does not accept certificate statements in place of the endorsement document.
->
-> Also required: a **Waiver of Subrogation Endorsement**, a **Primary and Non-Contributory
-> Coverage Endorsement**, and a policy providing **30 days' notice of cancellation**.
->
-> Vendors serving or selling alcohol must additionally carry **liquor liability coverage**
-> of $1,000,000 per occurrence and $2,000,000 aggregate, primary and non-contributory.
-
-**Note for RCCS:** these requirements come from the City's permit application for the event.
-Requiring the same of vendors is prudent and standard, but it is RCCS's decision — worth one
-confirming call to the City or to RCCS's broker, particularly on whether vendors must name
-the City directly or are covered under RCCS's own policy.
-
-*When uploads are built in September, these fields become upload controls with an
-"I will provide prior to the deadline" option, and the email instructions are removed.*
+The health permit stays concrete on the form because Placer County cannot be rushed — a
+vendor starting that process in mid-September may not make it. Everything else is variable
+by vendor and better communicated at approval.
 
 ### 4.8 Additional Information
 
@@ -352,7 +324,7 @@ Each is a separate required checkbox.
 - ☐ I understand running water is not provided.
 - ☐ I understand electrical outlets are available in prime and VIP sponsor locations only, and that I am responsible for my own power if required.
 - ☐ I understand I am responsible for obtaining all permits, licenses, insurance, and approvals required to operate at this event.
-- ☐ I understand food vendors must comply with all applicable Placer County Health Department requirements. *(cooking categories only)*
+- ☐ I understand that I am responsible for obtaining my own Placer County temporary food facility permit, and for emailing a copy to vendors@romaniancenter.org by September 18, 2026. *(cooking categories only)*
 - ☐ I understand I will be assigned a load-in time, that I will have 30 minutes to unload, and that no vehicles may remain on the festival grounds. Vehicles must be moved to the free parking structure.
 - ☐ I understand I am responsible for maintaining a clean booth space and removing all trash before leaving the event.
 - ☐ I understand RCCS is not responsible for lost, stolen, or damaged property.
