@@ -14,6 +14,8 @@ router.get("/portal/:token", async (req, res): Promise<void> => {
     const vendor = vendors[0];
     const years = await db.select().from(festivalYearsTable).where(eq(festivalYearsTable.id, vendor.yearId)).limit(1);
     const settingsRows = await db.select().from(festivalSettingsTable).where(eq(festivalSettingsTable.yearId, vendor.yearId)).limit(1);
+    const appData = (vendor.applicationData ?? {}) as Record<string, unknown>;
+    const spacesRequested = typeof appData.spacesRequested === "string" ? appData.spacesRequested : null;
     res.json({
       type: "vendor",
       id: vendor.id,
@@ -28,6 +30,7 @@ router.get("/portal/:token", async (req, res): Promise<void> => {
       eventDate: years[0]?.eventDate ?? "",
       tier: null,
       vendorType: vendor.vendorType,
+      spacesRequested,
       vendorPriceMajorFood:    settingsRows[0] ? parseFloat(settingsRows[0].vendorPriceMajorFood)    : null,
       vendorPriceSpecialtyFood: settingsRows[0] ? parseFloat(settingsRows[0].vendorPriceSpecialtyFood) : null,
       vendorPriceRetail:       settingsRows[0] ? parseFloat(settingsRows[0].vendorPriceRetail)       : null,
@@ -97,6 +100,8 @@ router.post("/portal/:token/sign-agreement", async (req, res): Promise<void> => 
     const updated = updatedVendors[0];
     const years = await db.select().from(festivalYearsTable).where(eq(festivalYearsTable.id, updated.yearId)).limit(1);
     const settingsRows = await db.select().from(festivalSettingsTable).where(eq(festivalSettingsTable.yearId, updated.yearId)).limit(1);
+    const updatedAppData = (updated.applicationData ?? {}) as Record<string, unknown>;
+    const updatedSpacesRequested = typeof updatedAppData.spacesRequested === "string" ? updatedAppData.spacesRequested : null;
     res.json({
       type: "vendor",
       id: updated.id,
@@ -111,6 +116,7 @@ router.post("/portal/:token/sign-agreement", async (req, res): Promise<void> => 
       eventDate: years[0]?.eventDate ?? "",
       tier: null,
       vendorType: updated.vendorType,
+      spacesRequested: updatedSpacesRequested,
       vendorPriceMajorFood:    settingsRows[0] ? parseFloat(settingsRows[0].vendorPriceMajorFood)    : null,
       vendorPriceSpecialtyFood: settingsRows[0] ? parseFloat(settingsRows[0].vendorPriceSpecialtyFood) : null,
       vendorPriceRetail:       settingsRows[0] ? parseFloat(settingsRows[0].vendorPriceRetail)       : null,

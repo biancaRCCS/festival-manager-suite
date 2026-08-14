@@ -55,4 +55,6 @@ export interface PortalInfo {
   vendorPriceRetail?: number | null;
   /** @nullable */
   vendorPriceNonprofit?: number | null;
+  /** @nullable */
+  spacesRequested?: string | null;
 }

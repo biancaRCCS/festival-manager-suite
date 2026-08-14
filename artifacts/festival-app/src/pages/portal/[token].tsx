@@ -92,9 +92,11 @@ export default function PortalPage() {
     platinum: portal.sponsorPricePlatinum,
     diamond:  portal.sponsorPriceDiamond,
   };
-  const amount = portal.type === 'vendor'
-    ? (vendorTypePrice[portal.vendorType ?? 'retail'] ?? portal.vendorPriceRetail)
-    : sponsorTierPrice[portal.tier ?? 'bronze'] ?? portal.sponsorPriceBronze
+  const baseAmount = portal.type === 'vendor'
+    ? (vendorTypePrice[portal.vendorType ?? 'retail'] ?? portal.vendorPriceRetail ?? 0)
+    : (sponsorTierPrice[portal.tier ?? 'bronze'] ?? portal.sponsorPriceBronze ?? 0)
+  const isDoubleSpace = portal.type === 'vendor' && (portal as any).spacesRequested === 'double'
+  const amount = isDoubleSpace ? (baseAmount as number) * 2 : baseAmount
 
   return (
     <div className="min-h-screen bg-noise bg-background font-sans relative pb-20">
@@ -171,7 +173,10 @@ export default function PortalPage() {
                   <div className="flex flex-col md:flex-row items-center justify-between p-6 bg-muted/30 rounded-lg border">
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Total Amount Due</p>
-                      <p className="text-4xl font-serif text-foreground">${amount}</p>
+                      <p className="text-4xl font-serif text-foreground">${(amount as number).toLocaleString()}</p>
+                      {isDoubleSpace && (
+                        <p className="text-xs text-muted-foreground mt-1">Double space — 2 × ${(baseAmount as number).toLocaleString()}</p>
+                      )}
                     </div>
                     <Button onClick={handleCheckout} size="lg" disabled={checkoutMutation.isPending} className="mt-4 md:mt-0 w-full md:w-auto">
                       {checkoutMutation.isPending ? "Redirecting..." : "Pay Securely via Stripe"}
@@ -192,7 +197,7 @@ export default function PortalPage() {
                   <CheckCircle2 className="w-8 h-8 text-green-600" />
                 </div>
                 <h3 className="text-2xl font-serif text-green-900 mb-2">Payment Confirmed</h3>
-                <p className="text-green-800">Your payment of ${amount} was successful. We have received your application and agreement.</p>
+                <p className="text-green-800">Your payment of ${(amount as number).toLocaleString()} was successful. We have received your application and agreement.</p>
               </CardContent>
             </Card>
 

@@ -27,10 +27,18 @@ export async function createCheckoutSession(params: {
     .where(eq(festivalYearsTable.id, entity.yearId))
     .limit(1);
 
+  const vendorTypeLabels: Record<string, string> = {
+    major_food:    "Major Food Vendor",
+    specialty_food: "Specialty Food & Beverage Vendor",
+    retail:        "Retail, Artisan & Business Vendor",
+    nonprofit:     "Verified Nonprofit Organization",
+  };
+
   let price: number;
+  let lineItemDescription: string;
   if (entityType === "vendor") {
     const [vendorRow] = await db
-      .select({ vendorType: vendorsTable.vendorType })
+      .select({ vendorType: vendorsTable.vendorType, applicationData: vendorsTable.applicationData })
       .from(vendorsTable)
       .where(eq(vendorsTable.id, entity.id))
       .limit(1);
@@ -41,7 +49,22 @@ export async function createCheckoutSession(params: {
       retail:        settingsRow?.vendorPriceRetail        ?? "300",
       nonprofit:     settingsRow?.vendorPriceNonprofit     ?? "150",
     };
-    price = parseFloat(vendorPriceMap[vendorType] ?? "300");
+    const basePrice = parseFloat(vendorPriceMap[vendorType] ?? "300");
+
+    // Read spacesRequested from applicationData; treat missing/unknown as single
+    const appData = (vendorRow?.applicationData ?? {}) as Record<string, unknown>;
+    const spacesRequested = typeof appData.spacesRequested === "string" ? appData.spacesRequested : null;
+    if (spacesRequested === null) {
+      console.warn(`[stripe] spacesRequested missing for vendor ${entity.id} — treating as single`);
+    }
+    const isDouble = spacesRequested === "double";
+    const multiplier = isDouble ? 2 : 1;
+    price = basePrice * multiplier;
+
+    const typeLabel = vendorTypeLabels[vendorType] ?? vendorType;
+    lineItemDescription = isDouble
+      ? `${typeLabel} — double space (2 × $${basePrice.toLocaleString()})`
+      : `${typeLabel} — single space · $${basePrice.toLocaleString()}`;
   } else {
     // Look up the sponsor's chosen tier and charge the matching price
     const [sponsor] = await db
@@ -58,6 +81,7 @@ export async function createCheckoutSession(params: {
       diamond:  settingsRow?.sponsorPriceDiamond  ?? "5000",
     };
     price = parseFloat(tierPriceMap[tier] ?? "250");
+    lineItemDescription = `${tier.charAt(0).toUpperCase() + tier.slice(1)} Sponsor — ${entity.name}`;
   }
 
   const domain = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost";
@@ -72,8 +96,8 @@ export async function createCheckoutSession(params: {
           currency: "usd",
           unit_amount: Math.round(price * 100),
           product_data: {
-            name: `${entityType === "vendor" ? "Vendor" : "Sponsor"} Fee — ${year?.eventName ?? "Romanian Festival"}`,
-            description: `${entity.name} — ${year?.eventName ?? ""}`,
+            name: lineItemDescription,
+            description: `${entity.name} — ${year?.eventName ?? "Romanian Festival"}`,
           },
         },
         quantity: 1,

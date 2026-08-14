@@ -469,6 +469,17 @@ export default function VendorDetailPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Amount Due</span>
+                  <div className="text-right">
+                    <span className="text-sm font-semibold text-foreground">
+                      ${(spaces === "double" ? fee * 2 : fee).toLocaleString()}
+                    </span>
+                    {spaces === "double" && (
+                      <p className="text-xs text-muted-foreground">2 × ${fee.toLocaleString()}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Agreement</span>
                   {vendor.agreementSigned ?
                     <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Signed</Badge> :

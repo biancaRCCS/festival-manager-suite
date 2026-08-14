@@ -117,7 +117,8 @@ export const GetPortalInfoResponse = zod.object({
   "vendorPriceMajorFood": zod.number().nullish(),
   "vendorPriceSpecialtyFood": zod.number().nullish(),
   "vendorPriceRetail": zod.number().nullish(),
-  "vendorPriceNonprofit": zod.number().nullish()
+  "vendorPriceNonprofit": zod.number().nullish(),
+  "spacesRequested": zod.string().nullish()
 })
 
 
@@ -171,7 +172,8 @@ export const SignPortalAgreementResponse = zod.object({
   "vendorPriceMajorFood": zod.number().nullish(),
   "vendorPriceSpecialtyFood": zod.number().nullish(),
   "vendorPriceRetail": zod.number().nullish(),
-  "vendorPriceNonprofit": zod.number().nullish()
+  "vendorPriceNonprofit": zod.number().nullish(),
+  "spacesRequested": zod.string().nullish()
 })
 
 

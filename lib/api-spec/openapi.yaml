@@ -1495,6 +1495,8 @@ components:
           type: ["number", "null"]
         vendorPriceNonprofit:
           type: ["number", "null"]
+        spacesRequested:
+          type: ["string", "null"]
 
     CheckoutSession:
       type: object
