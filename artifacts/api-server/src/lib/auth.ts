@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
-import { getAuth } from "@clerk/express";
+import { getAuth, clerkClient } from "@clerk/express";
 import { db, staffTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, isNull, and } from "drizzle-orm";
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   const auth = getAuth(req);
@@ -25,18 +25,24 @@ export async function requireStaff(req: Request, res: Response, next: NextFuncti
   // Check staff table for this Clerk user
   let staffMembers = await db.select().from(staffTable).where(eq(staffTable.clerkUserId, userId));
 
-  // If not found by Clerk ID, try to link an existing email-only invitation
+  // If not found by Clerk ID, fetch their email from Clerk and try to link an
+  // existing email-only invitation row (created when an admin adds them by email).
   if (staffMembers.length === 0) {
-    const sessionEmail =
-      (getAuth(req) as any)?.sessionClaims?.email ??
-      (getAuth(req) as any)?.sessionClaims?.primary_email_address ??
-      null;
-    if (sessionEmail) {
-      const { isNull, and } = await import("drizzle-orm");
+    let clerkEmail: string | null = null;
+    try {
+      const user = await clerkClient.users.getUser(userId);
+      // Use the primary email address, falling back to the first available one
+      const primary = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId);
+      clerkEmail = primary?.emailAddress ?? user.emailAddresses[0]?.emailAddress ?? null;
+    } catch {
+      // If we can't fetch from Clerk, fall through to the 403 below
+    }
+
+    if (clerkEmail) {
       const emailMatch = await db
         .select()
         .from(staffTable)
-        .where(and(eq(staffTable.email, sessionEmail), isNull(staffTable.clerkUserId)));
+        .where(and(eq(staffTable.email, clerkEmail), isNull(staffTable.clerkUserId)));
       if (emailMatch.length > 0) {
         // Link their Clerk ID so future lookups are instant
         const updated = await db
@@ -68,11 +74,9 @@ export async function requireStaff(req: Request, res: Response, next: NextFuncti
         }
       }
 
-      const auth2 = getAuth(req);
-      const email = (auth2 as any)?.sessionClaims?.email ?? (auth2 as any)?.sessionClaims?.primary_email_address ?? `admin-${userId}@festival.local`;
       const [newStaff] = await db.insert(staffTable).values({
         clerkUserId: userId,
-        email,
+        email: `admin-${userId}@festival.local`,
         name: "Admin",
         role: "admin",
       }).returning();
