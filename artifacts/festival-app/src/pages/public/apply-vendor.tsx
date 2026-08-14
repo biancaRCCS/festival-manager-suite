@@ -285,7 +285,7 @@ export default function ApplyVendorPage() {
     if (!form.backupContactName.trim()) errors.push("Backup contact name is required")
     if (!form.backupContactPhone.trim()) errors.push("Backup contact mobile is required")
     if (isNonprofit && !form.ein.trim()) errors.push("Employer Identification Number (EIN) is required for nonprofits")
-    if (!form.ack_documents)           errors.push("You must acknowledge the document email requirement")
+    if (!form.ack_documents)           errors.push("Please acknowledge the permits and insurance requirement")
     if (!form.participatedBefore)      errors.push("Please answer whether you have participated before")
     // Acknowledgements
     if (!form.ack_noGuarantee)         errors.push("Please check all acknowledgements")
@@ -708,32 +708,17 @@ export default function ApplyVendorPage() {
                 </div>
               </section>
 
-              {/* ── 4.7 Required Documents ── */}
+              {/* ── 4.7 Permits & Insurance ── */}
               <section>
-                <SectionHeading num="4.7" title="Required Documents" />
-
-                {/* Email instructions banner */}
-                <div className="rounded-md border border-border bg-muted/40 p-4 text-sm space-y-2 mb-6">
-                  <p className="font-semibold text-foreground">Required Documents</p>
-                  <p className="text-muted-foreground">
-                    Please email the documents below to{" "}
-                    <a href="mailto:vendors@romaniancenter.org" className="text-primary underline underline-offset-2">
-                      vendors@romaniancenter.org
-                    </a>{" "}
-                    by <strong> September 18th, 2026</strong>. Include your business name in the subject line.
-                    Document uploads will be available directly in this form in future years.
-                  </p>
-                </div>
+                <SectionHeading num="4.7" title="Permits & Insurance" />
 
                 <div className="space-y-6">
-                  {/* Seller's Permit */}
-                  <div className="space-y-1.5">
-                    <Label htmlFor="sellerPermitNumber">
-                      Seller's Permit Number <span className="text-muted-foreground text-sm">(required where applicable)</span>
-                    </Label>
-                    <Input id="sellerPermitNumber" className="max-w-sm" placeholder="Permit number" value={form.sellerPermitNumber} onChange={e => set("sellerPermitNumber", e.target.value)} />
-                    <FieldNote>Email a copy of your seller's permit to vendors@romaniancenter.org by 18 September 2026.</FieldNote>
-                  </div>
+                  {/* Intro */}
+                  <p className="text-sm text-muted-foreground">
+                    Vendors are responsible for obtaining any licenses, permits, and insurance required for their
+                    participation. Requirements may vary based on vendor type and activities. RCCS will provide
+                    applicable requirements to approved vendors prior to the event.
+                  </p>
 
                   {/* Health Permit — food categories only */}
                   {isFood && (
@@ -741,7 +726,11 @@ export default function ApplyVendorPage() {
                       <p className="text-sm font-medium text-foreground">Health Permit — food vendors</p>
                       <p className="text-sm text-muted-foreground">
                         Each vendor is responsible for obtaining their own Placer County health permit.
-                        Email a copy to vendors@romaniancenter.org by 18 September 2026.
+                        Please email your health permit to{" "}
+                        <a href="mailto:vendors@romaniancenter.org" className="text-primary underline underline-offset-2">
+                          vendors@romaniancenter.org
+                        </a>{" "}
+                        by <strong>September 18, 2026</strong>.
                       </p>
                       <a
                         href="https://www.placer.ca.gov/DocumentCenter/View/9479/Application-for-TFF-Food-Vendor-Authorization-PDF-Fillable-Form?bidId="
@@ -755,38 +744,12 @@ export default function ApplyVendorPage() {
                     </div>
                   )}
 
-                  {/* Certificate of Insurance */}
-                  <div className="rounded-md border border-border/60 p-4 space-y-3 bg-background text-sm">
-                    <p className="font-semibold text-foreground">Certificate of Insurance</p>
-                    <p className="text-muted-foreground">
-                      All vendors must carry commercial general liability insurance of at least{" "}
-                      <strong>$1,000,000 per occurrence</strong> and{" "}
-                      <strong>$2,000,000 general aggregate</strong>.
-                    </p>
-                    <p className="text-muted-foreground">Your certificate must name as additional insured:</p>
-                    <ul className="list-disc pl-5 text-muted-foreground space-y-1">
-                      <li><strong>Romanian Community Center of Sacramento Inc.</strong></li>
-                      <li><strong>The City of Roseville, its officers, agents, employees and volunteers</strong></li>
-                    </ul>
-                    <p className="text-muted-foreground">
-                      The certificate must be accompanied by an <strong>Additional Insured Endorsement</strong>{" "}
-                      (form CG 20 12 07 98 or equivalent — a blanket endorsement or the relevant section of
-                      your policy is acceptable). A statement on the certificate alone is <strong>not</strong> sufficient;
-                      the City does not accept certificate statements in place of the endorsement document.
-                    </p>
-                    <p className="text-muted-foreground">
-                      Also required: a <strong>Waiver of Subrogation Endorsement</strong>, a{" "}
-                      <strong>Primary and Non-Contributory Coverage Endorsement</strong>, and a policy providing{" "}
-                      <strong>30 days' notice of cancellation</strong>.
-                    </p>
-                    <p className="text-muted-foreground">
-                      Vendors serving or selling alcohol must additionally carry{" "}
-                      <strong>liquor liability coverage</strong> of $1,000,000 per occurrence and
-                      $2,000,000 aggregate, primary and non-contributory.
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Email your certificate and endorsements to vendors@romaniancenter.org by 18 September 2026.
-                    </p>
+                  {/* Seller's Permit */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="sellerPermitNumber">
+                      Seller's Permit Number <span className="text-muted-foreground text-sm">(required where applicable)</span>
+                    </Label>
+                    <Input id="sellerPermitNumber" className="max-w-sm" placeholder="Permit number" value={form.sellerPermitNumber} onChange={e => set("sellerPermitNumber", e.target.value)} />
                   </div>
 
                   {/* Nonprofit EIN — nonprofit category only */}
@@ -800,12 +763,10 @@ export default function ApplyVendorPage() {
                     </div>
                   )}
 
-                  {/* Document acknowledgement */}
+                  {/* Permits & Insurance acknowledgement */}
                   <div className="pt-2">
                     <AckRow id="ack_documents" checked={form.ack_documents} onChange={v => set("ack_documents", v)}>
-                      I understand I must email my required documents to{" "}
-                      <strong>vendors@romaniancenter.org</strong> by{" "}
-                      <strong>September 18th, 2026</strong>, and that my space may be released if they are not received.
+                      I understand that additional permits, licenses, or proof of insurance may be required before participating.
                     </AckRow>
                   </div>
                 </div>
@@ -891,7 +852,9 @@ export default function ApplyVendorPage() {
                   </AckRow>
                   {isFood && (
                     <AckRow id="ack_foodCompliance" checked={form.ack_foodCompliance} onChange={v => set("ack_foodCompliance", v)}>
-                      I understand food vendors must comply with all applicable Placer County Health Department requirements.
+                      I understand that I am responsible for obtaining my own Placer County temporary food facility permit, and for emailing a copy to{" "}
+                      <a href="mailto:vendors@romaniancenter.org" className="text-primary underline underline-offset-2">vendors@romaniancenter.org</a>{" "}
+                      by September 18, 2026.
                     </AckRow>
                   )}
                   <AckRow id="ack_fireMarshal" checked={form.ack_fireMarshal} onChange={v => set("ack_fireMarshal", v)}>
