@@ -57,4 +57,6 @@ export interface PortalInfo {
   vendorPriceNonprofit?: number | null;
   /** @nullable */
   spacesRequested?: string | null;
+  /** @nullable */
+  sponsorshipAmount?: number | null;
 }

@@ -1497,6 +1497,8 @@ components:
           type: ["number", "null"]
         spacesRequested:
           type: ["string", "null"]
+        sponsorshipAmount:
+          type: ["number", "null"]
 
     CheckoutSession:
       type: object

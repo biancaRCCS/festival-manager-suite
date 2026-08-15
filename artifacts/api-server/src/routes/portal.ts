@@ -64,6 +64,8 @@ router.get("/portal/:token", async (req, res): Promise<void> => {
       eventDate: years[0]?.eventDate ?? "",
       tier: sponsor.tier,
       vendorType: null,
+      spacesRequested: null,
+      sponsorshipAmount: sponsor.sponsorshipAmount != null ? parseFloat(sponsor.sponsorshipAmount) : null,
       vendorPriceMajorFood: null,
       vendorPriceSpecialtyFood: null,
       vendorPriceRetail: null,

@@ -92,9 +92,10 @@ export default function PortalPage() {
     platinum: portal.sponsorPricePlatinum,
     diamond:  portal.sponsorPriceDiamond,
   };
+  const tierMinAmount = sponsorTierPrice[portal.tier ?? 'bronze'] ?? portal.sponsorPriceBronze ?? 0
   const baseAmount = portal.type === 'vendor'
     ? (vendorTypePrice[portal.vendorType ?? 'retail'] ?? portal.vendorPriceRetail ?? 0)
-    : (sponsorTierPrice[portal.tier ?? 'bronze'] ?? portal.sponsorPriceBronze ?? 0)
+    : ((portal as any).sponsorshipAmount ?? tierMinAmount)
   const isDoubleSpace = portal.type === 'vendor' && (portal as any).spacesRequested === 'double'
   const amount = isDoubleSpace ? (baseAmount as number) * 2 : baseAmount
 

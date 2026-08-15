@@ -66,22 +66,44 @@ export async function createCheckoutSession(params: {
       ? `${typeLabel} — double space (2 × $${basePrice.toLocaleString()})`
       : `${typeLabel} — single space · $${basePrice.toLocaleString()}`;
   } else {
-    // Look up the sponsor's chosen tier and charge the matching price
+    // Require settings to be present — we must not invent a price if the record is missing
+    if (!settingsRow) {
+      throw new Error(
+        `[stripe] Festival settings not found for year ${entity.yearId} — cannot determine tier minimum for sponsor ${entity.id}`
+      );
+    }
+
     const [sponsor] = await db
-      .select({ tier: sponsorsTable.tier })
+      .select({ tier: sponsorsTable.tier, sponsorshipAmount: sponsorsTable.sponsorshipAmount })
       .from(sponsorsTable)
       .where(eq(sponsorsTable.id, entity.id))
       .limit(1);
     const tier = sponsor?.tier ?? "bronze";
-    const tierPriceMap: Record<string, string> = {
-      bronze:   settingsRow?.sponsorPriceBronze   ?? "250",
-      silver:   settingsRow?.sponsorPriceSilver   ?? "500",
-      gold:     settingsRow?.sponsorPriceGold     ?? "1000",
-      platinum: settingsRow?.sponsorPricePlatinum ?? "2000",
-      diamond:  settingsRow?.sponsorPriceDiamond  ?? "5000",
+
+    // Tier minimums come exclusively from Settings
+    const tierMinMap: Record<string, string> = {
+      bronze:   settingsRow.sponsorPriceBronze,
+      silver:   settingsRow.sponsorPriceSilver,
+      gold:     settingsRow.sponsorPriceGold,
+      platinum: settingsRow.sponsorPricePlatinum,
+      diamond:  settingsRow.sponsorPriceDiamond,
     };
-    price = parseFloat(tierPriceMap[tier] ?? "250");
-    lineItemDescription = `${tier.charAt(0).toUpperCase() + tier.slice(1)} Sponsor — ${entity.name}`;
+    const tierMin = parseFloat(tierMinMap[tier] ?? "0");
+
+    // Charge what the sponsor actually entered; fall back to the tier minimum if missing or invalid
+    const rawAmount = sponsor?.sponsorshipAmount != null ? parseFloat(sponsor.sponsorshipAmount) : null;
+    if (rawAmount === null) {
+      console.warn(`[stripe] sponsorshipAmount missing for sponsor ${entity.id} (tier: ${tier}) — falling back to tier minimum $${tierMin}`);
+      price = tierMin;
+    } else if (rawAmount < tierMin) {
+      console.warn(`[stripe] sponsorshipAmount $${rawAmount} is below tier minimum $${tierMin} for sponsor ${entity.id} (tier: ${tier}) — falling back to tier minimum`);
+      price = tierMin;
+    } else {
+      price = rawAmount;
+    }
+
+    const tierLabel = tier.charAt(0).toUpperCase() + tier.slice(1);
+    lineItemDescription = `${tierLabel} Sponsor — $${price.toLocaleString()}`;
   }
 
   const domain = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost";
