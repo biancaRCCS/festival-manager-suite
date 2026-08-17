@@ -166,13 +166,19 @@ function LandingPage() {
 
             {/* Left — text */}
             <div className="flex-1 min-w-0">
+              {/* Festival wordmark */}
+              <div className="mb-4">
+                <div className="font-wordmark text-white uppercase leading-none text-[40px] md:text-[72px]">Romanian</div>
+                <div className="font-sans font-bold text-white uppercase tracking-[0.3em] leading-tight text-[13px] md:text-[23px] mt-1">Festival</div>
+              </div>
+
               {/* Theme — year's creative concept */}
               <p className="font-serif italic text-white/60 md:text-lg mb-5 tracking-wide text-[20px]">
                 150 Years of Constantin Brâncuși:<br />Tradition, Art, and Romanian Spirit
               </p>
 
               {/* Main heading */}
-              <h1 className="font-serif md:text-7xl font-bold mb-8 text-[40px]">
+              <h1 className="font-serif md:text-3xl font-bold mb-8 text-2xl">
                 Preserving Culture.<br />
                 Strengthening<br />
                 Community.<br />
