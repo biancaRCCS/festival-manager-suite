@@ -36,7 +36,7 @@ async function send(to: string, subject: string, html: string): Promise<void> {
     const { error } = await resend.emails.send({
       from: FROM(),
       to,
-      reply_to: REPLY_TO(),
+      replyTo: REPLY_TO(),
       subject,
       html,
     });
@@ -95,6 +95,8 @@ const TIER_LABELS: Record<string, string> = {
   diamond:  "Diamond ($10,000 and above)",
 };
 
+export { VENDOR_LABELS, TIER_LABELS };
+
 // ---------------------------------------------------------------------------
 // 0a. Email status — never exposes the full API key
 // ---------------------------------------------------------------------------
@@ -132,7 +134,7 @@ export async function sendTestEmail(to: string): Promise<void> {
   const { error } = await resend.emails.send({
     from: FROM(),
     to,
-    reply_to: REPLY_TO(),
+    replyTo: REPLY_TO(),
     subject,
     html,
   });
@@ -141,21 +143,20 @@ export async function sendTestEmail(to: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// 1. Portal invite (existing)
+// 1a. Vendor portal invite — sign agreement & pay
 // ---------------------------------------------------------------------------
-export async function sendPortalInviteEmail(params: {
+export async function sendVendorPortalInviteEmail(params: {
   to: string;
   name: string;
-  type: "vendor" | "sponsor";
   portalUrl: string;
   festivalName: string;
 }) {
-  const { to, name, type, portalUrl, festivalName } = params;
-  const subject = `Your ${type === "vendor" ? "Vendor" : "Sponsor"} Application for ${festivalName} — Next Steps`;
+  const { to, name, portalUrl, festivalName } = params;
+  const subject = `Your Vendor Application for ${festivalName} — Next Steps`;
   const html = `
     <div style="${BASE_STYLE}">
       <h2 style="color: #8b1a1a;">Congratulations, ${name}!</h2>
-      <p>We are pleased to inform you that your ${type} application for <strong>${festivalName}</strong> has been <strong>approved</strong>.</p>
+      <p>We are pleased to inform you that your vendor application for <strong>${festivalName}</strong> has been <strong>approved</strong>.</p>
       <p>To complete your registration, please visit your private portal to:</p>
       <ol>
         <li>Review and sign the participation agreement</li>
@@ -175,6 +176,108 @@ export async function sendPortalInviteEmail(params: {
       ${FOOTER}
     </div>`;
   await send(to, subject, html);
+}
+
+// ---------------------------------------------------------------------------
+// 1b. Sponsor stage-1 approval — invite to complete sponsorship details
+//     Payment is NOT mentioned here; it comes only after details are approved.
+// ---------------------------------------------------------------------------
+export async function sendSponsorDetailsInviteEmail(params: {
+  to: string;
+  name: string;
+  orgName: string;
+  tier: string;
+  portalUrl: string;
+  festivalName: string;
+}) {
+  const { to, name, orgName, tier, portalUrl, festivalName } = params;
+  const tierLabel = TIER_LABELS[tier] ?? tier;
+  const subject = `Your Sponsorship Application for ${festivalName} — Complete Your Details`;
+  const html = `
+    <div style="${BASE_STYLE}">
+      <h2 style="color: #8b1a1a;">Congratulations, ${name}!</h2>
+      <p>We are delighted to confirm that <strong>${orgName}</strong>'s application to sponsor <strong>${festivalName}</strong> has been <strong>approved</strong>.</p>
+      ${field("Sponsorship Tier", tierLabel)}
+      <p>The next step is to complete your sponsorship details — including your organization's booth and operational information, acknowledgements, and logo — so we can finalise your participation.</p>
+      <p>
+        <a href="${portalUrl}" style="display: inline-block; background: #8b1a1a; color: white; padding: 12px 24px; text-decoration: none; font-size: 16px;">
+          Complete Your Sponsorship Details
+        </a>
+      </p>
+      <p style="color: #6b7280; font-size: 14px;">
+        If the button above does not work, copy and paste this link into your browser:<br>
+        <a href="${portalUrl}">${portalUrl}</a>
+      </p>
+      <p>Once our team reviews your details, we will send you a separate email with instructions to complete your payment.</p>
+      <p>If you have any questions, please reply to this email.</p>
+      <p>We look forward to welcoming you to the festival!</p>
+      ${FOOTER}
+    </div>`;
+  await send(to, subject, html);
+}
+
+// ---------------------------------------------------------------------------
+// 1c. Sponsor details approved — payment is now due
+// ---------------------------------------------------------------------------
+export async function sendSponsorPaymentReadyEmail(params: {
+  to: string;
+  name: string;
+  orgName: string;
+  tier: string;
+  sponsorshipAmount: number;
+  paymentDeadline: string | null;
+  portalUrl: string;
+  festivalName: string;
+}) {
+  const { to, name, orgName, tier, sponsorshipAmount, paymentDeadline, portalUrl, festivalName } = params;
+  const tierLabel = TIER_LABELS[tier] ?? tier;
+  const amountDisplay = `$${sponsorshipAmount.toLocaleString()}`;
+  const deadlineNote = paymentDeadline
+    ? `<p><strong>Payment deadline:</strong> ${new Date(paymentDeadline + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}. Payment received after this date may not be included in printed promotional materials.</p>`
+    : "";
+  const subject = `Your Sponsorship for ${festivalName} — Payment Due`;
+  const html = `
+    <div style="${BASE_STYLE}">
+      <h2 style="color: #8b1a1a;">Details Approved — Payment Now Due</h2>
+      <p>Dear ${name},</p>
+      <p>We have reviewed and approved the sponsorship details for <strong>${orgName}</strong>. You are now ready to complete your payment and secure your place at <strong>${festivalName}</strong>.</p>
+      ${DIVIDER}
+      ${field("Organisation", orgName)}
+      ${field("Sponsorship Tier", tierLabel)}
+      ${field("Amount Due", amountDisplay)}
+      ${DIVIDER}
+      ${deadlineNote}
+      <p>Please visit your portal to sign the participation agreement and complete payment:</p>
+      <p>
+        <a href="${portalUrl}" style="display: inline-block; background: #8b1a1a; color: white; padding: 12px 24px; text-decoration: none; font-size: 16px;">
+          Go to Your Portal
+        </a>
+      </p>
+      <p style="color: #6b7280; font-size: 14px;">
+        If the button above does not work, copy and paste this link into your browser:<br>
+        <a href="${portalUrl}">${portalUrl}</a>
+      </p>
+      <p>If you have any questions, please reply to this email.</p>
+      <p>Thank you for supporting the Romanian community!</p>
+      ${FOOTER}
+    </div>`;
+  await send(to, subject, html);
+}
+
+// ---------------------------------------------------------------------------
+// Legacy export — kept so existing call sites don't break during migration.
+// Vendor callers should migrate to sendVendorPortalInviteEmail.
+// ---------------------------------------------------------------------------
+export async function sendPortalInviteEmail(params: {
+  to: string;
+  name: string;
+  type: "vendor" | "sponsor";
+  portalUrl: string;
+  festivalName: string;
+}) {
+  // This path should only be reached for vendors now; sponsor approvals use
+  // sendSponsorDetailsInviteEmail. Keep vendor behaviour identical to before.
+  await sendVendorPortalInviteEmail(params);
 }
 
 // ---------------------------------------------------------------------------
@@ -234,6 +337,44 @@ export async function sendNewApplicationNotification(params: {
 }
 
 // ---------------------------------------------------------------------------
+// 2b. Sponsor stage-2 submission notification — sent to RCCS staff
+// ---------------------------------------------------------------------------
+export async function sendSponsorDetailsSubmittedNotification(params: {
+  notificationEmail: string;
+  applicantName: string;
+  orgName: string;
+  tier: string;
+  sponsorshipAmount: number | null;
+  adminPath: string;
+}): Promise<void> {
+  const { notificationEmail, applicantName, orgName, tier, sponsorshipAmount, adminPath } = params;
+  const tierLabel = TIER_LABELS[tier] ?? tier;
+  const amountDisplay = sponsorshipAmount != null ? `$${sponsorshipAmount.toLocaleString()}` : null;
+  const adminUrl = `${getAppBaseUrl()}${adminPath}`;
+  const adminLinkHtml = `<a href="${adminUrl}" style="display: inline-block; background: #1a2744; color: white; padding: 10px 20px; text-decoration: none; font-size: 14px; margin-top: 4px;">
+       Review Details in Admin
+     </a>
+     <p style="font-size: 12px; color: #9ca3af; margin-top: 8px;">${adminUrl}</p>`;
+
+  const subject = `Sponsor Details Submitted — ${orgName} (${applicantName})`;
+  const html = `
+    <div style="${BASE_STYLE}">
+      <h2 style="color: #1a2744; margin-bottom: 4px;">Sponsor Stage 2 Details Submitted</h2>
+      <p style="color: #6b7280; font-size: 14px; margin-top: 0;">${orgName} has submitted their sponsorship details and is awaiting your review.</p>
+      ${DIVIDER}
+      ${field("Contact Name", applicantName)}
+      ${field("Organisation", orgName)}
+      ${field("Tier", tierLabel)}
+      ${amountDisplay ? field("Sponsorship Amount", amountDisplay) : ""}
+      ${DIVIDER}
+      ${adminLinkHtml}
+      ${FOOTER}
+    </div>`;
+
+  await send(notificationEmail, subject, html);
+}
+
+// ---------------------------------------------------------------------------
 // 3. Applicant confirmation — sent to the person who applied
 // ---------------------------------------------------------------------------
 export async function sendApplicantConfirmation(params: {
@@ -255,7 +396,7 @@ export async function sendApplicantConfirmation(params: {
     applicationType === "vendor"
       ? `We will review your application and be in touch at this email address once a decision has been made. If your application is approved, you will receive a link to your private portal to sign the agreement and complete payment.`
       : applicationType === "sponsor"
-      ? `Someone from the Romanian Community Center of Sacramento will be in touch within one to two business days.`
+      ? `Someone from the Romanian Community Center of Sacramento will be in touch within one to two business days. If you have any questions in the meantime, please email us at vendors@romaniancenter.org.`
       : `We will be in touch as we finalize our volunteer schedule for the festival.`;
 
   const html = `

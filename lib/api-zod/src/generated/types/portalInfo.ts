@@ -59,4 +59,8 @@ export interface PortalInfo {
   spacesRequested?: string | null;
   /** @nullable */
   sponsorshipAmount?: number | null;
+  /** @nullable */
+  boothOrNameOnly?: string | null;
+  /** @nullable */
+  paymentDeadline?: string | null;
 }

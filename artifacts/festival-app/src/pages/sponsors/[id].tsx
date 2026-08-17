@@ -36,6 +36,26 @@ const BOOTH_LABELS: Record<string, string> = {
   name_only: "Name-only sponsorship — recognition without operating a booth",
 }
 
+const STATUS_LABELS: Record<string, { label: string; color: string }> = {
+  pending:            { label: "Pending Review",       color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
+  approved:           { label: "Approved — Awaiting Details", color: "bg-blue-100 text-blue-800 border-blue-200" },
+  rejected:           { label: "Rejected",             color: "bg-red-100 text-red-800 border-red-200" },
+  details_submitted:  { label: "Details Submitted",    color: "bg-purple-100 text-purple-800 border-purple-200" },
+  details_approved:   { label: "Details Approved — Awaiting Payment", color: "bg-indigo-100 text-indigo-800 border-indigo-200" },
+  payment_pending:    { label: "Payment Pending",       color: "bg-orange-100 text-orange-800 border-orange-200" },
+  paid:               { label: "Paid",                  color: "bg-green-100 text-green-800 border-green-200" },
+  final_approved:     { label: "Final Approved",        color: "bg-green-100 text-green-800 border-green-200" },
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const s = STATUS_LABELS[status] ?? { label: status.replace(/_/g, " "), color: "bg-gray-100 text-gray-700 border-gray-200" }
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${s.color}`}>
+      {s.label}
+    </span>
+  )
+}
+
 function SectionDivider({ title }: { title: string }) {
   return (
     <div className="border-t pt-5 mt-2">
@@ -74,6 +94,7 @@ export default function SponsorDetailPage() {
   const [spotNumber, setSpotNumber] = useState("")
   const [locationName, setLocationName] = useState("")
   const [isReviewOpen, setIsReviewOpen] = useState(false)
+  const [isApproveDetailsOpen, setIsApproveDetailsOpen] = useState(false)
   const [isSpotOpen, setIsSpotOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
 
@@ -89,7 +110,10 @@ export default function SponsorDetailPage() {
       { id, data: { status, note: reviewNote } },
       {
         onSuccess: (data) => {
-          toast({ title: `Sponsor ${status} successfully` })
+          toast({ title: status === 'approved'
+            ? "Sponsor approved — details invite sent"
+            : "Sponsor rejected"
+          })
           setIsReviewOpen(false)
           queryClient.setQueryData(getGetSponsorQueryKey(id), data)
         },
@@ -98,15 +122,16 @@ export default function SponsorDetailPage() {
     )
   }
 
-  const handleFinalApprove = () => {
+  const handleApproveDetails = () => {
     finalApproveMutateFnRef.current(
       { id },
       {
         onSuccess: (data) => {
-          toast({ title: "Sponsor final approved" })
+          toast({ title: "Details approved — payment email sent to sponsor" })
+          setIsApproveDetailsOpen(false)
           queryClient.setQueryData(getGetSponsorQueryKey(id), data)
         },
-        onError: () => toast({ title: "Failed to approve", variant: "destructive" })
+        onError: () => toast({ title: "Failed to approve details", variant: "destructive" })
       }
     )
   }
@@ -157,6 +182,8 @@ export default function SponsorDetailPage() {
     ? (BOOTH_LABELS[str("boothOrNameOnly")!] ?? str("boothOrNameOnly"))
     : null
 
+  const hasStage2 = !!str("stage2SubmittedAt")
+
   return (
     <AdminLayout>
       <div className="space-y-6 max-w-5xl mx-auto">
@@ -171,6 +198,8 @@ export default function SponsorDetailPage() {
             <p className="text-muted-foreground">{sponsor.name}</p>
           </div>
           <div className="flex gap-3 items-center flex-wrap">
+
+            {/* Stage 1 review — only for pending applications */}
             {sponsor.status === 'pending' && (
               <Dialog open={isReviewOpen} onOpenChange={setIsReviewOpen}>
                 <DialogTrigger asChild>
@@ -178,27 +207,60 @@ export default function SponsorDetailPage() {
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Review Sponsor</DialogTitle>
-                    <DialogDescription>Approve or reject this application. Approving will send them an invite to the portal.</DialogDescription>
+                    <DialogTitle>Review Sponsor Application</DialogTitle>
+                    <DialogDescription>
+                      Approve to send the sponsor a link to complete their stage 2 details. Payment is not collected until after you approve their details.
+                    </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     <div className="space-y-2">
                       <Label>Internal Note (Optional)</Label>
-                      <Input value={reviewNote} onChange={e => setReviewNote(e.target.value)} placeholder="e.g., Will bring extra banners" />
+                      <Input value={reviewNote} onChange={e => setReviewNote(e.target.value)} placeholder="e.g., Check booth preference" />
                     </div>
                   </div>
                   <DialogFooter className="gap-2 sm:gap-0">
                     <Button variant="destructive" onClick={() => handleReview('rejected')}>Reject</Button>
-                    <Button onClick={() => handleReview('approved')} className="bg-secondary text-secondary-foreground hover:bg-secondary/80">Approve Sponsor</Button>
+                    <Button onClick={() => handleReview('approved')} className="bg-secondary text-secondary-foreground hover:bg-secondary/80">
+                      Approve — Send Details Link
+                    </Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
             )}
 
-            {sponsor.status === 'paid' && (
-              <Button onClick={handleFinalApprove} variant="default" className="bg-green-600 hover:bg-green-700 text-white">
-                <CheckCircle2 className="w-4 h-4 mr-2" /> Final Approve
-              </Button>
+            {/* Stage 2 details approval — only for details_submitted */}
+            {sponsor.status === 'details_submitted' && (
+              <Dialog open={isApproveDetailsOpen} onOpenChange={setIsApproveDetailsOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-secondary text-secondary-foreground hover:bg-secondary/80">
+                    <CheckCircle2 className="w-4 h-4 mr-2" /> Approve Details
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Approve Sponsorship Details</DialogTitle>
+                    <DialogDescription>
+                      This will move the sponsor to <strong>Details Approved</strong> and send them a payment email with their tier, amount, and payment deadline.
+                    </DialogDescription>
+                  </DialogHeader>
+                  {amountDisplay && (
+                    <div className="py-2 space-y-1 text-sm">
+                      <p><span className="text-muted-foreground">Tier:</span> {tierDisplay}</p>
+                      <p><span className="text-muted-foreground">Amount due:</span> {amountDisplay}</p>
+                    </div>
+                  )}
+                  <DialogFooter className="gap-2 sm:gap-0">
+                    <Button variant="outline" onClick={() => setIsApproveDetailsOpen(false)}>Cancel</Button>
+                    <Button
+                      onClick={handleApproveDetails}
+                      disabled={finalApproveMutation.isPending}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      {finalApproveMutation.isPending ? "Approving…" : "Approve & Send Payment Email"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             )}
 
             <Dialog open={isSpotOpen} onOpenChange={setIsSpotOpen}>
@@ -265,12 +327,18 @@ export default function SponsorDetailPage() {
 
               {/* Status strip */}
               <div className="flex flex-wrap gap-3 items-center pb-3 border-b mb-2">
-                <Badge variant="outline" className="capitalize text-xs">{sponsor.status.replace(/_/g, ' ')}</Badge>
+                <StatusBadge status={sponsor.status} />
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5" /> Applied {new Date(sponsor.createdAt).toLocaleString()}
                 </span>
                 {sponsor.approvedAt && (
-                  <span className="text-xs text-muted-foreground">Approved {new Date(sponsor.approvedAt).toLocaleDateString()}</span>
+                  <span className="text-xs text-muted-foreground">Stage 1 approved {new Date(sponsor.approvedAt).toLocaleDateString()}</span>
+                )}
+                {(sponsor as any).detailsSubmittedAt && (
+                  <span className="text-xs text-muted-foreground">Details submitted {new Date((sponsor as any).detailsSubmittedAt).toLocaleDateString()}</span>
+                )}
+                {sponsor.finalApprovedAt && (
+                  <span className="text-xs text-muted-foreground">Details approved {new Date(sponsor.finalApprovedAt).toLocaleDateString()}</span>
                 )}
               </div>
 
@@ -288,6 +356,7 @@ export default function SponsorDetailPage() {
               <div className="grid grid-cols-2 gap-x-6 gap-y-4">
                 <Field label="Tier" value={tierDisplay} />
                 <Field label="Sponsorship Amount" value={amountDisplay ?? "Not specified"} />
+                <Field label="Booth Preference" value={boothDisplay} wide />
               </div>
 
               {/* About Your Organization */}
@@ -297,11 +366,20 @@ export default function SponsorDetailPage() {
                 <Field label="Organization / Business Description" value={str("orgDescription")} wide />
               </div>
 
-              {/* Booth or Name Only */}
-              <SectionDivider title="Booth or Name-Only Sponsorship" />
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                <Field label="Preference" value={boothDisplay} wide />
-              </div>
+              {/* Stage 2 details — shown only if submitted */}
+              {hasStage2 && (
+                <>
+                  <SectionDivider title="Stage 2 Details (Submitted)" />
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                    <Field label="On-site Contact Name" value={str("onsiteContactName")} />
+                    <Field label="On-site Contact Phone" value={str("onsiteContactPhone")} />
+                    <Field label="Booth Description / Products" value={str("boothDescription")} wide />
+                    <Field label="Electrical Requirements" value={str("electricalRequirements")} wide />
+                    <Field label="Special Setup Requests" value={str("specialRequests")} wide />
+                    <Field label="Logo Submitted" value={str("logoUrl") ? "Yes" : null} />
+                  </div>
+                </>
+              )}
 
             </CardContent>
           </Card>
@@ -331,23 +409,26 @@ export default function SponsorDetailPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-xl">Legal & Payment</CardTitle>
+                <CardTitle className="text-xl">Flow Status</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Agreement</span>
-                  {sponsor.agreementSigned ?
-                    <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Signed</Badge> :
-                    <Badge variant="secondary">Pending</Badge>
-                  }
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Payment</span>
-                  {sponsor.paidAt ?
-                    <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Paid {new Date(sponsor.paidAt).toLocaleDateString()}</Badge> :
-                    <Badge variant="secondary">Pending</Badge>
-                  }
-                </div>
+              <CardContent className="space-y-3">
+                {[
+                  { step: "Stage 1 approved",    done: !!sponsor.approvedAt },
+                  { step: "Details submitted",   done: !!(sponsor as any).detailsSubmittedAt },
+                  { step: "Details approved",    done: !!sponsor.finalApprovedAt },
+                  { step: "Agreement signed",    done: !!sponsor.agreementSigned },
+                  { step: "Payment received",    done: !!sponsor.paidAt },
+                ].map(({ step, done }) => (
+                  <div key={step} className="flex items-center justify-between">
+                    <span className="text-sm">{step}</span>
+                    {done
+                      ? <Badge className="bg-green-100 text-green-800 hover:bg-green-100">✓ Done</Badge>
+                      : <Badge variant="secondary">Pending</Badge>}
+                  </div>
+                ))}
+                {sponsor.paidAt && (
+                  <p className="text-xs text-muted-foreground pt-1">Paid {new Date(sponsor.paidAt).toLocaleDateString()}</p>
+                )}
                 {sponsor.reviewNote && (
                   <div className="pt-4 border-t">
                     <span className="text-xs font-medium text-muted-foreground block mb-1">Internal Note</span>

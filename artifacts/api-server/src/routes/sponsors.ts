@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, sponsorsTable, festivalYearsTable, activityLogTable } from "@workspace/db";
+import { db, sponsorsTable, festivalYearsTable, festivalSettingsTable, activityLogTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { requireStaff } from "../lib/auth";
 import {
@@ -12,7 +12,7 @@ import {
   AssignSponsorSpotBody,
 } from "@workspace/api-zod";
 import { randomBytes } from "crypto";
-import { sendPortalInviteEmail } from "../lib/email";
+import { sendSponsorDetailsInviteEmail, sendSponsorPaymentReadyEmail } from "../lib/email";
 
 const router: IRouter = Router();
 
@@ -25,6 +25,7 @@ function formatSponsor(s: typeof sponsorsTable.$inferSelect) {
     email: s.email,
     phone: s.phone,
     tier: s.tier,
+    sponsorshipAmount: s.sponsorshipAmount != null ? parseFloat(s.sponsorshipAmount) : null,
     status: s.status,
     applicationData: s.applicationData,
     agreementSigned: s.agreementSigned,
@@ -33,6 +34,7 @@ function formatSponsor(s: typeof sponsorsTable.$inferSelect) {
     reviewNote: s.reviewNote ?? null,
     paidAt: s.paidAt ? s.paidAt.toISOString() : null,
     approvedAt: s.approvedAt ? s.approvedAt.toISOString() : null,
+    detailsSubmittedAt: s.detailsSubmittedAt ? s.detailsSubmittedAt.toISOString() : null,
     finalApprovedAt: s.finalApprovedAt ? s.finalApprovedAt.toISOString() : null,
     createdAt: s.createdAt.toISOString(),
   };
@@ -68,6 +70,9 @@ router.get("/sponsors/:id", requireStaff, async (req, res): Promise<void> => {
   res.json(formatSponsor(sponsor));
 });
 
+// ---------------------------------------------------------------------------
+// Stage 1 review — pending → approved (sends details invite) or rejected
+// ---------------------------------------------------------------------------
 router.patch("/sponsors/:id/review", requireStaff, async (req, res): Promise<void> => {
   const paramsParsed = ReviewSponsorParams.safeParse(req.params);
   const bodyParsed = ReviewSponsorBody.safeParse(req.body);
@@ -93,20 +98,23 @@ router.patch("/sponsors/:id/review", requireStaff, async (req, res): Promise<voi
 
   await db.insert(activityLogTable).values({
     type: status === "approved" ? "approved" : "rejected",
-    message: `Sponsor ${updated.name} (${updated.orgName}) ${status === "approved" ? "approved" : "rejected"}`,
+    message: `Sponsor ${updated.name} (${updated.orgName}) ${status === "approved" ? "approved — details invite sent" : "rejected"}`,
     entityType: "sponsor",
     entityId: updated.id,
     performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
   });
 
+  // When approved: email the sponsor a link to complete their stage 2 details.
+  // Payment is NOT mentioned — it comes only after details are approved.
   if (status === "approved" && updated.portalToken) {
     const domain = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost";
     const portalUrl = `https://${domain}/portal/${updated.portalToken}`;
     const years = await db.select().from(festivalYearsTable).where(eq(festivalYearsTable.id, updated.yearId)).limit(1);
-    sendPortalInviteEmail({
+    sendSponsorDetailsInviteEmail({
       to: updated.email,
       name: updated.name,
-      type: "sponsor",
+      orgName: updated.orgName,
+      tier: updated.tier,
       portalUrl,
       festivalName: years[0]?.eventName ?? "Romanian Festival",
     });
@@ -115,6 +123,10 @@ router.patch("/sponsors/:id/review", requireStaff, async (req, res): Promise<voi
   res.json(formatSponsor(updated));
 });
 
+// ---------------------------------------------------------------------------
+// Stage 2 details approval — details_submitted → details_approved
+// Sends the payment-ready email with tier, amount, and document deadline.
+// ---------------------------------------------------------------------------
 router.patch("/sponsors/:id/final-approve", requireStaff, async (req, res): Promise<void> => {
   const parsed = FinalApproveSponsorParams.safeParse(req.params);
   if (!parsed.success) {
@@ -122,8 +134,19 @@ router.patch("/sponsors/:id/final-approve", requireStaff, async (req, res): Prom
     return;
   }
 
+  // Fetch current sponsor to validate status
+  const [current] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, parsed.data.id)).limit(1);
+  if (!current) {
+    res.status(404).json({ error: "Sponsor not found" });
+    return;
+  }
+  if (current.status !== "details_submitted") {
+    res.status(409).json({ error: `Cannot approve details: sponsor is currently '${current.status}', expected 'details_submitted'` });
+    return;
+  }
+
   const [updated] = await db.update(sponsorsTable)
-    .set({ status: "final_approved", finalApprovedAt: new Date() })
+    .set({ status: "details_approved", finalApprovedAt: new Date() })
     .where(eq(sponsorsTable.id, parsed.data.id))
     .returning();
 
@@ -134,11 +157,43 @@ router.patch("/sponsors/:id/final-approve", requireStaff, async (req, res): Prom
 
   await db.insert(activityLogTable).values({
     type: "final_approved",
-    message: `Sponsor ${updated.name} (${updated.orgName}) final approved`,
+    message: `Sponsor ${updated.name} (${updated.orgName}) details approved — payment email sent`,
     entityType: "sponsor",
     entityId: updated.id,
     performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
   });
+
+  // Send payment-ready email: includes tier, amount, and document deadline
+  if (updated.portalToken) {
+    const domain = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost";
+    const portalUrl = `https://${domain}/portal/${updated.portalToken}`;
+    const years = await db.select().from(festivalYearsTable).where(eq(festivalYearsTable.id, updated.yearId)).limit(1);
+    const settings = await db.select().from(festivalSettingsTable).where(eq(festivalSettingsTable.yearId, updated.yearId)).limit(1);
+
+    const sponsorshipAmount = updated.sponsorshipAmount != null
+      ? parseFloat(updated.sponsorshipAmount)
+      : (() => {
+          const s = settings[0];
+          if (!s) return 0;
+          const tierMinMap: Record<string, string> = {
+            bronze: s.sponsorPriceBronze, silver: s.sponsorPriceSilver,
+            gold: s.sponsorPriceGold, platinum: s.sponsorPricePlatinum,
+            diamond: s.sponsorPriceDiamond,
+          };
+          return parseFloat(tierMinMap[updated.tier] ?? "0");
+        })();
+
+    sendSponsorPaymentReadyEmail({
+      to: updated.email,
+      name: updated.name,
+      orgName: updated.orgName,
+      tier: updated.tier,
+      sponsorshipAmount,
+      paymentDeadline: settings[0]?.documentDeadline ?? null,
+      portalUrl,
+      festivalName: years[0]?.eventName ?? "Romanian Festival",
+    });
+  }
 
   res.json(formatSponsor(updated));
 });

@@ -3,9 +3,51 @@ import { db, vendorsTable, sponsorsTable, festivalYearsTable, festivalSettingsTa
 import { and, eq } from "drizzle-orm";
 import { SignPortalAgreementBody } from "@workspace/api-zod";
 import { logger } from "../lib/logger";
+import { sendSponsorDetailsSubmittedNotification } from "../lib/email";
 
 const router: IRouter = Router();
 
+// ---------------------------------------------------------------------------
+// Shared helper — build the PortalInfo JSON for a sponsor row
+// ---------------------------------------------------------------------------
+function buildSponsorPortalInfo(
+  sponsor: typeof sponsorsTable.$inferSelect,
+  year: { eventName: string; eventDate: string } | undefined,
+  s: typeof festivalSettingsTable.$inferSelect | undefined,
+) {
+  return {
+    type: "sponsor" as const,
+    id: sponsor.id,
+    name: sponsor.name,
+    businessName: null,
+    orgName: sponsor.orgName,
+    status: sponsor.status,
+    agreementSigned: sponsor.agreementSigned,
+    spotNumber: sponsor.spotNumber ?? null,
+    location: sponsor.location ?? null,
+    festivalYear: year?.eventName ?? "",
+    eventDate: year?.eventDate ?? "",
+    tier: sponsor.tier,
+    vendorType: null,
+    spacesRequested: null,
+    sponsorshipAmount: sponsor.sponsorshipAmount != null ? parseFloat(sponsor.sponsorshipAmount) : null,
+    boothOrNameOnly: ((sponsor.applicationData ?? {}) as Record<string, unknown>).boothOrNameOnly as string | null ?? null,
+    paymentDeadline: s?.documentDeadline ?? null,
+    vendorPriceMajorFood: null,
+    vendorPriceSpecialtyFood: null,
+    vendorPriceRetail: null,
+    vendorPriceNonprofit: null,
+    sponsorPriceBronze: s ? parseFloat(s.sponsorPriceBronze) : null,
+    sponsorPriceSilver: s ? parseFloat(s.sponsorPriceSilver) : null,
+    sponsorPriceGold: s ? parseFloat(s.sponsorPriceGold) : null,
+    sponsorPricePlatinum: s ? parseFloat(s.sponsorPricePlatinum) : null,
+    sponsorPriceDiamond: s ? parseFloat(s.sponsorPriceDiamond) : null,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// GET /portal/:token
+// ---------------------------------------------------------------------------
 router.get("/portal/:token", async (req, res): Promise<void> => {
   const { token } = req.params;
 
@@ -31,6 +73,8 @@ router.get("/portal/:token", async (req, res): Promise<void> => {
       tier: null,
       vendorType: vendor.vendorType,
       spacesRequested,
+      boothOrNameOnly: null,
+      paymentDeadline: settingsRows[0]?.documentDeadline ?? null,
       vendorPriceMajorFood:    settingsRows[0] ? parseFloat(settingsRows[0].vendorPriceMajorFood)    : null,
       vendorPriceSpecialtyFood: settingsRows[0] ? parseFloat(settingsRows[0].vendorPriceSpecialtyFood) : null,
       vendorPriceRetail:       settingsRows[0] ? parseFloat(settingsRows[0].vendorPriceRetail)       : null,
@@ -49,39 +93,81 @@ router.get("/portal/:token", async (req, res): Promise<void> => {
     const sponsor = sponsors[0];
     const years = await db.select().from(festivalYearsTable).where(eq(festivalYearsTable.id, sponsor.yearId)).limit(1);
     const settingsRows = await db.select().from(festivalSettingsTable).where(eq(festivalSettingsTable.yearId, sponsor.yearId)).limit(1);
-    const s = settingsRows[0];
-    res.json({
-      type: "sponsor",
-      id: sponsor.id,
-      name: sponsor.name,
-      businessName: null,
-      orgName: sponsor.orgName,
-      status: sponsor.status,
-      agreementSigned: sponsor.agreementSigned,
-      spotNumber: sponsor.spotNumber ?? null,
-      location: sponsor.location ?? null,
-      festivalYear: years[0]?.eventName ?? "",
-      eventDate: years[0]?.eventDate ?? "",
-      tier: sponsor.tier,
-      vendorType: null,
-      spacesRequested: null,
-      sponsorshipAmount: sponsor.sponsorshipAmount != null ? parseFloat(sponsor.sponsorshipAmount) : null,
-      vendorPriceMajorFood: null,
-      vendorPriceSpecialtyFood: null,
-      vendorPriceRetail: null,
-      vendorPriceNonprofit: null,
-      sponsorPriceBronze: s ? parseFloat(s.sponsorPriceBronze) : null,
-      sponsorPriceSilver: s ? parseFloat(s.sponsorPriceSilver) : null,
-      sponsorPriceGold: s ? parseFloat(s.sponsorPriceGold) : null,
-      sponsorPricePlatinum: s ? parseFloat(s.sponsorPricePlatinum) : null,
-      sponsorPriceDiamond: s ? parseFloat(s.sponsorPriceDiamond) : null,
-    });
+    res.json(buildSponsorPortalInfo(sponsor, years[0], settingsRows[0]));
     return;
   }
 
   res.status(404).json({ error: "Portal not found" });
 });
 
+// ---------------------------------------------------------------------------
+// POST /portal/:token/submit-details
+// Sponsor stage 2: save details, move to details_submitted, notify RCCS.
+// ---------------------------------------------------------------------------
+router.post("/portal/:token/submit-details", async (req, res): Promise<void> => {
+  const { token } = req.params;
+
+  const sponsors = await db.select().from(sponsorsTable).where(eq(sponsorsTable.portalToken, token)).limit(1);
+  if (sponsors.length === 0) {
+    res.status(404).json({ error: "Portal not found" });
+    return;
+  }
+  const sponsor = sponsors[0];
+
+  if (sponsor.status !== "approved") {
+    res.status(409).json({
+      error: `Details can only be submitted when status is 'approved'. Current status: '${sponsor.status}'`,
+    });
+    return;
+  }
+
+  // Merge submitted stage-2 fields into applicationData
+  const existing = (sponsor.applicationData ?? {}) as Record<string, unknown>;
+  const submitted = (req.body ?? {}) as Record<string, unknown>;
+  const merged = { ...existing, ...submitted, stage2SubmittedAt: new Date().toISOString() };
+
+  const [updated] = await db.update(sponsorsTable)
+    .set({
+      applicationData: merged,
+      status: "details_submitted",
+      detailsSubmittedAt: new Date(),
+    })
+    .where(eq(sponsorsTable.id, sponsor.id))
+    .returning();
+
+  if (!updated) {
+    res.status(500).json({ error: "Failed to update sponsor record" });
+    return;
+  }
+
+  await db.insert(activityLogTable).values({
+    type: "submitted",
+    message: `Sponsor ${updated.name} (${updated.orgName}) submitted stage 2 details`,
+    entityType: "sponsor",
+    entityId: updated.id,
+  });
+
+  // Notify RCCS staff
+  const years = await db.select().from(festivalYearsTable).where(eq(festivalYearsTable.id, updated.yearId)).limit(1);
+  const settingsRows = await db.select().from(festivalSettingsTable).where(eq(festivalSettingsTable.yearId, updated.yearId)).limit(1);
+  const notificationEmail = settingsRows[0]?.notificationEmail;
+  if (notificationEmail) {
+    sendSponsorDetailsSubmittedNotification({
+      notificationEmail,
+      applicantName: updated.name,
+      orgName: updated.orgName,
+      tier: updated.tier,
+      sponsorshipAmount: updated.sponsorshipAmount != null ? parseFloat(updated.sponsorshipAmount) : null,
+      adminPath: `/sponsors/${updated.id}`,
+    });
+  }
+
+  res.json(buildSponsorPortalInfo(updated, years[0], settingsRows[0]));
+});
+
+// ---------------------------------------------------------------------------
+// POST /portal/:token/sign-agreement
+// ---------------------------------------------------------------------------
 router.post("/portal/:token/sign-agreement", async (req, res): Promise<void> => {
   const { token } = req.params;
   const parsed = SignPortalAgreementBody.safeParse(req.body);
@@ -91,8 +177,6 @@ router.post("/portal/:token/sign-agreement", async (req, res): Promise<void> => 
   }
 
   // --- Vendors ---
-  // Atomic update: only update when agreementSigned is still false.
-  // If no row is returned, either the token doesn't exist OR it was already signed.
   const updatedVendors = await db.update(vendorsTable)
     .set({ agreementSigned: true, agreementSignedName: parsed.data.signedName })
     .where(and(eq(vendorsTable.portalToken, token), eq(vendorsTable.agreementSigned, false)))
@@ -119,6 +203,8 @@ router.post("/portal/:token/sign-agreement", async (req, res): Promise<void> => 
       tier: null,
       vendorType: updated.vendorType,
       spacesRequested: updatedSpacesRequested,
+      boothOrNameOnly: null,
+      paymentDeadline: settingsRows[0]?.documentDeadline ?? null,
       vendorPriceMajorFood:    settingsRows[0] ? parseFloat(settingsRows[0].vendorPriceMajorFood)    : null,
       vendorPriceSpecialtyFood: settingsRows[0] ? parseFloat(settingsRows[0].vendorPriceSpecialtyFood) : null,
       vendorPriceRetail:       settingsRows[0] ? parseFloat(settingsRows[0].vendorPriceRetail)       : null,
@@ -132,7 +218,7 @@ router.post("/portal/:token/sign-agreement", async (req, res): Promise<void> => 
     return;
   }
 
-  // Check if the token exists as a vendor with already-signed agreement (→ 409)
+  // Check if vendor token exists but already signed
   const existingVendors = await db.select({ agreementSigned: vendorsTable.agreementSigned })
     .from(vendorsTable).where(eq(vendorsTable.portalToken, token)).limit(1);
   if (existingVendors.length > 0) {
@@ -140,59 +226,45 @@ router.post("/portal/:token/sign-agreement", async (req, res): Promise<void> => 
     return;
   }
 
-  // --- Sponsors ---
-  const updatedSponsors = await db.update(sponsorsTable)
-    .set({ agreementSigned: true, agreementSignedName: parsed.data.signedName })
-    .where(and(eq(sponsorsTable.portalToken, token), eq(sponsorsTable.agreementSigned, false)))
-    .returning();
+  // --- Sponsors: only allowed at details_approved or payment_pending ---
+  const sponsorRows = await db.select().from(sponsorsTable).where(eq(sponsorsTable.portalToken, token)).limit(1);
+  if (sponsorRows.length > 0) {
+    const sponsor = sponsorRows[0];
+    const allowedStatuses = ["details_approved", "payment_pending"];
+    if (!allowedStatuses.includes(sponsor.status)) {
+      res.status(409).json({
+        error: `Agreement signing is not available yet. Current status: '${sponsor.status}'. Please complete your sponsorship details first.`,
+      });
+      return;
+    }
+    if (sponsor.agreementSigned) {
+      res.status(409).json({ error: "Agreement already signed" });
+      return;
+    }
 
-  if (updatedSponsors.length > 0) {
-    const updated = updatedSponsors[0];
-    const years = await db.select().from(festivalYearsTable).where(eq(festivalYearsTable.id, updated.yearId)).limit(1);
-    const settingsRows = await db.select().from(festivalSettingsTable).where(eq(festivalSettingsTable.yearId, updated.yearId)).limit(1);
-    const s = settingsRows[0];
-    res.json({
-      type: "sponsor",
-      id: updated.id,
-      name: updated.name,
-      businessName: null,
-      orgName: updated.orgName,
-      status: updated.status,
-      agreementSigned: updated.agreementSigned,
-      spotNumber: updated.spotNumber ?? null,
-      location: updated.location ?? null,
-      festivalYear: years[0]?.eventName ?? "",
-      eventDate: years[0]?.eventDate ?? "",
-      tier: updated.tier,
-      vendorType: null,
-      vendorPriceMajorFood: null,
-      vendorPriceSpecialtyFood: null,
-      vendorPriceRetail: null,
-      vendorPriceNonprofit: null,
-      sponsorPriceBronze: s ? parseFloat(s.sponsorPriceBronze) : null,
-      sponsorPriceSilver: s ? parseFloat(s.sponsorPriceSilver) : null,
-      sponsorPriceGold: s ? parseFloat(s.sponsorPriceGold) : null,
-      sponsorPricePlatinum: s ? parseFloat(s.sponsorPricePlatinum) : null,
-      sponsorPriceDiamond: s ? parseFloat(s.sponsorPriceDiamond) : null,
-    });
-    return;
-  }
+    const updatedSponsors = await db.update(sponsorsTable)
+      .set({ agreementSigned: true, agreementSignedName: parsed.data.signedName })
+      .where(and(eq(sponsorsTable.portalToken, token), eq(sponsorsTable.agreementSigned, false)))
+      .returning();
 
-  // Check if the token exists as a sponsor with already-signed agreement (→ 409)
-  const existingSponsors = await db.select({ agreementSigned: sponsorsTable.agreementSigned })
-    .from(sponsorsTable).where(eq(sponsorsTable.portalToken, token)).limit(1);
-  if (existingSponsors.length > 0) {
-    res.status(409).json({ error: "Agreement already signed" });
-    return;
+    if (updatedSponsors.length > 0) {
+      const updated = updatedSponsors[0];
+      const years = await db.select().from(festivalYearsTable).where(eq(festivalYearsTable.id, updated.yearId)).limit(1);
+      const settingsRows = await db.select().from(festivalSettingsTable).where(eq(festivalSettingsTable.yearId, updated.yearId)).limit(1);
+      res.json(buildSponsorPortalInfo(updated, years[0], settingsRows[0]));
+      return;
+    }
   }
 
   res.status(404).json({ error: "Portal not found" });
 });
 
+// ---------------------------------------------------------------------------
+// POST /portal/:token/checkout
+// ---------------------------------------------------------------------------
 router.post("/portal/:token/checkout", async (req, res): Promise<void> => {
   const { token } = req.params;
 
-  // Try to find the entity
   const vendors = await db.select().from(vendorsTable).where(eq(vendorsTable.portalToken, token)).limit(1);
   const sponsors = await db.select().from(sponsorsTable).where(eq(sponsorsTable.portalToken, token)).limit(1);
 
@@ -204,7 +276,17 @@ router.post("/portal/:token/checkout", async (req, res): Promise<void> => {
     return;
   }
 
-  // Get Stripe integration
+  // Sponsors must be at details_approved (or payment_pending if retrying) before checkout
+  if (entityType === "sponsor") {
+    const allowedStatuses = ["details_approved", "payment_pending"];
+    if (!allowedStatuses.includes(entity.status)) {
+      res.status(403).json({
+        error: `Payment is not available yet. Your sponsorship details must be reviewed and approved before you can complete payment. Current status: '${entity.status}'.`,
+      });
+      return;
+    }
+  }
+
   const stripeModule = await import("./stripe").catch(() => null);
   if (!stripeModule) {
     res.status(503).json({ error: "Payment processing not configured yet" });

@@ -13,6 +13,8 @@ export const SponsorStatus = {
   pending: 'pending',
   approved: 'approved',
   rejected: 'rejected',
+  details_submitted: 'details_submitted',
+  details_approved: 'details_approved',
   payment_pending: 'payment_pending',
   paid: 'paid',
   final_approved: 'final_approved',

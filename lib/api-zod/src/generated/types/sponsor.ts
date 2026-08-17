@@ -32,6 +32,8 @@ export interface Sponsor {
   /** @nullable */
   approvedAt?: string | null;
   /** @nullable */
+  detailsSubmittedAt?: string | null;
+  /** @nullable */
   finalApprovedAt?: string | null;
   createdAt: string;
 }

@@ -119,7 +119,53 @@ export const GetPortalInfoResponse = zod.object({
   "vendorPriceRetail": zod.number().nullish(),
   "vendorPriceNonprofit": zod.number().nullish(),
   "spacesRequested": zod.string().nullish(),
-  "sponsorshipAmount": zod.number().nullish()
+  "sponsorshipAmount": zod.number().nullish(),
+  "boothOrNameOnly": zod.string().nullish(),
+  "paymentDeadline": zod.string().nullish()
+})
+
+
+/**
+ * @summary Submit stage-2 sponsorship details (moves sponsor to details_submitted)
+ */
+export const SubmitSponsorDetailsParams = zod.object({
+  "token": zod.coerce.string()
+})
+
+export const SubmitSponsorDetailsBody = zod.record(zod.string(), zod.unknown()).describe('Stage-2 sponsorship detail fields submitted via the portal. All fields are optional; the full object is merged into applicationData.')
+
+export const SubmitSponsorDetailsResponse = zod.object({
+  "type": zod.enum(['vendor', 'sponsor']),
+  "id": zod.number().optional(),
+  "name": zod.string(),
+  "businessName": zod.string().nullish(),
+  "orgName": zod.string().nullish(),
+  "status": zod.string(),
+  "agreementSigned": zod.boolean(),
+  "spotNumber": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "festivalYear": zod.string(),
+  "eventDate": zod.string(),
+  "tier": zod.string().nullish(),
+  "vendorType": zod.string().nullish(),
+  "vendorPriceFood": zod.number().nullish(),
+  "vendorPriceCrafts": zod.number().nullish(),
+  "vendorPriceMerchandise": zod.number().nullish(),
+  "vendorPriceCultural": zod.number().nullish(),
+  "vendorPriceOther": zod.number().nullish(),
+  "sponsorPriceBronze": zod.number().nullish(),
+  "sponsorPriceSilver": zod.number().nullish(),
+  "sponsorPriceGold": zod.number().nullish(),
+  "sponsorPricePlatinum": zod.number().nullish(),
+  "sponsorPriceDiamond": zod.number().nullish(),
+  "vendorPriceMajorFood": zod.number().nullish(),
+  "vendorPriceSpecialtyFood": zod.number().nullish(),
+  "vendorPriceRetail": zod.number().nullish(),
+  "vendorPriceNonprofit": zod.number().nullish(),
+  "spacesRequested": zod.string().nullish(),
+  "sponsorshipAmount": zod.number().nullish(),
+  "boothOrNameOnly": zod.string().nullish(),
+  "paymentDeadline": zod.string().nullish()
 })
 
 
@@ -175,7 +221,9 @@ export const SignPortalAgreementResponse = zod.object({
   "vendorPriceRetail": zod.number().nullish(),
   "vendorPriceNonprofit": zod.number().nullish(),
   "spacesRequested": zod.string().nullish(),
-  "sponsorshipAmount": zod.number().nullish()
+  "sponsorshipAmount": zod.number().nullish(),
+  "boothOrNameOnly": zod.string().nullish(),
+  "paymentDeadline": zod.string().nullish()
 })
 
 
@@ -725,7 +773,7 @@ export const ListSponsorsResponseItem = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "tier": zod.string(),
-  "status": zod.enum(['pending', 'approved', 'rejected', 'payment_pending', 'paid', 'final_approved']),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'details_submitted', 'details_approved', 'payment_pending', 'paid', 'final_approved']),
   "applicationData": zod.record(zod.string(), zod.unknown()),
   "agreementSigned": zod.boolean().optional(),
   "sponsorshipAmount": zod.number().nullish(),
@@ -734,6 +782,7 @@ export const ListSponsorsResponseItem = zod.object({
   "reviewNote": zod.string().nullish(),
   "paidAt": zod.string().nullish(),
   "approvedAt": zod.string().nullish(),
+  "detailsSubmittedAt": zod.string().nullish(),
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
 })
@@ -755,7 +804,7 @@ export const GetSponsorResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "tier": zod.string(),
-  "status": zod.enum(['pending', 'approved', 'rejected', 'payment_pending', 'paid', 'final_approved']),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'details_submitted', 'details_approved', 'payment_pending', 'paid', 'final_approved']),
   "applicationData": zod.record(zod.string(), zod.unknown()),
   "agreementSigned": zod.boolean().optional(),
   "sponsorshipAmount": zod.number().nullish(),
@@ -764,6 +813,7 @@ export const GetSponsorResponse = zod.object({
   "reviewNote": zod.string().nullish(),
   "paidAt": zod.string().nullish(),
   "approvedAt": zod.string().nullish(),
+  "detailsSubmittedAt": zod.string().nullish(),
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
 })
@@ -799,7 +849,7 @@ export const ReviewSponsorResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "tier": zod.string(),
-  "status": zod.enum(['pending', 'approved', 'rejected', 'payment_pending', 'paid', 'final_approved']),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'details_submitted', 'details_approved', 'payment_pending', 'paid', 'final_approved']),
   "applicationData": zod.record(zod.string(), zod.unknown()),
   "agreementSigned": zod.boolean().optional(),
   "sponsorshipAmount": zod.number().nullish(),
@@ -808,6 +858,7 @@ export const ReviewSponsorResponse = zod.object({
   "reviewNote": zod.string().nullish(),
   "paidAt": zod.string().nullish(),
   "approvedAt": zod.string().nullish(),
+  "detailsSubmittedAt": zod.string().nullish(),
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
 })
@@ -828,7 +879,7 @@ export const FinalApproveSponsorResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "tier": zod.string(),
-  "status": zod.enum(['pending', 'approved', 'rejected', 'payment_pending', 'paid', 'final_approved']),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'details_submitted', 'details_approved', 'payment_pending', 'paid', 'final_approved']),
   "applicationData": zod.record(zod.string(), zod.unknown()),
   "agreementSigned": zod.boolean().optional(),
   "sponsorshipAmount": zod.number().nullish(),
@@ -837,6 +888,7 @@ export const FinalApproveSponsorResponse = zod.object({
   "reviewNote": zod.string().nullish(),
   "paidAt": zod.string().nullish(),
   "approvedAt": zod.string().nullish(),
+  "detailsSubmittedAt": zod.string().nullish(),
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
 })
@@ -862,7 +914,7 @@ export const AssignSponsorSpotResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "tier": zod.string(),
-  "status": zod.enum(['pending', 'approved', 'rejected', 'payment_pending', 'paid', 'final_approved']),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'details_submitted', 'details_approved', 'payment_pending', 'paid', 'final_approved']),
   "applicationData": zod.record(zod.string(), zod.unknown()),
   "agreementSigned": zod.boolean().optional(),
   "sponsorshipAmount": zod.number().nullish(),
@@ -871,6 +923,7 @@ export const AssignSponsorSpotResponse = zod.object({
   "reviewNote": zod.string().nullish(),
   "paidAt": zod.string().nullish(),
   "approvedAt": zod.string().nullish(),
+  "detailsSubmittedAt": zod.string().nullish(),
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
 })

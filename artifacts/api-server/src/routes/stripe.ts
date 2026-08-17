@@ -74,10 +74,19 @@ export async function createCheckoutSession(params: {
     }
 
     const [sponsor] = await db
-      .select({ tier: sponsorsTable.tier, sponsorshipAmount: sponsorsTable.sponsorshipAmount })
+      .select({ tier: sponsorsTable.tier, sponsorshipAmount: sponsorsTable.sponsorshipAmount, status: sponsorsTable.status })
       .from(sponsorsTable)
       .where(eq(sponsorsTable.id, entity.id))
       .limit(1);
+
+    // Belt-and-suspenders guard: portal.ts should have already refused, but
+    // reject here too if the sponsor hasn't had their details approved yet.
+    const sponsorStatus = sponsor?.status ?? "";
+    if (!["details_approved", "payment_pending", "paid"].includes(sponsorStatus)) {
+      throw new Error(
+        `[stripe] Cannot create checkout for sponsor ${entity.id}: status is '${sponsorStatus}', expected 'details_approved'`
+      );
+    }
     const tier = sponsor?.tier ?? "bronze";
 
     // Tier minimums come exclusively from Settings

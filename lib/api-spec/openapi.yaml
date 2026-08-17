@@ -137,6 +137,35 @@ paths:
         "404":
           description: Not found
 
+  /portal/{token}/submit-details:
+    post:
+      operationId: submitSponsorDetails
+      tags: [portal]
+      summary: Submit stage-2 sponsorship details (moves sponsor to details_submitted)
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SponsorStage2Data"
+      responses:
+        "200":
+          description: Updated portal info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortalInfo"
+        "404":
+          description: Not found
+        "409":
+          description: Sponsor not in approved status
+
   /portal/{token}/checkout:
     post:
       operationId: createPortalCheckout
@@ -1187,7 +1216,7 @@ components:
           type: string
         status:
           type: string
-          enum: [pending, approved, rejected, payment_pending, paid, final_approved]
+          enum: [pending, approved, rejected, details_submitted, details_approved, payment_pending, paid, final_approved]
         applicationData:
           type: object
           additionalProperties: true
@@ -1204,6 +1233,8 @@ components:
         paidAt:
           type: ["string", "null"]
         approvedAt:
+          type: ["string", "null"]
+        detailsSubmittedAt:
           type: ["string", "null"]
         finalApprovedAt:
           type: ["string", "null"]
@@ -1499,6 +1530,10 @@ components:
           type: ["string", "null"]
         sponsorshipAmount:
           type: ["number", "null"]
+        boothOrNameOnly:
+          type: ["string", "null"]
+        paymentDeadline:
+          type: ["string", "null"]
 
     CheckoutSession:
       type: object
@@ -1544,6 +1579,11 @@ components:
           type: string
         location:
           type: string
+
+    SponsorStage2Data:
+      type: object
+      description: Stage-2 sponsorship detail fields submitted via the portal. All fields are optional; the full object is merged into applicationData.
+      additionalProperties: true
 
     StaffInvite:
       type: object

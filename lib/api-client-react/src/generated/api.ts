@@ -45,6 +45,7 @@ import type {
   ReviewDecision,
   Sponsor,
   SponsorApplicationInput,
+  SponsorStage2Data,
   SpotAssignment,
   StaffInvite,
   StaffMember,
@@ -525,6 +526,78 @@ export function useGetPortalInfo<TData = Awaited<ReturnType<typeof getPortalInfo
 
 
 
+
+export const getSubmitSponsorDetailsUrl = (token: string,) => {
+
+
+
+
+  return `/api/portal/${token}/submit-details`
+}
+
+/**
+ * @summary Submit stage-2 sponsorship details (moves sponsor to details_submitted)
+ */
+export const submitSponsorDetails = async (token: string,
+    sponsorStage2Data: SponsorStage2Data, options?: RequestInit): Promise<PortalInfo> => {
+
+  return customFetch<PortalInfo>(getSubmitSponsorDetailsUrl(token),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(sponsorStage2Data)
+  }
+);}
+
+
+
+
+
+export const getSubmitSponsorDetailsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitSponsorDetails>>, TError,{token: string;data: BodyType<SponsorStage2Data>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitSponsorDetails>>, TError,{token: string;data: BodyType<SponsorStage2Data>}, TContext> => {
+
+const mutationKey = ['submitSponsorDetails'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitSponsorDetails>>, {token: string;data: BodyType<SponsorStage2Data>}> = (props) => {
+          const {token,data} = props ?? {};
+
+          return  submitSponsorDetails(token,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitSponsorDetailsMutationResult = NonNullable<Awaited<ReturnType<typeof submitSponsorDetails>>>
+    export type SubmitSponsorDetailsMutationBody = BodyType<SponsorStage2Data>
+    export type SubmitSponsorDetailsMutationError = ErrorType<void>
+
+    /**
+ * @summary Submit stage-2 sponsorship details (moves sponsor to details_submitted)
+ */
+export const useSubmitSponsorDetails = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitSponsorDetails>>, TError,{token: string;data: BodyType<SponsorStage2Data>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof submitSponsorDetails>>,
+        TError,
+        {token: string;data: BodyType<SponsorStage2Data>},
+        TContext
+      > => {
+      return useMutation(getSubmitSponsorDetailsMutationOptions(options));
+    }
 
 export const getCreatePortalCheckoutUrl = (token: string,) => {
 

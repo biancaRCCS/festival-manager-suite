@@ -205,6 +205,8 @@ export const SponsorStatus = {
   pending: 'pending',
   approved: 'approved',
   rejected: 'rejected',
+  details_submitted: 'details_submitted',
+  details_approved: 'details_approved',
   payment_pending: 'payment_pending',
   paid: 'paid',
   final_approved: 'final_approved',
@@ -235,6 +237,8 @@ export interface Sponsor {
   paidAt?: string | null;
   /** @nullable */
   approvedAt?: string | null;
+  /** @nullable */
+  detailsSubmittedAt?: string | null;
   /** @nullable */
   finalApprovedAt?: string | null;
   createdAt: string;
@@ -474,6 +478,10 @@ export interface PortalInfo {
   spacesRequested?: string | null;
   /** @nullable */
   sponsorshipAmount?: number | null;
+  /** @nullable */
+  boothOrNameOnly?: string | null;
+  /** @nullable */
+  paymentDeadline?: string | null;
 }
 
 export interface CheckoutSession {
@@ -518,6 +526,11 @@ export interface SpotAssignment {
   spotNumber: string;
   location: string;
 }
+
+/**
+ * Stage-2 sponsorship detail fields submitted via the portal. All fields are optional; the full object is merged into applicationData.
+ */
+export interface SponsorStage2Data { [key: string]: unknown }
 
 export type StaffInviteRole = typeof StaffInviteRole[keyof typeof StaffInviteRole];
 

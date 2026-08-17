@@ -24,7 +24,8 @@ export const sponsorsTable = pgTable("sponsors", {
   stripeSessionId: text("stripe_session_id"),
   paidAt: timestamp("paid_at", { withTimezone: true }),
   approvedAt: timestamp("approved_at", { withTimezone: true }),
-  finalApprovedAt: timestamp("final_approved_at", { withTimezone: true }),
+  detailsSubmittedAt: timestamp("details_submitted_at", { withTimezone: true }),
+  finalApprovedAt: timestamp("final_approved_at", { withTimezone: true }), // repurposed: set when status → details_approved
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

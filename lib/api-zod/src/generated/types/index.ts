@@ -45,6 +45,7 @@ export * from './sponsor';
 export * from './sponsorApplicationData';
 export * from './sponsorApplicationInput';
 export * from './sponsorApplicationInputAnswers';
+export * from './sponsorStage2Data';
 export * from './sponsorStatus';
 export * from './spotAssignment';
 export * from './staffInvite';
