@@ -8,25 +8,100 @@ import { useQueryClient } from "@tanstack/react-query"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useToast } from "@/hooks/use-toast"
-import { Loader2, CheckCircle2, FileSignature, CreditCard, MapPin, Calendar, Clock, ClipboardList } from "lucide-react"
+import {
+  Loader2, CheckCircle2, FileSignature, CreditCard, MapPin, Calendar,
+  Clock, ClipboardList, Mail,
+} from "lucide-react"
 
 // ---------------------------------------------------------------------------
-// Sponsor stage 2 detail form state
+// Shared local helpers (styled to match the vendor application form)
 // ---------------------------------------------------------------------------
-const EMPTY_STAGE2 = {
-  onsiteContactName: "",
-  onsiteContactPhone: "",
-  boothDescription: "",
-  electricalRequirements: "",
-  specialRequests: "",
-  logoUrl: "",
-  ackPromoOnly: false,
+function SectionHeading({ title }: { title: string }) {
+  return (
+    <div className="border-b border-border pb-2 mb-5">
+      <h3 className="text-base font-semibold text-foreground">{title}</h3>
+    </div>
+  )
 }
 
+function RequiredStar() {
+  return <span className="text-destructive ml-0.5">*</span>
+}
+
+function FieldNote({ children }: { children: React.ReactNode }) {
+  return <p className="text-xs text-muted-foreground mt-1.5 leading-snug">{children}</p>
+}
+
+function AckRow({
+  id, checked, onChange, children,
+}: { id: string; checked: boolean; onChange: (v: boolean) => void; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-3 py-3">
+      <input
+        type="checkbox"
+        id={id}
+        checked={checked}
+        onChange={e => onChange(e.target.checked)}
+        className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-primary flex-shrink-0"
+      />
+      <label htmlFor={id} className="text-sm text-foreground leading-snug cursor-pointer">
+        {children}
+      </label>
+    </div>
+  )
+}
+
+function YesNoRadio({ id, value, onChange }: { id: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <RadioGroup value={value} onValueChange={onChange} className="flex gap-6 mt-1">
+      {["Yes", "No"].map(opt => (
+        <div key={opt} className="flex items-center gap-2">
+          <RadioGroupItem value={opt} id={`${id}-${opt}`} />
+          <Label htmlFor={`${id}-${opt}`} className="font-normal">{opt}</Label>
+        </div>
+      ))}
+    </RadioGroup>
+  )
+}
+
+const TIER_LABELS: Record<string, string> = {
+  bronze: "Bronze", silver: "Silver", gold: "Gold",
+  platinum: "Platinum", diamond: "Diamond",
+}
+
+// ---------------------------------------------------------------------------
+// Stage 2 form state
+// ---------------------------------------------------------------------------
+const EMPTY_STAGE2 = {
+  // Booth & operational (booth sponsors only)
+  setupType: "",
+  setupOther: "",
+  requiresElectricity: "" as "" | "Yes" | "No",
+  electricityEquipment: "",
+  electricityAmps: "",
+  staffCount: "",
+  placementRequests: "",
+  accessibilityNeeds: "",
+  // Contacts (booth sponsors only)
+  dayOfContactName: "",
+  dayOfContactPhone: "",
+  backupContactName: "",
+  backupContactPhone: "",
+  // Acknowledgements (all sponsors)
+  ackPromoOnly: false,
+  ackPermits: false,
+  ackPaymentRequired: false,
+  // Signature (all)
+  signatureName: "",
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
 export default function PortalPage() {
   const { token } = useParams()
   const queryClient = useQueryClient()
@@ -35,7 +110,7 @@ export default function PortalPage() {
   const { data: portal, isLoading } = useGetPortalInfo(token || "", {
     query: { enabled: !!token, queryKey: getGetPortalInfoQueryKey(token || "") },
   })
-  const signMutation = useSignPortalAgreement()
+  const signMutation    = useSignPortalAgreement()
   const checkoutMutation = useCreatePortalCheckout()
   const submitDetailsMutation = useSubmitSponsorDetails()
 
@@ -48,6 +123,13 @@ export default function PortalPage() {
   checkoutMutateFnRef.current = checkoutMutation.mutate
   const submitDetailsMutateFnRef = useRef(submitDetailsMutation.mutate)
   submitDetailsMutateFnRef.current = submitDetailsMutation.mutate
+
+  const s2 = <K extends keyof typeof EMPTY_STAGE2>(key: K) =>
+    (e: React.ChangeEvent<HTMLInputElement>) =>
+      setStage2(prev => ({ ...prev, [key]: e.target.value }))
+
+  const setS2 = <K extends keyof typeof EMPTY_STAGE2>(key: K, val: (typeof EMPTY_STAGE2)[K]) =>
+    setStage2(prev => ({ ...prev, [key]: val }))
 
   const handleSign = () => {
     if (!token || !signedName) return
@@ -75,26 +157,42 @@ export default function PortalPage() {
   }
 
   const handleSubmitDetails = () => {
-    if (!token) return
-    if (!stage2.ackPromoOnly) {
-      toast({ title: "Please acknowledge the booth terms before submitting.", variant: "destructive" })
+    if (!token || !portal) return
+
+    const isBoothSponsor = portal.boothOrNameOnly === "Booth"
+    const errors: string[] = []
+
+    if (isBoothSponsor) {
+      if (!stage2.setupType)              errors.push("Booth setup type is required.")
+      if (!stage2.requiresElectricity)    errors.push("Please answer the electricity question.")
+      if (!stage2.dayOfContactName.trim()) errors.push("Day-of on-site contact name is required.")
+      if (!stage2.dayOfContactPhone.trim()) errors.push("Day-of on-site contact mobile is required.")
+      if (!stage2.backupContactName.trim()) errors.push("Backup contact name is required.")
+      if (!stage2.backupContactPhone.trim()) errors.push("Backup contact mobile is required.")
+    }
+
+    if (!stage2.ackPromoOnly)     errors.push("Please acknowledge the booth terms.")
+    if (!stage2.ackPermits)       errors.push("Please acknowledge the permits and insurance requirement.")
+    if (!stage2.ackPaymentRequired) errors.push("Please acknowledge that sponsorship requires payment.")
+    if (!stage2.signatureName.trim()) errors.push("Please type your full name as your signature.")
+
+    if (errors.length > 0) {
+      toast({ title: errors[0], variant: "destructive" })
       return
     }
+
     submitDetailsMutateFnRef.current(
       { token, data: stage2 },
       {
         onSuccess: (data) => {
-          toast({ title: "Details submitted — our team will review and be in touch." })
           queryClient.setQueryData(getGetPortalInfoQueryKey(token), data)
         },
-        onError: () => toast({ title: "Failed to submit details", variant: "destructive" }),
+        onError: () => toast({ title: "Failed to submit details. Please try again.", variant: "destructive" }),
       }
     )
   }
 
-  const s2field = (key: keyof typeof stage2) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-    setStage2(prev => ({ ...prev, [key]: e.target.value }))
-
+  // ── Loading / invalid ────────────────────────────────────────────────────
   if (isLoading) {
     return (
       <div className="min-h-screen bg-noise bg-background flex items-center justify-center">
@@ -116,29 +214,26 @@ export default function PortalPage() {
     )
   }
 
-  // ── Status helpers ──────────────────────────────────────────────────────
+  // ── Status helpers ───────────────────────────────────────────────────────
   const isSponsor = portal.type === "sponsor"
 
-  // Sponsor-specific statuses
-  const sponsorNeedsDetails  = isSponsor && portal.status === "approved"
-  const sponsorDetailsUnder  = isSponsor && portal.status === "details_submitted"
-  const sponsorCanPay        = isSponsor && (portal.status === "details_approved" || portal.status === "payment_pending")
+  const sponsorNeedsDetails = isSponsor && portal.status === "approved"
+  const sponsorDetailsUnder = isSponsor && portal.status === "details_submitted"
+  const sponsorCanPay       = isSponsor && (portal.status === "details_approved" || portal.status === "payment_pending")
 
-  // Vendor: approved or payment_pending → show agreement + payment
   const vendorCanPay = !isSponsor && (portal.status === "approved" || portal.status === "payment_pending")
 
-  // Show agreement + payment if: vendor (approved/payment_pending) OR sponsor (details_approved/payment_pending)
   const showAgreementAndPayment = vendorCanPay || sponsorCanPay
 
-  const isPaid    = portal.status === "paid"
-  const isFinal   = portal.status === "final_approved"
+  const isPaid  = portal.status === "paid"
+  const isFinal = portal.status === "final_approved"
 
-  // ── Amount calculation (vendors + sponsors at payment stage) ──────────
+  // ── Amount ───────────────────────────────────────────────────────────────
   const vendorTypePrice: Record<string, number | null | undefined> = {
-    major_food:    portal.vendorPriceMajorFood,
+    major_food:     portal.vendorPriceMajorFood,
     specialty_food: portal.vendorPriceSpecialtyFood,
-    retail:        portal.vendorPriceRetail,
-    nonprofit:     portal.vendorPriceNonprofit,
+    retail:         portal.vendorPriceRetail,
+    nonprofit:      portal.vendorPriceNonprofit,
   }
   const sponsorTierPrice: Record<string, number | null | undefined> = {
     bronze:   portal.sponsorPriceBronze,
@@ -148,13 +243,19 @@ export default function PortalPage() {
     diamond:  portal.sponsorPriceDiamond,
   }
   const tierMinAmount = sponsorTierPrice[portal.tier ?? "bronze"] ?? portal.sponsorPriceBronze ?? 0
-  const baseAmount = portal.type === "vendor"
+  const baseAmount    = portal.type === "vendor"
     ? (vendorTypePrice[portal.vendorType ?? "retail"] ?? portal.vendorPriceRetail ?? 0)
     : ((portal as any).sponsorshipAmount ?? tierMinAmount)
   const isDoubleSpace = portal.type === "vendor" && (portal as any).spacesRequested === "double"
-  const amount = isDoubleSpace ? (baseAmount as number) * 2 : baseAmount
+  const amount        = isDoubleSpace ? (baseAmount as number) * 2 : baseAmount
 
-  const paymentDeadline = (portal as any).paymentDeadline as string | null
+  const paymentDeadline = portal.paymentDeadline
+
+  // ── Sponsor stage 2 helpers ──────────────────────────────────────────────
+  const isBoothSponsor   = portal.boothOrNameOnly === "Booth"
+  const sponsorshipAmount = (portal as any).sponsorshipAmount as number | undefined
+  const tierLabel         = TIER_LABELS[portal.tier ?? ""] ?? portal.tier ?? ""
+  const todayStr          = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
 
   return (
     <div className="min-h-screen bg-noise bg-background font-sans relative pb-20">
@@ -185,115 +286,331 @@ export default function PortalPage() {
           </p>
         </div>
 
-        {/* ── Sponsor stage 2: complete details ────────────────────────── */}
+        {/* ── Sponsor stage 2: complete details ─────────────────────────── */}
         {sponsorNeedsDetails && (
           <Card className="border-t-4 border-t-primary shadow-md">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <ClipboardList className="w-5 h-5 text-primary" /> Complete Your Sponsorship Details
+                <ClipboardList className="w-5 h-5 text-primary" />
+                Complete Your Sponsorship Details
               </CardTitle>
               <CardDescription>
-                Your application has been approved. Please fill in your operational details so we can finalise your participation. Once our team reviews your information, you will receive a separate email with payment instructions.
+                Your application has been accepted. Please complete the details below so we can
+                finalise your participation. Once our team reviews your information, you will receive
+                a separate email with payment instructions.
               </CardDescription>
+
+              {/* Sponsorship summary */}
+              <div className="mt-4 rounded-md bg-muted/50 border border-border px-5 py-4 flex flex-wrap gap-6 text-sm">
+                <div>
+                  <p className="text-muted-foreground text-xs uppercase tracking-wide mb-0.5">Organisation</p>
+                  <p className="font-medium text-foreground">{portal.orgName || portal.businessName || portal.name}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs uppercase tracking-wide mb-0.5">Tier</p>
+                  <p className="font-medium text-foreground">{tierLabel}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs uppercase tracking-wide mb-0.5">Sponsorship Amount</p>
+                  <p className="font-medium text-foreground">
+                    {sponsorshipAmount != null ? `$${sponsorshipAmount.toLocaleString()}` : "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs uppercase tracking-wide mb-0.5">Booth</p>
+                  <p className="font-medium text-foreground">{portal.boothOrNameOnly ?? "—"}</p>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>On-site Contact Name <span className="text-destructive">*</span></Label>
-                  <Input
-                    value={stage2.onsiteContactName}
-                    onChange={s2field("onsiteContactName")}
-                    placeholder="Name of person on-site during the festival"
-                  />
+
+            <CardContent className="space-y-10">
+
+              {/* ── Booth sections (booth sponsors only) ─────────────────── */}
+              {isBoothSponsor && (
+                <>
+                  {/* Booth & Operational Information */}
+                  <section>
+                    <SectionHeading title="Booth & Operational Information" />
+                    <div className="space-y-6">
+
+                      {/* Setup type */}
+                      <div className="space-y-1.5">
+                        <Label>What type of setup will you have?<RequiredStar /></Label>
+                        <RadioGroup
+                          value={stage2.setupType}
+                          onValueChange={v => setS2("setupType", v)}
+                          className="flex flex-col gap-2 mt-1"
+                        >
+                          {["Standard 10′×10′ Tent", "Other (describe)"].map(opt => (
+                            <div key={opt} className="flex items-center gap-2">
+                              <RadioGroupItem value={opt} id={`setup-${opt}`} />
+                              <Label htmlFor={`setup-${opt}`} className="font-normal">{opt}</Label>
+                            </div>
+                          ))}
+                        </RadioGroup>
+                        {stage2.setupType === "Other (describe)" && (
+                          <Input
+                            className="mt-2 max-w-md"
+                            placeholder="Describe your setup"
+                            value={stage2.setupOther}
+                            onChange={s2("setupOther")}
+                          />
+                        )}
+                        <FieldNote>
+                          All sponsors receive a complimentary 10′×10′ promotional booth space. Only
+                          10′×10′ pop-up tents are permitted. Any tent larger than 10′×10′ must be
+                          approved by the Roseville Fire Marshal.
+                        </FieldNote>
+                      </div>
+
+                      {/* Electricity */}
+                      <div className="space-y-1">
+                        <Label>Will you require electricity?<RequiredStar /></Label>
+                        <YesNoRadio
+                          id="requiresElectricity"
+                          value={stage2.requiresElectricity}
+                          onChange={v => setS2("requiresElectricity", v as "Yes" | "No")}
+                        />
+                        <FieldNote>
+                          Electrical outlets are available in prime and VIP sponsor locations. Standard
+                          locations do not have power access. Sponsors requiring power who are placed
+                          in a standard location may need to supply their own generator.
+                        </FieldNote>
+                        {stage2.requiresElectricity === "Yes" && (
+                          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4 pl-4 border-l-2 border-border">
+                            <div className="space-y-1.5">
+                              <Label htmlFor="electricityEquipment">Equipment requiring electricity</Label>
+                              <Input
+                                id="electricityEquipment"
+                                placeholder="e.g. display lights, laptop, monitor"
+                                value={stage2.electricityEquipment}
+                                onChange={s2("electricityEquipment")}
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label htmlFor="electricityAmps">Total amps needed</Label>
+                              <Input
+                                id="electricityAmps"
+                                placeholder="e.g. 15A"
+                                value={stage2.electricityAmps}
+                                onChange={s2("electricityAmps")}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Staff count */}
+                      <div className="space-y-1.5 max-w-xs">
+                        <Label htmlFor="staffCount">
+                          Number of staff / representatives at your booth{" "}
+                          <span className="text-muted-foreground text-sm">(optional)</span>
+                        </Label>
+                        <Input
+                          id="staffCount"
+                          type="number"
+                          min={1}
+                          placeholder="e.g. 2"
+                          value={stage2.staffCount}
+                          onChange={s2("staffCount")}
+                        />
+                      </div>
+
+                      {/* Placement & accessibility */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="placementRequests">
+                            Special placement requests{" "}
+                            <span className="text-muted-foreground text-sm">(optional)</span>
+                          </Label>
+                          <Input
+                            id="placementRequests"
+                            placeholder="e.g. near entrance, corner spot"
+                            value={stage2.placementRequests}
+                            onChange={s2("placementRequests")}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="accessibilityNeeds">
+                            Accessibility needs{" "}
+                            <span className="text-muted-foreground text-sm">(optional)</span>
+                          </Label>
+                          <Input
+                            id="accessibilityNeeds"
+                            placeholder="Any accessibility requirements"
+                            value={stage2.accessibilityNeeds}
+                            onChange={s2("accessibilityNeeds")}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* Contacts */}
+                  <section>
+                    <SectionHeading title="Contacts" />
+                    <div className="space-y-6">
+                      <div>
+                        <p className="text-sm font-medium text-foreground mb-3">
+                          Day-of on-site contact<RequiredStar />
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="dayOfContactName">Full name</Label>
+                            <Input
+                              id="dayOfContactName"
+                              value={stage2.dayOfContactName}
+                              onChange={s2("dayOfContactName")}
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="dayOfContactPhone">Mobile number</Label>
+                            <Input
+                              id="dayOfContactPhone"
+                              type="tel"
+                              value={stage2.dayOfContactPhone}
+                              onChange={s2("dayOfContactPhone")}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground mb-3">
+                          Backup contact<RequiredStar />
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="backupContactName">Full name</Label>
+                            <Input
+                              id="backupContactName"
+                              value={stage2.backupContactName}
+                              onChange={s2("backupContactName")}
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="backupContactPhone">Mobile number</Label>
+                            <Input
+                              id="backupContactPhone"
+                              type="tel"
+                              value={stage2.backupContactPhone}
+                              onChange={s2("backupContactPhone")}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* Permits & Insurance */}
+                  <section>
+                    <SectionHeading title="Permits & Insurance" />
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Sponsors are responsible for obtaining any licenses, permits, and insurance required for
+                      their participation. Requirements may vary based on activities. RCCS will provide
+                      applicable requirements prior to the event.
+                    </p>
+                  </section>
+                </>
+              )}
+
+              {/* ── Logo & Marketing Materials (all sponsors) ───────────── */}
+              <section>
+                <SectionHeading title="Logo & Marketing Materials" />
+                <div className="rounded-md bg-muted/40 border border-border p-4 flex gap-3">
+                  <Mail className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-foreground leading-relaxed">
+                    <p className="font-medium mb-1">Email your logo files to us</p>
+                    <p className="text-muted-foreground">
+                      Please email your logo files (PNG, SVG, or vector formats preferred) to{" "}
+                      <a
+                        href="mailto:vendors@romaniancenter.org"
+                        className="text-primary underline underline-offset-2 font-medium"
+                      >
+                        vendors@romaniancenter.org
+                      </a>{" "}
+                      for use in festival marketing and signage. To be included in printed materials,
+                      logos must be received by <strong>Monday, August 31, 2026</strong>.
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>On-site Contact Phone <span className="text-destructive">*</span></Label>
-                  <Input
-                    value={stage2.onsiteContactPhone}
-                    onChange={s2field("onsiteContactPhone")}
-                    placeholder="Mobile number"
-                  />
-                </div>
-              </div>
+              </section>
 
-              <div className="space-y-2">
-                <Label>Booth Description / What You Will Display</Label>
-                <Textarea
-                  value={stage2.boothDescription}
-                  onChange={s2field("boothDescription")}
-                  placeholder="Describe what your organisation will display or promote at your booth"
-                  rows={3}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Electrical Requirements</Label>
-                <Input
-                  value={stage2.electricalRequirements}
-                  onChange={s2field("electricalRequirements")}
-                  placeholder="e.g., None, 1× 110V outlet for laptop"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Special Setup Requests</Label>
-                <Textarea
-                  value={stage2.specialRequests}
-                  onChange={s2field("specialRequests")}
-                  placeholder="Any special requests for setup, access, or location"
-                  rows={2}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Logo URL (for marketing materials)</Label>
-                <Input
-                  value={stage2.logoUrl}
-                  onChange={s2field("logoUrl")}
-                  placeholder="https://your-organisation.com/logo.png"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Link to your organisation's logo (PNG or SVG preferred). You can also email it to{" "}
-                  <a href="mailto:vendors@romaniancenter.org" className="text-primary underline">vendors@romaniancenter.org</a>.
+              {/* ── Acknowledgements (all sponsors) ─────────────────────── */}
+              <section>
+                <SectionHeading title="Acknowledgements" />
+                <p className="text-sm text-muted-foreground mb-1">
+                  Each of the following must be acknowledged before submitting.<RequiredStar />
                 </p>
-              </div>
-
-              {/* Acknowledgement */}
-              <div className="rounded-md border border-border bg-muted/30 p-4 space-y-2">
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
+                <div className="divide-y divide-border">
+                  <AckRow
+                    id="ackPromoOnly"
                     checked={stage2.ackPromoOnly}
-                    onChange={e => setStage2(prev => ({ ...prev, ackPromoOnly: e.target.checked }))}
-                    className="mt-1 h-4 w-4 rounded border-gray-300 accent-primary"
-                  />
-                  <span className="text-sm text-foreground">
-                    I understand that my complimentary sponsor booth is for <strong>promotional purposes only</strong>, and that selling prepared food requires a separate vendor application and vendor fee.
-                  </span>
-                </label>
-              </div>
+                    onChange={v => setS2("ackPromoOnly", v)}
+                  >
+                    I understand that my complimentary sponsor booth is for <strong>promotional purposes</strong>,
+                    and that selling prepared food requires a separate vendor application and vendor fee.
+                  </AckRow>
+                  <AckRow
+                    id="ackPermits"
+                    checked={stage2.ackPermits}
+                    onChange={v => setS2("ackPermits", v)}
+                  >
+                    I understand that additional permits, licenses, or proof of insurance may be required
+                    before participating.
+                  </AckRow>
+                  <AckRow
+                    id="ackPaymentRequired"
+                    checked={stage2.ackPaymentRequired}
+                    onChange={v => setS2("ackPaymentRequired", v)}
+                  >
+                    I understand that my sponsorship is <strong>not confirmed</strong> until payment is received
+                    in full.
+                  </AckRow>
+                </div>
+              </section>
 
+              {/* ── Signature (all sponsors) ─────────────────────────────── */}
+              <section>
+                <SectionHeading title="Signature" />
+                <div className="space-y-4">
+                  <div className="space-y-1.5 max-w-sm">
+                    <Label htmlFor="signatureName">Type your full name<RequiredStar /></Label>
+                    <Input
+                      id="signatureName"
+                      className="font-serif text-lg"
+                      placeholder="Full name as signature"
+                      value={stage2.signatureName}
+                      onChange={s2("signatureName")}
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Date: <strong>{todayStr}</strong>
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    By typing your name above, you certify that all information provided is accurate and
+                    that you have read and agree to the terms set out in this form.
+                  </p>
+                </div>
+              </section>
+
+              {/* Submit */}
               <Button
                 onClick={handleSubmitDetails}
-                disabled={
-                  submitDetailsMutation.isPending ||
-                  !stage2.onsiteContactName.trim() ||
-                  !stage2.onsiteContactPhone.trim()
-                }
-                className="w-full"
+                disabled={submitDetailsMutation.isPending}
+                className="w-full h-12 text-base"
                 size="lg"
               >
                 {submitDetailsMutation.isPending ? (
                   <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Submitting…</>
                 ) : (
-                  "Submit Details"
+                  "Submit Sponsorship Details"
                 )}
               </Button>
             </CardContent>
           </Card>
         )}
 
-        {/* ── Sponsor details under review ─────────────────────────────── */}
+        {/* ── Sponsor details under review ──────────────────────────────── */}
         {sponsorDetailsUnder && (
           <Card className="border-t-4 border-t-blue-400 shadow-md">
             <CardContent className="p-8 text-center flex flex-col items-center">
@@ -302,13 +619,14 @@ export default function PortalPage() {
               </div>
               <h3 className="text-xl font-serif text-blue-900 mb-2">Details Under Review</h3>
               <p className="text-blue-800 max-w-sm">
-                Thank you for submitting your sponsorship details. Our team will review your information and email you with the next step — payment instructions — shortly.
+                Thank you for submitting your sponsorship details. Our team at RCCS will review your
+                information and email you with payment instructions shortly.
               </p>
             </CardContent>
           </Card>
         )}
 
-        {/* ── Agreement + Payment (vendors at approved, sponsors at details_approved) ── */}
+        {/* ── Agreement + Payment ───────────────────────────────────────── */}
         {showAgreementAndPayment && (
           <div className="space-y-6">
             {!portal.agreementSigned ? (
@@ -375,7 +693,11 @@ export default function PortalPage() {
                       )}
                       {paymentDeadline && (
                         <p className="text-xs text-muted-foreground mt-2">
-                          Payment by {new Date(paymentDeadline + "T12:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} to be included in printed materials.
+                          Payment by{" "}
+                          {new Date(paymentDeadline + "T12:00:00").toLocaleDateString("en-US", {
+                            month: "long", day: "numeric", year: "numeric",
+                          })}{" "}
+                          to be included in printed materials.
                         </p>
                       )}
                     </div>
@@ -404,7 +726,8 @@ export default function PortalPage() {
                 </div>
                 <h3 className="text-2xl font-serif text-green-900 mb-2">Payment Confirmed</h3>
                 <p className="text-green-800">
-                  Your payment of ${(amount as number).toLocaleString()} was successful. We have received your application and agreement.
+                  Your payment of ${(amount as number).toLocaleString()} was successful. We have received
+                  your application and agreement.
                 </p>
               </CardContent>
             </Card>
@@ -438,7 +761,9 @@ export default function PortalPage() {
                     <div>
                       <p className="font-medium">Assigned Spot</p>
                       <div className="mt-2 inline-block px-4 py-2 bg-secondary/10 border border-secondary/20 rounded-md">
-                        <span className="font-serif text-xl text-secondary-foreground">{portal.spotNumber || "TBD"}</span>
+                        <span className="font-serif text-xl text-secondary-foreground">
+                          {portal.spotNumber || "TBD"}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -447,7 +772,9 @@ export default function PortalPage() {
             ) : (
               <Card>
                 <CardContent className="p-6 text-center">
-                  <p className="text-muted-foreground">Our team is finalizing the festival map. We will assign your spot shortly.</p>
+                  <p className="text-muted-foreground">
+                    Our team is finalizing the festival map. We will assign your spot shortly.
+                  </p>
                 </CardContent>
               </Card>
             )}
@@ -455,7 +782,7 @@ export default function PortalPage() {
         )}
       </main>
 
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent pointer-events-none z-0"></div>
+      <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent pointer-events-none z-0" />
     </div>
   )
 }
