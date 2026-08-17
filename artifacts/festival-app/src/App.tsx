@@ -187,11 +187,11 @@ function LandingPage() {
 
               {/* Event details */}
               <div className="flex flex-col sm:flex-row sm:flex-wrap gap-y-3 gap-x-8 mb-10 text-white/80 md:text-base text-[24px] font-bold">
-                <span className="flex items-center gap-2.5">
+                <span className="flex items-center gap-2.5 text-[22px]">
                   <CalendarDays className="w-4 h-4 text-white/45 shrink-0" />
                   Saturday, September 26, 2026
                 </span>
-                <span className="flex items-center gap-2.5">
+                <span className="flex items-center gap-2.5 text-[19px]">
                   <Clock className="w-4 h-4 text-white/45 shrink-0" />
                   12:00 PM – 9:00 PM
                 </span>
@@ -214,7 +214,7 @@ function LandingPage() {
               <img
                 src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/festival-dancers.png`}
                 alt="Romanian Festival — dancing figures"
-                className="w-44 sm:w-56 md:w-full md:max-w-[480px] h-auto ml-[0px] mr-[0px] pt-[0px] pb-[0px]"
+                className="w-44 sm:w-56 md:w-full md:max-w-[480px] h-auto mr-[0px] pt-[0px] pb-[0px] ml-[0px]"
               />
             </div>
 
