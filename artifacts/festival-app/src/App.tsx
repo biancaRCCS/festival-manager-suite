@@ -160,61 +160,76 @@ function LandingPage() {
         </div>
       </header>
       {/* Hero */}
-      <section className="bg-secondary text-white">
-        <div className="max-w-6xl mx-auto px-6 py-16 md:py-24">
+      <section className="relative bg-secondary text-white overflow-hidden">
+
+        {/* Flag ribbon — desktop only; sits behind wordmark + dancers, clears lower text */}
+        <img
+          src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/festival-flag.png`}
+          alt=""
+          aria-hidden="true"
+          className="hidden md:block absolute top-0 left-[-12%] w-[124%] max-w-none h-auto z-0 pointer-events-none select-none"
+        />
+
+        <div className="relative z-10 max-w-6xl mx-auto px-6 py-16 md:py-24">
           <div className="flex flex-col md:flex-row md:items-center gap-10 md:gap-16">
 
-            {/* Left — text */}
-            <div className="flex-1 min-w-0">
-              {/* Festival wordmark */}
-              <div className="mb-4">
-                <div className="font-wordmark text-white uppercase md:text-[72px] text-[127px]">Romanian</div>
-                <div className="font-sans text-white uppercase tracking-[0.3em] md:text-[23px] mt-1 text-[75px] font-bold">Festival</div>
-              </div>
+            {/* Left column */}
+            <div className="flex-1 min-w-0 flex flex-col items-center md:items-start text-center md:text-left">
 
-              {/* Theme — year's creative concept */}
-              <p className="font-serif italic text-white/60 md:text-lg mb-5 tracking-wide text-[28px]">
-                150 Years of Constantin Brâncuși:<br />Tradition, Art, and Romanian Spirit
+              {/* 1. Wordmark image */}
+              <img
+                src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/festival-wordmark.png`}
+                alt="Romanian Festival — official event wordmark"
+                className="w-full max-w-[520px] h-auto mb-4"
+              />
+
+              {/* 2. Theme line */}
+              <p className="font-serif italic text-white/60 text-sm md:text-base mb-5 tracking-wide">
+                150 Years of Constantin Brâncuși: Tradition, Art, &amp; Romanian Spirit
               </p>
 
-              {/* Main heading */}
-              <h1 className="font-serif md:text-3xl font-bold mb-8 text-[24px]">
-                Preserving Culture.<br />
-                Strengthening<br />
-                Community.<br />
-                Connecting Generations.
-              </h1>
-
-              {/* Event details */}
-              <div className="flex flex-col sm:flex-row sm:flex-wrap gap-y-3 gap-x-8 mb-10 text-white/80 md:text-base text-[24px] font-bold">
-                <span className="flex items-center gap-2.5 text-[22px]">
-                  <CalendarDays className="w-4 h-4 text-white/45 shrink-0" />
-                  Saturday, September 26, 2026
-                </span>
-                <span className="flex items-center gap-2.5 text-[19px]">
-                  <Clock className="w-4 h-4 text-white/45 shrink-0" />
-                  12:00 PM – 9:00 PM
-                </span>
-                <span className="flex items-center gap-2.5 text-[22px]">
-                  <MapPin className="w-4 h-4 text-white/45 shrink-0" />
-                  Vernon Street Town Square, Downtown Roseville, CA
-                </span>
+              {/* 3. Mobile dancers — flag ribbon behind this block only */}
+              <div className="relative md:hidden flex justify-center w-full mb-6">
+                <img
+                  src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/festival-flag.png`}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] max-w-none h-auto z-0 pointer-events-none select-none"
+                />
+                <img
+                  src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/festival-dancers-v2.png`}
+                  alt="Romanian folk dancers in traditional costume performing a circle dance"
+                  className="relative z-10 w-full max-w-[280px] h-auto"
+                />
               </div>
 
+              {/* 4. Date, time, location */}
+              <div className="mb-6 text-white/80 text-sm md:text-base leading-relaxed space-y-1">
+                <p>Saturday, September 26, 2026 · 12:00 PM – 9:00 PM · Free Admission</p>
+                <p>Vernon Street Town Square, Downtown Roseville, CA</p>
+              </div>
+
+              {/* 5. Get Involved button */}
               <Button
-                className="bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-sm px-8 h-12 shadow-lg"
+                className="bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-sm px-8 h-12 shadow-lg mb-8"
                 onClick={() => document.getElementById("apply-section")?.scrollIntoView({ behavior: "smooth" })}
               >
                 Get Involved
               </Button>
+
+              {/* 6. Tagline */}
+              <p className="text-white/50 text-xs md:text-sm tracking-wide">
+                Preserving Culture. Strengthening Community. Connecting Generations.
+              </p>
+
             </div>
 
-            {/* Right — dancers logo (desktop: right column; mobile: below button, centered) */}
-            <div className="flex justify-center md:justify-end md:w-[40%] md:flex-shrink-0">
+            {/* Right column — desktop dancers */}
+            <div className="hidden md:flex justify-end w-[40%] flex-shrink-0 items-center">
               <img
-                src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/festival-dancers.png`}
-                alt="Romanian Festival — dancing figures"
-                className="w-44 sm:w-56 md:w-full md:max-w-[480px] h-auto mr-[0px] pt-[0px] pb-[0px] ml-[0px]"
+                src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/festival-dancers-v2.png`}
+                alt="Romanian folk dancers in traditional costume performing a circle dance"
+                className="w-full max-w-[420px] h-auto"
               />
             </div>
 

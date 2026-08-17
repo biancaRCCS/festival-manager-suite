@@ -1,0 +1,28 @@
+Rebuild the landing page hero using three images I have added to artifacts/festival-app/public/: festival-wordmark.png (the ROMANIAN FESTIVAL wordmark, white on transparent), festival-dancers-v2.png (the dancers), and festival-flag.png (the Romanian flag ribbon, diagonal, transparent).
+
+DESKTOP (md and above) — two columns on the navy background:
+
+Left column, in this order:
+1. festival-wordmark.png, max-width about 520px
+2. The theme line: "150 Years of Constantin Brâncuși: Tradition, Art, & Romanian Spirit" — small, italic
+3. Date and details on separate lines: "Saturday, September 26, 2026 · 12:00 PM – 9:00 PM · Free Admission" then "Vernon Street Town Square, Downtown Roseville, CA"
+4. The Get Involved button
+5. The tagline "Preserving Culture. Strengthening Community. Connecting Generations."
+
+Right column: festival-dancers-v2.png, about 40% of the width, max 420px, vertically centered.
+
+Behind both columns: festival-flag.png positioned diagonally so it passes behind the wordmark and behind the dancers, bleeding off both left and right edges of the section. It must sit behind all text and images — use a lower z-index. Position it so the ribbon does NOT cross the date, location, button, or tagline text. Those must sit on flat navy so they stay readable.
+
+MOBILE (below md) — single column, centered, in this order:
+1. Wordmark, full width
+2. Theme line
+3. Dancers, centered, with the flag behind the dancers block only — not behind the whole section
+4. Date, time and Free Admission, then location, each centered on its own line
+5. Get Involved button, centered
+6. Tagline, centered
+
+Center all hero text on mobile only; keep desktop left-aligned.
+
+Replace the existing hero heading and the old dancers image entirely. Remove the old large "Preserving Culture / Strengthening Community / Connecting Generations" h1 — the tagline in item 5 replaces it.
+
+Every image needs descriptive alt text. Set only width or max-width and let height follow so nothing distorts. Nothing may overflow horizontally at 375px. Do not change any colors, fonts, or anything outside the hero section.
