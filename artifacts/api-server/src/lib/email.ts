@@ -14,7 +14,21 @@ function getResendClient(): Resend | null {
 }
 
 const FROM = () => process.env.EMAIL_FROM ?? "Romanian Festival <festival@example.com>";
-const REPLY_TO = () => process.env.EMAIL_REPLY_TO ?? "vendors@romaniancenter.org";
+
+/** Returns a validated reply-to address, or undefined if the value is absent or malformed.
+ *  A bad reply-to causes Resend to reject the entire send; omitting it is always safer. */
+function validReplyTo(): string | undefined {
+  const val = (process.env.EMAIL_REPLY_TO ?? "").trim();
+  if (!val) return undefined;
+  // Accepts "email@example.com" or "Name <email@example.com>"
+  const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val) ||
+             /^.+<[^\s@]+@[^\s@]+\.[^\s@]+>$/.test(val);
+  if (!ok) {
+    logger.warn({ value: val }, "EMAIL_REPLY_TO is set but not a valid email address — omitting reply-to");
+    return undefined;
+  }
+  return val;
+}
 
 function getAppBaseUrl(): string {
   if (process.env.APP_BASE_URL) return process.env.APP_BASE_URL;
@@ -33,10 +47,11 @@ async function send(to: string, subject: string, html: string): Promise<void> {
       logger.info({ to, subject }, "Email would be sent (no RESEND_API_KEY configured)");
       return;
     }
+    const replyTo = validReplyTo();
     const { error } = await resend.emails.send({
       from: FROM(),
       to,
-      replyTo: REPLY_TO(),
+      ...(replyTo ? { replyTo } : {}),
       subject,
       html,
     });
@@ -131,10 +146,11 @@ export async function sendTestEmail(to: string): Promise<void> {
       <p>If you received this, email notifications are working and will be delivered when applications are submitted.</p>
       ${FOOTER}
     </div>`;
+  const replyTo = validReplyTo();
   const { error } = await resend.emails.send({
     from: FROM(),
     to,
-    replyTo: REPLY_TO(),
+    ...(replyTo ? { replyTo } : {}),
     subject,
     html,
   });
