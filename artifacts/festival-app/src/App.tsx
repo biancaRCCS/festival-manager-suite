@@ -319,7 +319,7 @@ function LandingPage() {
             className="h-14 w-auto"
           />
         </div>
-        <div>Romanian Festival &copy; {new Date().getFullYear()}</div>
+        <div>Romanian Community Center of Sacramento &copy; {new Date().getFullYear()}</div>
         <div className="text-[14px]">
           <Link href="/sign-in" className="text-white/25 hover:text-white/50 transition-colors text-[10px]">
             Staff Login
