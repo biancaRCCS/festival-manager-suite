@@ -103,7 +103,7 @@ function SignInPage() {
     <div className="min-h-[100dvh] flex flex-col bg-background">
       {/* Navy header */}
       <div className="h-16 bg-secondary flex items-center px-8 gap-3 shadow-md">
-        <img src={`${basePath}/festival-dancers-navy@120.png`} alt="Romanian Festival – dancing figures logo" className="h-9 w-auto" />
+        <img src={`${basePath}/festival-dancers-v2.png`} alt="Romanian Festival – dancing figures logo" className="h-9 w-auto" />
         <span className="font-serif font-bold text-white text-lg tracking-wide">Romanian Festival</span>
       </div>
       <div className="flex-1 flex items-center justify-center px-4 py-12 bg-background">
@@ -117,7 +117,7 @@ function SignUpPage() {
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background">
       <div className="h-16 bg-secondary flex items-center px-8 gap-3 shadow-md">
-        <img src={`${basePath}/festival-dancers-navy@120.png`} alt="Romanian Festival – dancing figures logo" className="h-9 w-auto" />
+        <img src={`${basePath}/festival-dancers-v2.png`} alt="Romanian Festival – dancing figures logo" className="h-9 w-auto" />
         <span className="font-serif font-bold text-white text-lg tracking-wide">Romanian Festival</span>
       </div>
       <div className="flex-1 flex items-center justify-center px-4 py-12 bg-background">
@@ -147,7 +147,7 @@ function LandingPage() {
         <div className="max-w-6xl mx-auto px-6 h-20 md:h-32 flex items-center justify-between">
           <div className="flex items-center gap-3 md:gap-5">
             <img
-              src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/festival-dancers-navy@120.png`}
+              src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/festival-dancers-v2.png`}
               alt="Romanian Festival – dancing figures logo"
               className="h-12 md:h-[76px] w-auto"
             />
