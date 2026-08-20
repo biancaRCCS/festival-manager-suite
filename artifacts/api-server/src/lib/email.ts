@@ -31,9 +31,80 @@ function validReplyTo(): string | undefined {
 }
 
 function getAppBaseUrl(): string {
-  if (process.env.APP_BASE_URL) return process.env.APP_BASE_URL;
-  if (process.env.REPLIT_DEV_DOMAIN) return `https://${process.env.REPLIT_DEV_DOMAIN}`;
-  return "";
+  const configured = process.env.APP_BASE_URL?.trim() || process.env.REPLIT_DOMAINS?.split(",")[0]?.trim();
+  if (!configured) return "";
+  if (/^https?:\/\//i.test(configured)) return configured.replace(/\/+$/, "");
+  return `https://${configured.replace(/\/+$/, "")}`;
+}
+
+function getEmailImageUrls(): { rccsLogo: string; festivalLogo: string } {
+  const baseUrl = getAppBaseUrl();
+  if (!baseUrl) {
+    logger.warn("APP_BASE_URL and REPLIT_DOMAINS are not configured; email images may not load");
+  }
+  return {
+    rccsLogo: `${baseUrl}/rccs-logo-white@96.png`,
+    festivalLogo: `${baseUrl}/festival-logo-light-900.png`,
+  };
+}
+
+/**
+ * Shared RCCS email shell. Individual messages provide only their existing
+ * body markup; this function owns the header, body container, and footer.
+ */
+function wrapEmail(bodyHtml: string): string {
+  const { rccsLogo, festivalLogo } = getEmailImageUrls();
+  return `
+    <div style="margin: 0; padding: 0; width: 100%; background: #ffffff; color: #1a2744;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width: 100%; border-collapse: collapse; background: #ffffff;">
+        <tr>
+          <td align="center" style="padding: 0;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width: 100%; max-width: 680px; border-collapse: collapse; background: #ffffff;">
+              <tr>
+                <td style="background: #1a2744; padding: 14px 24px;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                      <td valign="middle" width="76" style="width: 76px; padding: 0 16px 0 0;">
+                        <img src="${rccsLogo}" width="64" height="56" alt="Romanian Community Center of Sacramento logo" style="display: block; width: 64px; height: 56px; object-fit: contain; border: 0;">
+                      </td>
+                      <td valign="middle" style="padding: 0;">
+                        <div style="font-family: Arial, Helvetica, sans-serif; font-size: 16px; line-height: 22px; font-weight: 700; letter-spacing: 0.04em; color: #ffffff;">
+                          ROMANIAN COMMUNITY CENTER OF SACRAMENTO
+                        </div>
+                        <div style="font-family: Georgia, 'Times New Roman', serif; font-size: 14px; line-height: 20px; color: #C89A2A;">
+                          Preserving culture. Building community.
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              <tr>
+                <td style="background: #ffffff; padding: 32px 24px;">
+                  ${bodyHtml}
+                </td>
+              </tr>
+              <tr>
+                <td align="center" style="background: #ffffff; padding: 12px 24px 36px; text-align: center;">
+                  <img src="${festivalLogo}" width="480" alt="Romanian Festival 2026" style="display: block; width: 100%; max-width: 480px; height: auto; margin: 0 auto 24px; border: 0;">
+                  <p style="font-family: Georgia, 'Times New Roman', serif; font-size: 14px; line-height: 23px; color: #1a2744; margin: 0 0 18px;">
+                    Thank you for your continued support.<br>
+                    We look forward to celebrating with you soon.<br>
+                    Vă așteptăm cu drag la următorul eveniment!
+                  </p>
+                  <p style="font-family: Arial, Helvetica, sans-serif; font-size: 13px; line-height: 21px; color: #1a2744; margin: 0;">
+                    <strong>Romanian Community Center of Sacramento</strong><br>
+                    <a href="https://romaniancenter.org" style="color: #1a2744; text-decoration: underline;">RomanianCenter.org</a>
+                    <span style="color: #9ca3af;"> | </span>
+                    <a href="https://romanianfestival.org" style="color: #1a2744; text-decoration: underline;">RomanianFestival.org</a>
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </div>`;
 }
 
 // ---------------------------------------------------------------------------
@@ -53,7 +124,7 @@ async function send(to: string, subject: string, html: string): Promise<void> {
       to,
       ...(replyTo ? { replyTo } : {}),
       subject,
-      html,
+      html: wrapEmail(html),
     });
     if (error) throw new Error(error.message);
     logger.info({ to, subject }, "Email sent");
@@ -81,11 +152,6 @@ const BASE_STYLE = `font-family: Georgia, 'Times New Roman', serif; max-width: 6
 const LABEL_STYLE = `font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; margin: 0 0 2px 0;`;
 const VALUE_STYLE = `font-size: 15px; margin: 0 0 14px 0; color: #1a2744;`;
 const DIVIDER = `<hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;" />`;
-const FOOTER = `
-  <p style="font-size: 13px; color: #9ca3af; margin-top: 32px;">
-    Romanian Community Center of Sacramento · 2026 Romanian Festival<br>
-    Vernon Street Town Square, Downtown Roseville, CA · Saturday, 26 September 2026
-  </p>`;
 
 function field(label: string, value: string | null | undefined) {
   if (!value) return "";
@@ -144,7 +210,6 @@ export async function sendTestEmail(to: string): Promise<void> {
       <h2 style="color: #8b1a1a;">Email is working ✓</h2>
       <p>This is a test message sent from the Romanian Festival admin panel to confirm that Resend email delivery is configured correctly.</p>
       <p>If you received this, email notifications are working and will be delivered when applications are submitted.</p>
-      ${FOOTER}
     </div>`;
   const replyTo = validReplyTo();
   const { error } = await resend.emails.send({
@@ -152,7 +217,7 @@ export async function sendTestEmail(to: string): Promise<void> {
     to,
     ...(replyTo ? { replyTo } : {}),
     subject,
-    html,
+    html: wrapEmail(html),
   });
   if (error) throw new Error(error.message);
   logger.info({ to, subject }, "Test email sent");
@@ -189,7 +254,6 @@ export async function sendVendorPortalInviteEmail(params: {
       </p>
       <p>If you have any questions, please reply to this email.</p>
       <p>We look forward to having you at the festival!</p>
-      ${FOOTER}
     </div>`;
   await send(to, subject, html);
 }
@@ -227,7 +291,6 @@ export async function sendSponsorDetailsInviteEmail(params: {
       <p>Once our team reviews your details, we will send you a separate email with instructions to complete your payment.</p>
       <p>If you have any questions, please reply to this email.</p>
       <p>We look forward to welcoming you to the festival!</p>
-      ${FOOTER}
     </div>`;
   await send(to, subject, html);
 }
@@ -275,7 +338,6 @@ export async function sendSponsorPaymentReadyEmail(params: {
       </p>
       <p>If you have any questions, please reply to this email.</p>
       <p>Thank you for supporting the Romanian community!</p>
-      ${FOOTER}
     </div>`;
   await send(to, subject, html);
 }
@@ -346,7 +408,6 @@ export async function sendNewApplicationNotification(params: {
       ${contactPhone ? field("Phone", contactPhone) : ""}
       ${DIVIDER}
       ${adminLinkHtml}
-      ${FOOTER}
     </div>`;
 
   await send(notificationEmail, subject, html);
@@ -384,7 +445,6 @@ export async function sendSponsorDetailsSubmittedNotification(params: {
       ${amountDisplay ? field("Sponsorship Amount", amountDisplay) : ""}
       ${DIVIDER}
       ${adminLinkHtml}
-      ${FOOTER}
     </div>`;
 
   await send(notificationEmail, subject, html);
@@ -431,7 +491,6 @@ export async function sendApplicantConfirmation(params: {
         <a href="mailto:vendors@romaniancenter.org" style="color: #8b1a1a;">vendors@romaniancenter.org</a>.
       </p>
       <p>We look forward to welcoming you to the festival!</p>
-      ${FOOTER}
     </div>`;
 
   await send(to, subject, html);
