@@ -241,8 +241,8 @@ function LandingPage() {
         </div>
       </section>
       {/* Cards section */}
-      <section className="bg-background flex-1">
-        <div className="max-w-6xl mx-auto px-6 py-16">
+      <section className="bg-background">
+        <div className="max-w-6xl mx-auto px-6 pt-16 pb-6">
 
           {/* Application deadline countdown — from settings */}
           {deadline && (
@@ -316,20 +316,20 @@ function LandingPage() {
       </section>
 
       {/* Support CTA Band */}
-      <section className="bg-secondary/5 border-t border-border py-20 px-6">
+      <section className="bg-secondary/5 border-t border-border py-8 px-6">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="font-serif text-3xl md:text-4xl font-bold text-secondary mb-6">
+          <h2 className="font-serif text-3xl md:text-4xl font-bold text-secondary mb-4">
             25 Years and Counting
           </h2>
-          <p className="text-base md:text-lg text-muted-foreground leading-relaxed mb-10 max-w-2xl mx-auto">
-            Since 2001, this community has built something worth continuing. Contributions help us keep building — this festival, and the events that follow.
-          </p>
           <Link
             href="/support"
-            className="inline-flex items-center justify-center bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-sm px-8 h-14 shadow-md rounded-md"
+            className="inline-flex items-center justify-center bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-sm px-8 h-14 shadow-md rounded-md mb-5"
           >
             Support the Festival
           </Link>
+          <p className="text-base md:text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+            Since 2001, this community has built something worth continuing. Contributions help us keep building — this festival, and the events that follow.
+          </p>
         </div>
       </section>
 
