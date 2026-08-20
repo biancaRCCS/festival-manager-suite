@@ -1,0 +1,39 @@
+Add a public contributions feature. Self-serve — no approval workflow.
+
+LANDING PAGE. Below the three Apply cards, add a full-width band with a slightly different background so it reads as a distinct section rather than a fourth card:
+
+Heading: "25 Years and Counting"
+Body: "Since 2001, this community has built something worth continuing. Contributions help us keep building — this festival, and the events that follow."
+Button: "Support the Festival" — links to /support
+
+CONTRIBUTIONS PAGE at /support. Public, no login, matching the site's existing styling. Repeat the heading and body text, then:
+
+- Preset amount buttons: $50, $100, $200, $500
+- An "Other amount" field accepting any amount of $5 or more
+- Full name — required
+- Email address — required, used for the tax receipt
+- A "Continue to Payment" button that creates a Stripe Checkout session and redirects, the same way the vendor and sponsor flows do. Pass the email to Stripe so it is prefilled at checkout.
+- A success page thanking them and telling them a receipt is on its way
+
+DATA. Add a contributions table storing: name, email, amount, Stripe session id, paid timestamp, created timestamp. Record the contribution when the Stripe webhook confirms payment, never when the button is clicked.
+
+RECEIPT EMAIL. When the webhook confirms payment, send this to the contributor's email address via the existing Resend setup. Subject: "Thank you for supporting the Romanian Community Center of Sacramento". Body, with [Name], [Amount] and [Date] filled in from the record — if the name is missing use "Dear Friend":
+
+Dear [Name],
+
+On behalf of the Romanian Community Center of Sacramento, thank you for your generous contribution of $[Amount], received on [Date].
+
+Since its establishment in 2001, our organization has proudly served and celebrated the Romanian community, fostering cultural enrichment and unity. Your contribution directly helps us continue this work and create meaningful connections through events like the Romanian Festival.
+
+The Romanian Community Center of Sacramento is a non-profit Corporation registered with the State of California under #C2344434, with the assigned Employer Identification Number (EIN) #94-3400833. As a 501(c)(3) organization, your contribution is tax deductible. No goods or services of monetary value were provided in exchange for this contribution. Please retain this email as acknowledgement for your tax records.
+
+With sincere appreciation,
+The Romanian Community Center of Sacramento Board of Directors
+
+romaniancenter.org · info@romaniancenter.org
+
+Format it in the same style as the other emails from this app. Send a copy of each receipt to the notification address in Settings so RCCS has a record.
+
+ADMIN. Add a Contributions page to the admin sidebar listing each contribution with date, name, email, and amount, plus a total. Read-only.
+
+Do not touch the vendor or sponsor flows.
