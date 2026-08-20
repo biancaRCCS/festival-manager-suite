@@ -13,7 +13,7 @@
 
 import { beforeAll, afterAll, describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
-import { db, festivalYearsTable, vendorsTable, activityLogTable } from "@workspace/db";
+import { db, festivalYearsTable, vendorsTable, contributionsTable, activityLogTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import type Stripe from "stripe";
 
@@ -24,8 +24,10 @@ import type Stripe from "stripe";
 
 /** Spy that records every processWebhook call. Declared via vi.hoisted() so
  *  it is available when the hoisted vi.mock() factory runs. */
-const { processWebhookSpy } = vi.hoisted(() => ({
+const { processWebhookSpy, contributionReceiptSpy, createCheckoutSessionSpy } = vi.hoisted(() => ({
   processWebhookSpy: vi.fn().mockResolvedValue(undefined),
+  contributionReceiptSpy: vi.fn().mockResolvedValue(undefined),
+  createCheckoutSessionSpy: vi.fn(),
 }));
 
 vi.mock("../lib/stripeClient", () => {
@@ -40,7 +42,7 @@ vi.mock("../lib/stripeClient", () => {
      * that branches on event.type.
      */
     getUncachableStripeClient: vi.fn().mockResolvedValue({
-      checkout: { sessions: { create: vi.fn() } },
+      checkout: { sessions: { create: createCheckoutSessionSpy } },
       webhooks: {
         constructEvent: (
           payload: Buffer,
@@ -51,6 +53,14 @@ vi.mock("../lib/stripeClient", () => {
     }),
     getWebhookSecret: vi.fn().mockResolvedValue("whsec_test_secret"),
     persistWebhookSecret: vi.fn().mockResolvedValue(undefined),
+  };
+});
+
+vi.mock("../lib/email", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/email")>();
+  return {
+    ...actual,
+    sendContributionReceipt: contributionReceiptSpy,
   };
 });
 
@@ -116,6 +126,9 @@ beforeAll(async () => {
 
 afterAll(async () => {
   // Clean up test data in reverse FK order
+  if (testYearId) {
+    await db.delete(contributionsTable).where(eq(contributionsTable.yearId, testYearId));
+  }
   if (testVendorId) {
     await db
       .delete(activityLogTable)
@@ -133,6 +146,8 @@ afterAll(async () => {
 
 beforeEach(() => {
   processWebhookSpy.mockClear();
+  contributionReceiptSpy.mockClear();
+  createCheckoutSessionSpy.mockClear();
 });
 
 // ---------------------------------------------------------------------------
@@ -140,6 +155,16 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("POST /api/stripe/webhook", () => {
+  it("rejects invalid public contribution details before creating a Stripe Checkout session", async () => {
+    const res = await request(app)
+      .post("/api/public/contributions/checkout")
+      .send({ name: "", email: "not-an-email", amount: 4 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain("valid email address");
+    expect(createCheckoutSessionSpy).not.toHaveBeenCalled();
+  });
+
   it("returns 400 when stripe-signature header is absent", async () => {
     const res = await request(app)
       .post("/api/stripe/webhook")
@@ -231,5 +256,50 @@ describe("POST /api/stripe/webhook", () => {
     const paidLog = logs.find((l) => l.type === "paid");
     expect(paidLog).toBeDefined();
     expect(paidLog?.entityType).toBe("vendor");
+  });
+
+  it("records a paid contribution once and sends one receipt when Stripe completes checkout", async () => {
+    const sessionId = `cs_contribution_${Date.now()}`;
+    const session: Partial<Stripe.Checkout.Session> = {
+      id: sessionId,
+      object: "checkout.session",
+      payment_status: "paid",
+      amount_total: 12500,
+      customer_email: "contributor@example.com",
+      metadata: {
+        entityType: "contribution",
+        contributorName: "Test Contributor",
+        contributorEmail: "contributor@example.com",
+        yearId: String(testYearId),
+      },
+    };
+
+    const event = makeEvent("checkout.session.completed", session);
+    const first = await postWebhook(event);
+    expect(first.status).toBe(200);
+
+    const [recorded] = await db
+      .select()
+      .from(contributionsTable)
+      .where(eq(contributionsTable.stripeSessionId, sessionId));
+    expect(recorded).toMatchObject({
+      name: "Test Contributor",
+      email: "contributor@example.com",
+      amount: "125.00",
+      stripeSessionId: sessionId,
+    });
+    expect(recorded?.paidAt).not.toBeNull();
+    expect(contributionReceiptSpy).toHaveBeenCalledOnce();
+
+    // Stripe may deliver the same webhook again. The session-id uniqueness must
+    // prevent a duplicate record and a duplicate receipt.
+    const second = await postWebhook(event);
+    expect(second.status).toBe(200);
+    const rows = await db
+      .select()
+      .from(contributionsTable)
+      .where(eq(contributionsTable.stripeSessionId, sessionId));
+    expect(rows).toHaveLength(1);
+    expect(contributionReceiptSpy).toHaveBeenCalledOnce();
   });
 });

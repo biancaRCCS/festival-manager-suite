@@ -30,6 +30,8 @@ tags:
     description: Staff management
   - name: export
     description: Data export
+  - name: contributions
+    description: Public contributions and staff reporting
 paths:
   /healthz:
     get:
@@ -114,6 +116,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApplicationConfirmation"
+
+  /public/contributions/checkout:
+    post:
+      operationId: createContributionCheckout
+      tags: [contributions]
+      summary: Create a Stripe Checkout session for a public contribution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContributionCheckoutInput"
+      responses:
+        "200":
+          description: Checkout session URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutSession"
+        "400":
+          description: Invalid contribution details
+        "404":
+          description: No active festival year
 
   # ─── PORTAL (token-based, no login) ──────────────────────
   /portal/{token}:
@@ -247,6 +272,21 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/FinancialSummary"
+
+  /contributions:
+    get:
+      operationId: listContributions
+      tags: [contributions]
+      summary: List completed contributions for staff
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: Completed contributions and total received
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContributionListResponse"
 
   /dashboard/activity:
     get:
@@ -1541,6 +1581,51 @@ components:
       properties:
         checkoutUrl:
           type: string
+
+    ContributionCheckoutInput:
+      type: object
+      required: [name, email, amount]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+        amount:
+          type: number
+          minimum: 5
+
+    Contribution:
+      type: object
+      required: [id, name, email, amount, stripeSessionId, paidAt, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        amount:
+          type: number
+        stripeSessionId:
+          type: string
+        paidAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    ContributionListResponse:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Contribution"
+        total:
+          type: number
 
     AgreementSignature:
       type: object

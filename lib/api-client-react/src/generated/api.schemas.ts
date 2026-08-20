@@ -488,6 +488,29 @@ export interface CheckoutSession {
   checkoutUrl: string;
 }
 
+export interface ContributionCheckoutInput {
+  /** @minLength 1 */
+  name: string;
+  email: string;
+  /** @minimum 5 */
+  amount: number;
+}
+
+export interface Contribution {
+  id: number;
+  name: string;
+  email: string;
+  amount: number;
+  stripeSessionId: string;
+  paidAt: string;
+  createdAt: string;
+}
+
+export interface ContributionListResponse {
+  items: Contribution[];
+  total: number;
+}
+
 export interface AgreementSignature {
   signedName: string;
 }

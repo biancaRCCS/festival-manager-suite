@@ -1,6 +1,9 @@
-import { db, vendorsTable, sponsorsTable, festivalYearsTable, festivalSettingsTable, activityLogTable } from "@workspace/db";
+import Stripe from "stripe";
+import { db, vendorsTable, sponsorsTable, contributionsTable, festivalYearsTable, festivalSettingsTable, activityLogTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { getUncachableStripeClient } from "../lib/stripeClient";
+import { sendContributionReceipt } from "../lib/email";
+import { logger } from "../lib/logger";
 
 /**
  * Creates a Stripe Checkout session for vendor or sponsor portal payment.
@@ -161,18 +164,74 @@ export async function createCheckoutSession(params: {
 }
 
 /**
+ * Creates a one-time public contribution checkout without writing an application
+ * record. The contribution is persisted only after Stripe's verified webhook.
+ */
+export async function createContributionCheckout(params: {
+  name: string;
+  email: string;
+  amount: number;
+  yearId: number;
+}): Promise<string> {
+  const { name, email, amount, yearId } = params;
+  const stripe = await getUncachableStripeClient();
+  const cents = Math.round(amount * 100);
+  if (!Number.isSafeInteger(cents) || cents < 500) {
+    throw new Error("Contribution amount must be at least $5.00");
+  }
+
+  const domain = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost";
+  const successUrl = `https://${domain}/support/success?session_id={CHECKOUT_SESSION_ID}`;
+  const cancelUrl = `https://${domain}/support`;
+
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ["card"],
+    mode: "payment",
+    customer_email: email,
+    line_items: [
+      {
+        price_data: {
+          currency: "usd",
+          unit_amount: cents,
+          product_data: {
+            name: "Contribution to the Romanian Community Center of Sacramento",
+            description: "Supporting the Romanian Festival and community events",
+          },
+        },
+        quantity: 1,
+      },
+    ],
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    metadata: {
+      entityType: "contribution",
+      contributorName: name,
+      contributorEmail: email,
+      yearId: String(yearId),
+    },
+  });
+
+  if (!session.url) {
+    throw new Error("Stripe did not return a checkout URL");
+  }
+  return session.url;
+}
+
+/**
  * Post-payment fulfillment: called from webhookHandlers after stripe-replit-sync
  * processes a checkout.session.completed event.
  *
  * stripe-replit-sync handles signature verification and event parsing;
  * this function performs the application-level state transitions.
  */
-export async function handleCheckoutComplete(sessionMetadata: {
-  token?: string;
-  entityType?: string;
-  entityId?: string;
-}): Promise<void> {
-  const { entityType, entityId } = sessionMetadata;
+export async function handleCheckoutComplete(session: Stripe.Checkout.Session): Promise<void> {
+  const { entityType, entityId } = session.metadata ?? {};
+
+  if (entityType === "contribution") {
+    await handleContributionCheckoutComplete(session);
+    return;
+  }
+
   if (!entityId || !entityType) return;
 
   const id = parseInt(entityId, 10);
@@ -209,4 +268,60 @@ export async function handleCheckoutComplete(sessionMetadata: {
       });
     }
   }
+}
+
+async function handleContributionCheckoutComplete(session: Stripe.Checkout.Session): Promise<void> {
+  if (session.payment_status !== "paid" || !session.amount_total) {
+    logger.warn(
+      { sessionId: session.id, paymentStatus: session.payment_status },
+      "Ignoring contribution checkout that is not paid",
+    );
+    return;
+  }
+
+  const metadata = session.metadata ?? {};
+  const yearId = Number.parseInt(metadata.yearId ?? "", 10);
+  const email = session.customer_details?.email ?? session.customer_email ?? metadata.contributorEmail;
+  const name = metadata.contributorName?.trim() || "Friend";
+  const amount = session.amount_total / 100;
+
+  if (!Number.isSafeInteger(yearId) || yearId <= 0 || !email || amount < 5) {
+    logger.error(
+      { sessionId: session.id, hasEmail: !!email, yearId, amount },
+      "Contribution checkout is missing required fulfillment data",
+    );
+    return;
+  }
+
+  const paidAt = new Date();
+  const inserted = await db
+    .insert(contributionsTable)
+    .values({
+      yearId,
+      name,
+      email,
+      amount: amount.toFixed(2),
+      stripeSessionId: session.id,
+      paidAt,
+    })
+    .onConflictDoNothing()
+    .returning({ id: contributionsTable.id });
+
+  // Stripe retries webhook delivery; the unique session ID makes fulfillment
+  // idempotent and ensures donors never receive duplicate receipts.
+  if (inserted.length === 0) return;
+
+  const [settings] = await db
+    .select({ notificationEmail: festivalSettingsTable.notificationEmail })
+    .from(festivalSettingsTable)
+    .where(eq(festivalSettingsTable.yearId, yearId))
+    .limit(1);
+
+  await sendContributionReceipt({
+    to: email,
+    name,
+    amount,
+    paidAt,
+    notificationEmail: settings?.notificationEmail,
+  });
 }

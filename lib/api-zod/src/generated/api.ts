@@ -84,6 +84,25 @@ export const SubmitVolunteerApplicationResponse = zod.object({
 
 
 /**
+ * @summary Create a Stripe Checkout session for a public contribution
+ */
+
+export const createContributionCheckoutBodyAmountMin = 5;
+
+
+
+export const CreateContributionCheckoutBody = zod.object({
+  "name": zod.string().min(1),
+  "email": zod.string(),
+  "amount": zod.number().min(createContributionCheckoutBodyAmountMin)
+})
+
+export const CreateContributionCheckoutResponse = zod.object({
+  "checkoutUrl": zod.string()
+})
+
+
+/**
  * @summary Get vendor/sponsor portal info by token
  */
 export const GetPortalInfoParams = zod.object({
@@ -291,6 +310,23 @@ export const GetDashboardFinancialsResponse = zod.object({
   "amount": zod.number(),
   "paidAt": zod.string()
 })).optional()
+})
+
+
+/**
+ * @summary List completed contributions for staff
+ */
+export const ListContributionsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "amount": zod.number(),
+  "stripeSessionId": zod.string(),
+  "paidAt": zod.coerce.date(),
+  "createdAt": zod.coerce.date()
+})),
+  "total": zod.number()
 })
 
 

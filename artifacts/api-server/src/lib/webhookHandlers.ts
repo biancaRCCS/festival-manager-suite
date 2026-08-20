@@ -40,7 +40,7 @@ export class WebhookHandlers {
 
       if (event.type === 'checkout.session.completed') {
         const session = event.data.object as Stripe.Checkout.Session;
-        await handleCheckoutComplete(session.metadata ?? {});
+        await handleCheckoutComplete(session);
       }
     } catch (err: any) {
       // Log but don't re-throw: stripe-replit-sync already verified the signature above.

@@ -10,6 +10,7 @@ import sponsorsRouter from "./sponsors";
 import volunteersRouter from "./volunteers";
 import staffRouter from "./staff";
 import exportRouter from "./exportRoutes";
+import contributionsRouter from "./contributions";
 
 const router = Router();
 
@@ -24,5 +25,6 @@ router.use(sponsorsRouter);
 router.use(volunteersRouter);
 router.use(staffRouter);
 router.use(exportRouter);
+router.use(contributionsRouter);
 
 export default router;

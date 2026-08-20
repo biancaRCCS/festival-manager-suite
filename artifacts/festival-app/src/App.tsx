@@ -28,6 +28,10 @@ import ApplySuccessPage from '@/pages/public/apply-success';
 import PortalPage from '@/pages/portal/[token]';
 import PortalSuccessPage from '@/pages/portal/success';
 
+import SupportPage from '@/pages/public/support';
+import SupportSuccessPage from '@/pages/public/support-success';
+import ContributionsPage from '@/pages/contributions/index';
+
 import { Button } from '@/components/ui/button';
 import { Link } from 'wouter';
 import { CalendarDays, HandHeart, Store, MapPin, Clock } from 'lucide-react';
@@ -310,6 +314,25 @@ function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Support CTA Band */}
+      <section className="bg-secondary/5 border-t border-border py-20 px-6">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="font-serif text-3xl md:text-4xl font-bold text-secondary mb-6">
+            25 Years and Counting
+          </h2>
+          <p className="text-base md:text-lg text-muted-foreground leading-relaxed mb-10 max-w-2xl mx-auto">
+            Since 2001, this community has built something worth continuing. Contributions help us keep building — this festival, and the events that follow.
+          </p>
+          <Link
+            href="/support"
+            className="inline-flex items-center justify-center bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-sm px-8 h-14 shadow-md rounded-md"
+          >
+            Support the Festival
+          </Link>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="bg-secondary text-white/60 text-xs text-center py-6 tracking-wide">
         <div className="flex justify-center mb-4">
@@ -344,7 +367,7 @@ function HomeRedirect() {
 }
 
 // Protect Admin routes
-function ProtectedRoute({ component: Component, ...rest }: any) {
+function ProtectedRoute({ component: Component, redirectToSignIn = false, ...rest }: any) {
   return (
     <Route {...rest}>
       {() => (
@@ -353,7 +376,7 @@ function ProtectedRoute({ component: Component, ...rest }: any) {
             <Component />
           </Show>
           <Show when="signed-out">
-            <Redirect to="/" />
+            <Redirect to={redirectToSignIn ? "/sign-in" : "/"} />
           </Show>
         </>
       )}
@@ -421,11 +444,15 @@ function ClerkProviderWithRoutes() {
             <Route path="/apply/sponsor" component={ApplySponsorPage} />
             <Route path="/apply/volunteer" component={ApplyVolunteerPage} />
             <Route path="/apply/success" component={ApplySuccessPage} />
+
+            <Route path="/support" component={SupportPage} />
+            <Route path="/support/success" component={SupportSuccessPage} />
             
             <Route path="/portal/:token/success" component={PortalSuccessPage} />
             <Route path="/portal/:token" component={PortalPage} />
 
             <ProtectedRoute path="/dashboard" component={DashboardPage} />
+            <ProtectedRoute path="/contributions" component={ContributionsPage} redirectToSignIn />
             <ProtectedRoute path="/vendors" component={VendorsPage} />
             <ProtectedRoute path="/vendors/:id" component={VendorDetailPage} />
             <ProtectedRoute path="/sponsors" component={SponsorsPage} />

@@ -436,3 +436,43 @@ export async function sendApplicantConfirmation(params: {
 
   await send(to, subject, html);
 }
+
+// ---------------------------------------------------------------------------
+// 4. Contribution tax receipt — sent after Stripe confirms payment
+// ---------------------------------------------------------------------------
+export async function sendContributionReceipt(params: {
+  to: string;
+  name?: string | null;
+  amount: number;
+  paidAt: Date;
+  notificationEmail?: string | null;
+}): Promise<void> {
+  const { to, name, amount, paidAt, notificationEmail } = params;
+  const recipientName = name?.trim();
+  const greeting = recipientName ? `Dear ${recipientName},` : "Dear Friend,";
+  const amountDisplay = amount.toLocaleString("en-US", { style: "currency", currency: "USD" });
+  const dateDisplay = paidAt.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+  const subject = "Thank you for supporting the Romanian Community Center of Sacramento";
+  const html = `
+    <div style="${BASE_STYLE}">
+      <h2 style="color: #8b1a1a;">Thank you for your contribution</h2>
+      <p>${greeting}</p>
+      <p>On behalf of the Romanian Community Center of Sacramento, thank you for your generous contribution of <strong>${amountDisplay}</strong>, received on <strong>${dateDisplay}</strong>.</p>
+      <p>Since its establishment in 2001, our organization has proudly served and celebrated the Romanian community, fostering cultural enrichment and unity. Your contribution directly helps us continue this work and create meaningful connections through events like the Romanian Festival.</p>
+      ${DIVIDER}
+      <p>The Romanian Community Center of Sacramento is a non-profit Corporation registered with the State of California under #C2344434, with the assigned Employer Identification Number (EIN) #94-3400833. As a 501(c)(3) organization, your contribution is tax deductible. No goods or services of monetary value were provided in exchange for this contribution. Please retain this email as acknowledgement for your tax records.</p>
+      <p>With sincere appreciation,<br>
+      The Romanian Community Center of Sacramento Board of Directors</p>
+      <p><a href="https://romaniancenter.org" style="color: #8b1a1a;">romaniancenter.org</a> · <a href="mailto:info@romaniancenter.org" style="color: #8b1a1a;">info@romaniancenter.org</a></p>
+    </div>`;
+
+  const recipients = [to];
+  if (notificationEmail && notificationEmail.trim().toLowerCase() !== to.trim().toLowerCase()) {
+    recipients.push(notificationEmail);
+  }
+  await Promise.all(recipients.map((recipient) => send(recipient, subject, html)));
+}

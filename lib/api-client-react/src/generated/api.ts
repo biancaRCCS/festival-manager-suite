@@ -23,6 +23,8 @@ import type {
   AgreementSignature,
   ApplicationConfirmation,
   CheckoutSession,
+  ContributionCheckoutInput,
+  ContributionListResponse,
   DashboardSummary,
   ExportSponsorsParams,
   ExportVendorsParams,
@@ -448,6 +450,77 @@ export const useSubmitVolunteerApplication = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getSubmitVolunteerApplicationMutationOptions(options));
+    }
+
+export const getCreateContributionCheckoutUrl = () => {
+
+
+
+
+  return `/api/public/contributions/checkout`
+}
+
+/**
+ * @summary Create a Stripe Checkout session for a public contribution
+ */
+export const createContributionCheckout = async (contributionCheckoutInput: ContributionCheckoutInput, options?: RequestInit): Promise<CheckoutSession> => {
+
+  return customFetch<CheckoutSession>(getCreateContributionCheckoutUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(contributionCheckoutInput)
+  }
+);}
+
+
+
+
+
+export const getCreateContributionCheckoutMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContributionCheckout>>, TError,{data: BodyType<ContributionCheckoutInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createContributionCheckout>>, TError,{data: BodyType<ContributionCheckoutInput>}, TContext> => {
+
+const mutationKey = ['createContributionCheckout'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createContributionCheckout>>, {data: BodyType<ContributionCheckoutInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createContributionCheckout(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateContributionCheckoutMutationResult = NonNullable<Awaited<ReturnType<typeof createContributionCheckout>>>
+    export type CreateContributionCheckoutMutationBody = BodyType<ContributionCheckoutInput>
+    export type CreateContributionCheckoutMutationError = ErrorType<void>
+
+    /**
+ * @summary Create a Stripe Checkout session for a public contribution
+ */
+export const useCreateContributionCheckout = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContributionCheckout>>, TError,{data: BodyType<ContributionCheckoutInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createContributionCheckout>>,
+        TError,
+        {data: BodyType<ContributionCheckoutInput>},
+        TContext
+      > => {
+      return useMutation(getCreateContributionCheckoutMutationOptions(options));
     }
 
 export const getGetPortalInfoUrl = (token: string,) => {
@@ -891,6 +964,83 @@ export function useGetDashboardFinancials<TData = Awaited<ReturnType<typeof getD
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetDashboardFinancialsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListContributionsUrl = () => {
+
+
+
+
+  return `/api/contributions`
+}
+
+/**
+ * @summary List completed contributions for staff
+ */
+export const listContributions = async ( options?: RequestInit): Promise<ContributionListResponse> => {
+
+  return customFetch<ContributionListResponse>(getListContributionsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListContributionsQueryKey = () => {
+    return [
+    `/api/contributions`
+    ] as const;
+    }
+
+
+export const getListContributionsQueryOptions = <TData = Awaited<ReturnType<typeof listContributions>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listContributions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListContributionsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listContributions>>> = ({ signal }) => listContributions({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listContributions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListContributionsQueryResult = NonNullable<Awaited<ReturnType<typeof listContributions>>>
+export type ListContributionsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List completed contributions for staff
+ */
+
+export function useListContributions<TData = Awaited<ReturnType<typeof listContributions>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listContributions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListContributionsQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

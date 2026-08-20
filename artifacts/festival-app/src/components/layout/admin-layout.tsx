@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter"
 import { useClerk, useUser } from "@clerk/react"
 import { useEffect, useState } from "react"
-import { Calendar, Users, Briefcase, HandHeart, Settings, LogOut, ShieldCheck, Home, ClipboardList } from "lucide-react"
+import { Calendar, Users, Briefcase, HandHeart, Settings, LogOut, ShieldCheck, Home, ClipboardList, Gift } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
@@ -23,6 +23,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     { href: "/vendors",    label: "Vendors",      icon: Briefcase },
     { href: "/sponsors",   label: "Sponsors",     icon: HandHeart },
     { href: "/volunteers", label: "Volunteers",   icon: Users },
+    { href: "/contributions", label: "Contributions", icon: Gift },
     { href: "/activity",   label: "Activity Log", icon: ClipboardList },
     { href: "/staff",      label: "Staff",        icon: ShieldCheck },
     { href: "/settings",   label: "Settings",     icon: Settings, badge: emailFailureCount > 0 ? emailFailureCount : undefined },
