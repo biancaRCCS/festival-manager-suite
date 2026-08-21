@@ -226,6 +226,8 @@ export interface Sponsor {
   applicationData: SponsorApplicationData;
   agreementSigned?: boolean;
   /** @nullable */
+  agreementSignedName?: string | null;
+  /** @nullable */
   sponsorshipAmount?: number | null;
   /** @nullable */
   spotNumber?: string | null;

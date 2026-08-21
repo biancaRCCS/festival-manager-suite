@@ -29,6 +29,7 @@ function formatSponsor(s: typeof sponsorsTable.$inferSelect) {
     status: s.status,
     applicationData: s.applicationData,
     agreementSigned: s.agreementSigned,
+    agreementSignedName: s.agreementSignedName ?? null,
     spotNumber: s.spotNumber ?? null,
     location: s.location ?? null,
     reviewNote: s.reviewNote ?? null,

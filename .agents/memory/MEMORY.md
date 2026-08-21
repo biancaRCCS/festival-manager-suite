@@ -1,3 +1,4 @@
 - [Public vs protected API routes](public-api-pattern.md) — public apply forms must use /api/public/* endpoints; never call auth-protected routes (like /api/settings) from unauthenticated pages.
 - [DB schema rebuild after new tables](db-schema-rebuild.md) — after adding new schema files to lib/db, must run pnpm run typecheck:libs (tsc --build) before api-server typecheck succeeds.
 - [Vendor category + sponsor tier model](category-tier-model.md) — 4 vendor categories (major_food/specialty_food/retail/nonprofit) replaced the old 5; sponsor tiers now have min+max price ranges; see this file for key names and amounts.
+- [Durable code execution limits](durable-code-execution-limits.md) — use fixed, cleaned-up test fixtures when durable sandbox runtime IDs are unavailable.

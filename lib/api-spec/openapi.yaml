@@ -1262,6 +1262,8 @@ components:
           additionalProperties: true
         agreementSigned:
           type: boolean
+        agreementSignedName:
+          type: ["string", "null"]
         sponsorshipAmount:
           type: ["number", "null"]
         spotNumber:
