@@ -30,6 +30,12 @@ export interface Vendor {
   /** @nullable */
   paidAt?: string | null;
   /** @nullable */
+  settledAmount?: number | null;
+  /** @nullable */
+  pendingManualAdjustment?: number | null;
+  /** @nullable */
+  pendingAdjustmentTargetAmount?: number | null;
+  /** @nullable */
   approvedAt?: string | null;
   /** @nullable */
   finalApprovedAt?: string | null;

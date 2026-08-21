@@ -37,6 +37,8 @@ const TYPE_LABELS: Record<string, string> = {
   paid:            "Paid",
   final_approved:  "Final Approved",
   assigned:        "Assigned",
+  category_changed: "Category Changed",
+  category_adjustment_settled: "Category Adjustment Handled",
   deleted:         "Deleted",
   new_application: "New Application",
 }
@@ -54,6 +56,8 @@ function typeIcon(type: string) {
     case "rejected":        return <XCircle      className="w-4 h-4 text-red-500" />
     case "paid":            return <DollarSign   className="w-4 h-4 text-blue-500" />
     case "assigned":        return <Briefcase    className="w-4 h-4 text-violet-500" />
+    case "category_changed": return <ClipboardList className="w-4 h-4 text-amber-600" />
+    case "category_adjustment_settled": return <DollarSign className="w-4 h-4 text-amber-700" />
     case "deleted":         return <Trash2       className="w-4 h-4 text-gray-400" />
     case "new_application": return <UserPlus     className="w-4 h-4 text-amber-500" />
     default:                return <ClipboardList className="w-4 h-4 text-muted-foreground" />
@@ -195,6 +199,8 @@ export default function ActivityPage() {
                   <SelectItem value="paid">Paid</SelectItem>
                   <SelectItem value="final_approved">Final approved</SelectItem>
                   <SelectItem value="assigned">Assigned</SelectItem>
+                  <SelectItem value="category_changed">Category changed</SelectItem>
+                  <SelectItem value="category_adjustment_settled">Category adjustment handled</SelectItem>
                   <SelectItem value="deleted">Deleted</SelectItem>
                   <SelectItem value="new_application">New application</SelectItem>
                 </SelectContent>

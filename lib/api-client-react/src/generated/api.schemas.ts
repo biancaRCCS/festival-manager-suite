@@ -192,6 +192,12 @@ export interface Vendor {
   /** @nullable */
   paidAt?: string | null;
   /** @nullable */
+  settledAmount?: number | null;
+  /** @nullable */
+  pendingManualAdjustment?: number | null;
+  /** @nullable */
+  pendingAdjustmentTargetAmount?: number | null;
+  /** @nullable */
   approvedAt?: string | null;
   /** @nullable */
   finalApprovedAt?: string | null;
@@ -351,6 +357,8 @@ export const ActivityItemType = {
   paid: 'paid',
   final_approved: 'final_approved',
   assigned: 'assigned',
+  category_changed: 'category_changed',
+  category_adjustment_settled: 'category_adjustment_settled',
   deleted: 'deleted',
 } as const;
 
@@ -531,6 +539,62 @@ export interface ReviewDecision {
   note?: string | null;
 }
 
+export type VendorCategoryUpdateVendorType = typeof VendorCategoryUpdateVendorType[keyof typeof VendorCategoryUpdateVendorType];
+
+
+export const VendorCategoryUpdateVendorType = {
+  major_food: 'major_food',
+  specialty_food: 'specialty_food',
+  retail: 'retail',
+  nonprofit: 'nonprofit',
+} as const;
+
+export interface VendorCategoryUpdate {
+  vendorType: VendorCategoryUpdateVendorType;
+  /**
+     * @minLength 3
+     * @maxLength 2000
+     */
+  reason: string;
+}
+
+export type VendorCategoryUpdateResultNewVendorType = typeof VendorCategoryUpdateResultNewVendorType[keyof typeof VendorCategoryUpdateResultNewVendorType];
+
+
+export const VendorCategoryUpdateResultNewVendorType = {
+  major_food: 'major_food',
+  specialty_food: 'specialty_food',
+  retail: 'retail',
+  nonprofit: 'nonprofit',
+} as const;
+
+export type VendorCategoryUpdateResultPaymentAdjustmentDirection = typeof VendorCategoryUpdateResultPaymentAdjustmentDirection[keyof typeof VendorCategoryUpdateResultPaymentAdjustmentDirection];
+
+
+export const VendorCategoryUpdateResultPaymentAdjustmentDirection = {
+  collect: 'collect',
+  refund: 'refund',
+  none: 'none',
+} as const;
+
+export type VendorCategoryUpdateResultPaymentAdjustment = {
+  isPaid: boolean;
+  direction: VendorCategoryUpdateResultPaymentAdjustmentDirection;
+  amount: number;
+};
+
+export interface VendorCategoryUpdateResult {
+  vendor: Vendor;
+  previousVendorType: string;
+  newVendorType: VendorCategoryUpdateResultNewVendorType;
+  /** @nullable */
+  oldAmount: number | null;
+  newAmount: number;
+  /** @nullable */
+  boothDimensions: string | null;
+  paymentAdjustment: VendorCategoryUpdateResultPaymentAdjustment;
+}
+
 export type VolunteerReviewStatus = typeof VolunteerReviewStatus[keyof typeof VolunteerReviewStatus];
 
 
@@ -599,6 +663,8 @@ export const GetRecentActivityType = {
   paid: 'paid',
   final_approved: 'final_approved',
   assigned: 'assigned',
+  category_changed: 'category_changed',
+  category_adjustment_settled: 'category_adjustment_settled',
   deleted: 'deleted',
 } as const;
 

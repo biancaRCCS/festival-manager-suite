@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 import { db, vendorsTable, sponsorsTable, contributionsTable, festivalYearsTable, festivalSettingsTable, activityLogTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { getUncachableStripeClient } from "../lib/stripeClient";
 import { sendContributionReceipt } from "../lib/email";
 import { logger } from "../lib/logger";
@@ -39,13 +39,32 @@ export async function createCheckoutSession(params: {
 
   let price: number;
   let lineItemDescription: string;
+  let vendorPricingRevision: number | null = null;
   if (entityType === "vendor") {
     const [vendorRow] = await db
-      .select({ vendorType: vendorsTable.vendorType, applicationData: vendorsTable.applicationData })
+      .select({
+        vendorType: vendorsTable.vendorType,
+        applicationData: vendorsTable.applicationData,
+        status: vendorsTable.status,
+        stripeSessionId: vendorsTable.stripeSessionId,
+        pricingRevision: vendorsTable.pricingRevision,
+      })
       .from(vendorsTable)
       .where(eq(vendorsTable.id, entity.id))
       .limit(1);
-    const vendorType = vendorRow?.vendorType ?? "retail";
+    if (vendorRow?.status === "payment_pending" && vendorRow.stripeSessionId) {
+      const existingSession = await stripe.checkout.sessions.retrieve(vendorRow.stripeSessionId);
+      if (existingSession.status === "open" && existingSession.url) {
+        return existingSession.url;
+      }
+    }
+    if (!vendorRow || vendorRow.status !== "approved") {
+      throw new Error(
+        `[stripe] Cannot create checkout for vendor ${entity.id}: status is '${vendorRow?.status ?? "missing"}', expected 'approved'`,
+      );
+    }
+    const vendorType = vendorRow.vendorType;
+    vendorPricingRevision = vendorRow.pricingRevision;
     const vendorPriceMap: Record<string, string> = {
       major_food:    settingsRow?.vendorPriceMajorFood    ?? "2000",
       specialty_food: settingsRow?.vendorPriceSpecialtyFood ?? "600",
@@ -144,15 +163,29 @@ export async function createCheckoutSession(params: {
       token,
       entityType,
       entityId: entity.id.toString(),
+        ...(entityType === "vendor" ? { pricingRevision: String(vendorPricingRevision) } : {}),
     },
   });
 
   // Mark the entity as payment-pending and store the session ID
   if (entityType === "vendor") {
-    await db
+    const [attachedVendor] = await db
       .update(vendorsTable)
       .set({ stripeSessionId: session.id, status: "payment_pending" })
-      .where(eq(vendorsTable.id, entity.id));
+      .where(
+        and(
+          eq(vendorsTable.id, entity.id),
+          eq(vendorsTable.status, "approved"),
+          eq(vendorsTable.pricingRevision, vendorPricingRevision!),
+        ),
+      )
+      .returning({ id: vendorsTable.id });
+    if (!attachedVendor) {
+      await stripe.checkout.sessions.expire(session.id);
+      throw new Error(
+        `[stripe] Vendor ${entity.id} changed category or payment state before Checkout could be attached; expired stale Checkout.`,
+      );
+    }
   } else {
     await db
       .update(sponsorsTable)
@@ -238,18 +271,32 @@ export async function handleCheckoutComplete(session: Stripe.Checkout.Session): 
   if (isNaN(id)) return;
 
   if (entityType === "vendor") {
-    await db
+    if (session.payment_status !== "paid" || session.amount_total === null) {
+      logger.warn({ sessionId: session.id, paymentStatus: session.payment_status }, "Ignoring unpaid vendor checkout");
+      return;
+    }
+    const [updated] = await db
       .update(vendorsTable)
-      .set({ status: "paid", paidAt: new Date() })
-      .where(eq(vendorsTable.id, id));
+      .set({
+        status: "paid",
+        paidAt: new Date(),
+        settledAmount: (session.amount_total / 100).toFixed(2),
+      })
+      .where(
+        and(
+          eq(vendorsTable.id, id),
+          eq(vendorsTable.stripeSessionId, session.id),
+          eq(vendorsTable.status, "payment_pending"),
+        ),
+      )
+      .returning();
 
-    const [v] = await db.select().from(vendorsTable).where(eq(vendorsTable.id, id));
-    if (v) {
+    if (updated) {
       await db.insert(activityLogTable).values({
         type: "paid",
-        message: `Vendor ${v.name} completed payment`,
+        message: `Vendor ${updated.name} completed payment`,
         entityType: "vendor",
-        entityId: v.id,
+        entityId: updated.id,
       });
     }
   } else if (entityType === "sponsor") {

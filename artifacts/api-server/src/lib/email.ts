@@ -158,6 +158,16 @@ function field(label: string, value: string | null | undefined) {
   return `<p style="${LABEL_STYLE}">${label}</p><p style="${VALUE_STYLE}">${value}</p>`;
 }
 
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  })[character] ?? character);
+}
+
 // ---------------------------------------------------------------------------
 // Vendor category / sponsor tier display labels
 // ---------------------------------------------------------------------------
@@ -231,8 +241,14 @@ export async function sendVendorPortalInviteEmail(params: {
   name: string;
   portalUrl: string;
   festivalName: string;
+  reviewNote?: string | null;
 }) {
-  const { to, name, portalUrl, festivalName } = params;
+  const { to, name, portalUrl, festivalName, reviewNote } = params;
+  const noteSection = reviewNote?.trim()
+    ? `${DIVIDER}
+      <h3 style="color: #1a2744; margin: 0 0 8px;">A note from RCCS</h3>
+      <p>${escapeHtml(reviewNote.trim())}</p>`
+    : "";
   const subject = `Your Vendor Application for ${festivalName} — Next Steps`;
   const html = `
     <div style="${BASE_STYLE}">
@@ -252,6 +268,7 @@ export async function sendVendorPortalInviteEmail(params: {
         If the button above does not work, copy and paste this link into your browser:<br>
         <a href="${portalUrl}">${portalUrl}</a>
       </p>
+       ${noteSection}
       <p>If you have any questions, please reply to this email.</p>
       <p>We look forward to having you at the festival!</p>
     </div>`;
@@ -259,7 +276,40 @@ export async function sendVendorPortalInviteEmail(params: {
 }
 
 // ---------------------------------------------------------------------------
-// 1b. Sponsor stage-1 approval — invite to complete sponsorship details
+// 1b. Vendor category correction — applies only before payment
+// ---------------------------------------------------------------------------
+export async function sendVendorCategoryAdjustedEmail(params: {
+  to: string;
+  name: string;
+  vendorType: string;
+  amountDue: number;
+  boothDimensions: string;
+  reason: string;
+  festivalName: string;
+}) {
+  const { to, name, vendorType, amountDue, boothDimensions, reason, festivalName } = params;
+  const categoryLabel = VENDOR_LABELS[vendorType] ?? vendorType;
+  const amountDisplay = amountDue.toLocaleString("en-US", { style: "currency", currency: "USD" });
+  const subject = `Vendor Category Updated — ${festivalName}`;
+  const html = `
+    <div style="${BASE_STYLE}">
+      <h2 style="color: #8b1a1a;">Vendor Category Updated</h2>
+      <p>Dear ${escapeHtml(name)},</p>
+      <p>RCCS has updated your vendor category for <strong>${escapeHtml(festivalName)}</strong>.</p>
+      ${DIVIDER}
+      ${field("New category", escapeHtml(categoryLabel))}
+      ${field("Booth dimensions", escapeHtml(boothDimensions))}
+      ${field("New amount due", amountDisplay)}
+      ${DIVIDER}
+      <h3 style="color: #1a2744; margin: 0 0 8px;">Reason for this change</h3>
+      <p>${escapeHtml(reason)}</p>
+      <p>Please visit your private portal to review and complete the updated payment amount. If you have any questions, please reply to this email.</p>
+    </div>`;
+  await send(to, subject, html);
+}
+
+// ---------------------------------------------------------------------------
+// 1c. Sponsor stage-1 approval — invite to complete sponsorship details
 //     Payment is NOT mentioned here; it comes only after details are approved.
 // ---------------------------------------------------------------------------
 export async function sendSponsorDetailsInviteEmail(params: {

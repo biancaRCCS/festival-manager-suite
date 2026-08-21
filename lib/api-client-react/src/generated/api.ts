@@ -53,6 +53,8 @@ import type {
   StaffMember,
   Vendor,
   VendorApplicationInput,
+  VendorCategoryUpdate,
+  VendorCategoryUpdateResult,
   Volunteer,
   VolunteerApplicationInput,
   VolunteerReview
@@ -1814,6 +1816,149 @@ export const useReviewVendor = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getReviewVendorMutationOptions(options));
+    }
+
+export const getUpdateVendorCategoryUrl = (id: number,) => {
+
+
+
+
+  return `/api/vendors/${id}/category`
+}
+
+/**
+ * @summary Correct a vendor category and calculate any payment adjustment
+ */
+export const updateVendorCategory = async (id: number,
+    vendorCategoryUpdate: VendorCategoryUpdate, options?: RequestInit): Promise<VendorCategoryUpdateResult> => {
+
+  return customFetch<VendorCategoryUpdateResult>(getUpdateVendorCategoryUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(vendorCategoryUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateVendorCategoryMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateVendorCategory>>, TError,{id: number;data: BodyType<VendorCategoryUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateVendorCategory>>, TError,{id: number;data: BodyType<VendorCategoryUpdate>}, TContext> => {
+
+const mutationKey = ['updateVendorCategory'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateVendorCategory>>, {id: number;data: BodyType<VendorCategoryUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateVendorCategory(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateVendorCategoryMutationResult = NonNullable<Awaited<ReturnType<typeof updateVendorCategory>>>
+    export type UpdateVendorCategoryMutationBody = BodyType<VendorCategoryUpdate>
+    export type UpdateVendorCategoryMutationError = ErrorType<void>
+
+    /**
+ * @summary Correct a vendor category and calculate any payment adjustment
+ */
+export const useUpdateVendorCategory = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateVendorCategory>>, TError,{id: number;data: BodyType<VendorCategoryUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateVendorCategory>>,
+        TError,
+        {id: number;data: BodyType<VendorCategoryUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateVendorCategoryMutationOptions(options));
+    }
+
+export const getSettleVendorCategoryAdjustmentUrl = (id: number,) => {
+
+
+
+
+  return `/api/vendors/${id}/settle-category-adjustment`
+}
+
+/**
+ * @summary Mark a paid vendor's manual category adjustment as handled
+ */
+export const settleVendorCategoryAdjustment = async (id: number, options?: RequestInit): Promise<Vendor> => {
+
+  return customFetch<Vendor>(getSettleVendorCategoryAdjustmentUrl(id),
+  {
+    ...options,
+    method: 'PATCH'
+
+
+  }
+);}
+
+
+
+
+
+export const getSettleVendorCategoryAdjustmentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof settleVendorCategoryAdjustment>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof settleVendorCategoryAdjustment>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['settleVendorCategoryAdjustment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof settleVendorCategoryAdjustment>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  settleVendorCategoryAdjustment(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SettleVendorCategoryAdjustmentMutationResult = NonNullable<Awaited<ReturnType<typeof settleVendorCategoryAdjustment>>>
+
+    export type SettleVendorCategoryAdjustmentMutationError = ErrorType<void>
+
+    /**
+ * @summary Mark a paid vendor's manual category adjustment as handled
+ */
+export const useSettleVendorCategoryAdjustment = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof settleVendorCategoryAdjustment>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof settleVendorCategoryAdjustment>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getSettleVendorCategoryAdjustmentMutationOptions(options));
     }
 
 export const getFinalApproveVendorUrl = (id: number,) => {

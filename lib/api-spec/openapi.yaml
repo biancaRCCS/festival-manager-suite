@@ -313,7 +313,7 @@ paths:
           name: type
           schema:
             type: string
-            enum: [new_application, approved, rejected, paid, final_approved, assigned, deleted]
+            enum: [new_application, approved, rejected, paid, final_approved, assigned, category_changed, category_adjustment_settled, deleted]
         - in: query
           name: entityType
           schema:
@@ -526,6 +526,62 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Vendor"
+
+  /vendors/{id}/category:
+    patch:
+      operationId: updateVendorCategory
+      tags: [vendors]
+      summary: Correct a vendor category and calculate any payment adjustment
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VendorCategoryUpdate"
+      responses:
+        "200":
+          description: Updated vendor category and payment adjustment details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VendorCategoryUpdateResult"
+        "400":
+          description: Invalid update
+        "404":
+          description: Not found
+
+  /vendors/{id}/settle-category-adjustment:
+    patch:
+      operationId: settleVendorCategoryAdjustment
+      tags: [vendors]
+      summary: Mark a paid vendor's manual category adjustment as handled
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Vendor with the manual adjustment cleared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vendor"
+        "404":
+          description: Not found
+        "409":
+          description: No manual adjustment is awaiting settlement
 
   /vendors/{id}/final-approve:
     patch:
@@ -1229,6 +1285,12 @@ components:
           type: ["string", "null"]
         paidAt:
           type: ["string", "null"]
+        settledAmount:
+          type: ["number", "null"]
+        pendingManualAdjustment:
+          type: ["number", "null"]
+        pendingAdjustmentTargetAmount:
+          type: ["number", "null"]
         approvedAt:
           type: ["string", "null"]
         finalApprovedAt:
@@ -1415,7 +1477,7 @@ components:
           type: integer
         type:
           type: string
-          enum: [new_application, approved, rejected, paid, final_approved, assigned, deleted]
+          enum: [new_application, approved, rejected, paid, final_approved, assigned, category_changed, category_adjustment_settled, deleted]
         message:
           type: string
         entityType:
@@ -1645,6 +1707,47 @@ components:
           enum: [approved, rejected]
         note:
           type: ["string", "null"]
+
+    VendorCategoryUpdate:
+      type: object
+      required: [vendorType, reason]
+      properties:
+        vendorType:
+          type: string
+          enum: [major_food, specialty_food, retail, nonprofit]
+        reason:
+          type: string
+          minLength: 3
+          maxLength: 2000
+
+    VendorCategoryUpdateResult:
+      type: object
+      required: [vendor, previousVendorType, newVendorType, oldAmount, newAmount, boothDimensions, paymentAdjustment]
+      properties:
+        vendor:
+          $ref: "#/components/schemas/Vendor"
+        previousVendorType:
+          type: string
+        newVendorType:
+          type: string
+          enum: [major_food, specialty_food, retail, nonprofit]
+        oldAmount:
+          type: ["number", "null"]
+        newAmount:
+          type: number
+        boothDimensions:
+          type: ["string", "null"]
+        paymentAdjustment:
+          type: object
+          required: [isPaid, direction, amount]
+          properties:
+            isPaid:
+              type: boolean
+            direction:
+              type: string
+              enum: [collect, refund, none]
+            amount:
+              type: number
 
     VolunteerReview:
       type: object

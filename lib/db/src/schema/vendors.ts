@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, boolean, jsonb, numeric, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { festivalYearsTable } from "./festivalYears";
@@ -21,6 +21,15 @@ export const vendorsTable = pgTable("vendors", {
   portalToken: text("portal_token"),
   stripeSessionId: text("stripe_session_id"),
   paidAt: timestamp("paid_at", { withTimezone: true }),
+  // The amount fully settled against the vendor's current category. Stripe
+  // establishes the initial value; staff update it only after resolving a
+  // recorded manual category adjustment.
+  settledAmount: numeric("settled_amount", { precision: 10, scale: 2 }),
+  pendingManualAdjustment: numeric("pending_manual_adjustment", { precision: 10, scale: 2 }),
+  pendingAdjustmentTargetAmount: numeric("pending_adjustment_target_amount", { precision: 10, scale: 2 }),
+  // Incremented whenever a category recalculates a vendor's amount due. A
+  // Checkout is attached only if this remains unchanged while Stripe creates it.
+  pricingRevision: integer("pricing_revision").notNull().default(0),
   approvedAt: timestamp("approved_at", { withTimezone: true }),
   finalApprovedAt: timestamp("final_approved_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

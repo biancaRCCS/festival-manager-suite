@@ -14,6 +14,8 @@ import {
   sendApplicantConfirmation,
   sendContributionReceipt,
   sendTestEmail,
+  sendVendorCategoryAdjustedEmail,
+  sendVendorPortalInviteEmail,
 } from "../lib/email";
 
 const originalResendKey = process.env.RESEND_API_KEY;
@@ -87,6 +89,44 @@ describe("shared email layout", () => {
     const email = resendSendSpy.mock.calls[0][0] as { subject: string; html: string };
     expect(email.subject).toBe("Romanian Festival — Test Email");
     expect(email.html).toContain("Email is working ✓");
+    expectSharedLayout(email.html);
+  });
+
+  it("includes an approved vendor's review note under the RCCS heading", async () => {
+    await sendVendorPortalInviteEmail({
+      to: "vendor@example.com",
+      name: "Maria Ionescu",
+      portalUrl: "https://festival.example.test/portal/example-token",
+      festivalName: "2026 Romanian Festival",
+      reviewNote: "We saved a corner spot request for you.",
+    });
+
+    expect(resendSendSpy).toHaveBeenCalledOnce();
+    const email = resendSendSpy.mock.calls[0][0] as { subject: string; html: string };
+    expect(email.subject).toBe("Your Vendor Application for 2026 Romanian Festival — Next Steps");
+    expect(email.html).toContain("A note from RCCS");
+    expect(email.html).toContain("We saved a corner spot request for you.");
+    expectSharedLayout(email.html);
+  });
+
+  it("sends unpaid vendors a category update with the amount and reason", async () => {
+    await sendVendorCategoryAdjustedEmail({
+      to: "vendor@example.com",
+      name: "Maria Ionescu",
+      vendorType: "specialty_food",
+      amountDue: 1200,
+      boothDimensions: "10′×20′",
+      reason: "The submitted menu is a specialty food booth.",
+      festivalName: "2026 Romanian Festival",
+    });
+
+    expect(resendSendSpy).toHaveBeenCalledOnce();
+    const email = resendSendSpy.mock.calls[0][0] as { subject: string; html: string };
+    expect(email.subject).toBe("Vendor Category Updated — 2026 Romanian Festival");
+    expect(email.html).toContain("Vendor Category Updated");
+    expect(email.html).toContain("Specialty Food &amp; Beverage Vendor");
+    expect(email.html).toContain("$1,200.00");
+    expect(email.html).toContain("The submitted menu is a specialty food booth.");
     expectSharedLayout(email.html);
   });
 });

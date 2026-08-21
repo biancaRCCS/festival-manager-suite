@@ -1,15 +1,16 @@
 import { useState, useRef } from "react"
 import { useLocation, useParams } from "wouter"
-import { useGetVendor, useReviewVendor, useFinalApproveVendor, useAssignVendorSpot, getGetVendorQueryKey, useDeleteVendor } from "@workspace/api-client-react"
+import { useGetVendor, useGetSettings, useReviewVendor, useUpdateVendorCategory, useSettleVendorCategoryAdjustment, useFinalApproveVendor, useAssignVendorSpot, getGetVendorQueryKey, getGetSettingsQueryKey, useDeleteVendor } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { ArrowLeft, CheckCircle2, XCircle, MapPin, Clock, Trash2 } from "lucide-react"
+import { ArrowLeft, CheckCircle2, XCircle, MapPin, Clock, Trash2, Pencil, AlertTriangle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 // ---------------------------------------------------------------------------
@@ -101,7 +102,13 @@ export default function VendorDetailPage() {
   const { toast } = useToast()
 
   const { data: vendor, isLoading } = useGetVendor(id, { query: { enabled: !!id, queryKey: getGetVendorQueryKey(id) } })
+  const { data: settings } = useGetSettings(
+    { yearId: vendor?.yearId },
+    { query: { enabled: !!vendor?.yearId, queryKey: getGetSettingsQueryKey({ yearId: vendor?.yearId }) } }
+  )
   const reviewMutation = useReviewVendor({ mutation: { mutationKey: ["reviewVendor", id] } })
+  const categoryMutation = useUpdateVendorCategory({ mutation: { mutationKey: ["updateVendorCategory", id] } })
+  const settleAdjustmentMutation = useSettleVendorCategoryAdjustment({ mutation: { mutationKey: ["settleVendorCategoryAdjustment", id] } })
   const finalApproveMutation = useFinalApproveVendor({ mutation: { mutationKey: ["finalApproveVendor", id] } })
   const assignSpotMutation = useAssignVendorSpot({ mutation: { mutationKey: ["assignSpotVendor", id] } })
   const deleteMutation = useDeleteVendor()
@@ -110,8 +117,16 @@ export default function VendorDetailPage() {
   const [spotNumber, setSpotNumber] = useState("")
   const [locationName, setLocationName] = useState("")
   const [isReviewOpen, setIsReviewOpen] = useState(false)
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false)
   const [isSpotOpen, setIsSpotOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState("")
+  const [categoryReason, setCategoryReason] = useState("")
+  const [paymentReconciliation, setPaymentReconciliation] = useState<{
+    oldAmount: number | null
+    newAmount: number
+    paymentAdjustment: { isPaid: boolean; direction: "collect" | "refund" | "none"; amount: number }
+  } | null>(null)
 
   const reviewMutateFnRef = useRef(reviewMutation.mutate)
   reviewMutateFnRef.current = reviewMutation.mutate
@@ -119,6 +134,14 @@ export default function VendorDetailPage() {
   finalApproveMutateFnRef.current = finalApproveMutation.mutate
   const assignSpotMutateFnRef = useRef(assignSpotMutation.mutate)
   assignSpotMutateFnRef.current = assignSpotMutation.mutate
+
+  const openCategoryDialog = (open: boolean) => {
+    setIsCategoryOpen(open)
+    if (open && vendor) {
+      setSelectedCategory(vendor.vendorType)
+      setCategoryReason("")
+    }
+  }
 
   const handleReview = (status: 'approved' | 'rejected') => {
     reviewMutateFnRef.current(
@@ -162,6 +185,45 @@ export default function VendorDetailPage() {
     )
   }
 
+  const handleCategoryChange = () => {
+    if (!vendor || selectedCategory === vendor.vendorType || categoryReason.trim().length < 3) return
+
+    categoryMutation.mutate(
+      { id, data: { vendorType: selectedCategory as "major_food" | "specialty_food" | "retail" | "nonprofit", reason: categoryReason.trim() } },
+      {
+        onSuccess: (data) => {
+          queryClient.setQueryData(getGetVendorQueryKey(id), data.vendor)
+          setIsCategoryOpen(false)
+          const { paymentAdjustment } = data
+          setPaymentReconciliation(paymentAdjustment.isPaid
+            ? { oldAmount: data.oldAmount, newAmount: data.newAmount, paymentAdjustment }
+            : null)
+          const adjustmentMessage = paymentAdjustment.isPaid && paymentAdjustment.amount > 0
+            ? paymentAdjustment.direction === "collect"
+              ? `Collect ${paymentAdjustment.amount.toLocaleString("en-US", { style: "currency", currency: "USD" })} manually from this paid vendor.`
+              : `Refund ${paymentAdjustment.amount.toLocaleString("en-US", { style: "currency", currency: "USD" })} manually to this paid vendor.`
+            : "The vendor will receive their updated payment details."
+          toast({ title: "Vendor category updated", description: adjustmentMessage })
+        },
+        onError: () => toast({ title: "Failed to update vendor category", variant: "destructive" })
+      }
+    )
+  }
+
+  const handleSettleCategoryAdjustment = () => {
+    settleAdjustmentMutation.mutate(
+      { id },
+      {
+        onSuccess: (data) => {
+          queryClient.setQueryData(getGetVendorQueryKey(id), data)
+          setPaymentReconciliation(null)
+          toast({ title: "Manual adjustment marked handled" })
+        },
+        onError: () => toast({ title: "Unable to settle the manual adjustment", variant: "destructive" })
+      }
+    )
+  }
+
   const handleDelete = () => {
     deleteMutation.mutate(
       { id },
@@ -185,12 +247,29 @@ export default function VendorDetailPage() {
   const isFood = FOOD_KEYS.has(vendor.vendorType)
   const isNonprofit = vendor.vendorType === "nonprofit"
   const categoryLabel = VENDOR_TYPE_LABELS[vendor.vendorType] ?? vendor.vendorType
-  const fee = VENDOR_FEES[vendor.vendorType] ?? 0
+  const feeForCategory = (type: string) => {
+    const settingKey = {
+      major_food: "vendorPriceMajorFood",
+      specialty_food: "vendorPriceSpecialtyFood",
+      retail: "vendorPriceRetail",
+      nonprofit: "vendorPriceNonprofit",
+    }[type] as keyof typeof settings | undefined
+    const configuredFee = settingKey ? Number(settings?.[settingKey]) : NaN
+    return Number.isFinite(configuredFee) ? configuredFee : (VENDOR_FEES[type] ?? 0)
+  }
+  const fee = feeForCategory(vendor.vendorType)
   const spaceSizes = SPACE_SIZES[vendor.vendorType]
   const spaces = str("spacesRequested")
+  const isDoubleSpace = spaces === "double"
+  const currentAmount = isDoubleSpace ? fee * 2 : fee
+  const selectedFee = feeForCategory(selectedCategory)
+  const selectedAmount = isDoubleSpace ? selectedFee * 2 : selectedFee
+  const selectedSpaceDimensions = selectedCategory
+    ? SPACE_SIZES[selectedCategory]?.[isDoubleSpace ? "double" : "single"]
+    : null
   const spaceDim = spaces === "double" ? spaceSizes?.double : spaceSizes?.single
   const spaceLabel = spaces
-    ? `${spaces === "double" ? "Double" : "Single"} — ${spaceDim} · $${spaces === "double" ? (fee * 2).toLocaleString() : fee.toLocaleString()}`
+    ? `${spaces === "double" ? "Double" : "Single"} — ${spaceDim} · $${currentAmount.toLocaleString()}`
     : null
 
   const cookingEquipment = Array.isArray(ad.cookingEquipment)
@@ -225,7 +304,7 @@ export default function VendorDetailPage() {
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     <div className="space-y-2">
-                      <Label>Internal Note (Optional)</Label>
+                       <Label>A note from RCCS (optional)</Label>
                       <Input value={reviewNote} onChange={e => setReviewNote(e.target.value)} placeholder="e.g., They requested a corner spot" />
                     </div>
                   </div>
@@ -235,6 +314,86 @@ export default function VendorDetailPage() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+            )}
+
+            <Dialog open={isCategoryOpen} onOpenChange={openCategoryDialog}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="border-primary/20 hover:bg-primary/5 text-primary">
+                  <Pencil className="w-4 h-4 mr-2" /> Change Category
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Change vendor category</DialogTitle>
+                  <DialogDescription>
+                    Update this vendor’s category, booth dimensions, and amount due. RCCS records why each change was made.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="vendor-category">New category</Label>
+                    <select
+                      id="vendor-category"
+                      value={selectedCategory}
+                      onChange={(event) => setSelectedCategory(event.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    >
+                      {Object.entries(VENDOR_TYPE_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {selectedCategory && selectedCategory !== vendor.vendorType && (
+                    <div className="rounded-md border bg-muted/40 p-3 text-sm">
+                      <p><span className="font-medium">Updated booth:</span> {selectedSpaceDimensions}</p>
+                      <p><span className="font-medium">Updated amount due:</span> {selectedAmount.toLocaleString("en-US", { style: "currency", currency: "USD" })}</p>
+                    </div>
+                  )}
+                  {vendor.paidAt && selectedCategory !== vendor.vendorType && (
+                    <div role="alert" className="flex gap-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+                      <div>
+                        <p className="font-semibold">Manual payment adjustment required</p>
+                        <p>
+                          RCCS will verify the original Stripe payment when this change is saved, then show the exact manual amount to collect or refund.
+                          {" "}No automatic charge, refund, or email will be sent.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor="category-reason">Reason for change</Label>
+                    <Textarea
+                      id="category-reason"
+                      value={categoryReason}
+                      onChange={(event) => setCategoryReason(event.target.value)}
+                      placeholder="Explain why RCCS is correcting this category."
+                      rows={4}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsCategoryOpen(false)}>Cancel</Button>
+                  <Button
+                    onClick={handleCategoryChange}
+                    disabled={selectedCategory === vendor.vendorType || categoryReason.trim().length < 3 || categoryMutation.isPending}
+                  >
+                    {categoryMutation.isPending ? "Saving…" : "Save Category Change"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {vendor.pendingManualAdjustment != null && (
+              <Button
+                onClick={handleSettleCategoryAdjustment}
+                variant="outline"
+                disabled={settleAdjustmentMutation.isPending}
+                className="border-amber-400 text-amber-900 hover:bg-amber-50"
+              >
+                <AlertTriangle className="w-4 h-4 mr-2" />
+                {settleAdjustmentMutation.isPending ? "Recording…" : "Mark Manual Adjustment Handled"}
+              </Button>
             )}
 
             {vendor.status === 'paid' && (
@@ -472,9 +631,9 @@ export default function VendorDetailPage() {
                   <span className="text-sm font-medium">Amount Due</span>
                   <div className="text-right">
                     <span className="text-sm font-semibold text-foreground">
-                      ${(spaces === "double" ? fee * 2 : fee).toLocaleString()}
+                      ${currentAmount.toLocaleString()}
                     </span>
-                    {spaces === "double" && (
+                    {isDoubleSpace && (
                       <p className="text-xs text-muted-foreground">2 × ${fee.toLocaleString()}</p>
                     )}
                   </div>
@@ -493,9 +652,28 @@ export default function VendorDetailPage() {
                     <Badge variant="secondary">Pending</Badge>
                   }
                 </div>
+                {(paymentReconciliation?.paymentAdjustment.isPaid || vendor.pendingManualAdjustment != null) && (
+                  <div role="alert" className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+                    <p className="font-semibold">Manual payment reconciliation</p>
+                    <p className="mt-1">
+                      {vendor.pendingManualAdjustment != null
+                        ? <>
+                            A {vendor.pendingManualAdjustment > 0 ? "collection" : "refund"} of {Math.abs(vendor.pendingManualAdjustment).toLocaleString("en-US", { style: "currency", currency: "USD" })} is awaiting manual handling.
+                            {" "}After it is complete outside the app, use <strong>Mark Manual Adjustment Handled</strong> before changing this vendor’s category again.
+                          </>
+                        : <>
+                            The vendor paid {paymentReconciliation?.oldAmount?.toLocaleString("en-US", { style: "currency", currency: "USD" })}.
+                            {" "}Their corrected amount is {paymentReconciliation?.newAmount.toLocaleString("en-US", { style: "currency", currency: "USD" })}.
+                            {paymentReconciliation?.paymentAdjustment.direction === "collect" && ` Collect ${paymentReconciliation.paymentAdjustment.amount.toLocaleString("en-US", { style: "currency", currency: "USD" })} manually.`}
+                            {paymentReconciliation?.paymentAdjustment.direction === "refund" && ` Refund ${paymentReconciliation.paymentAdjustment.amount.toLocaleString("en-US", { style: "currency", currency: "USD" })} manually.`}
+                            {paymentReconciliation?.paymentAdjustment.direction === "none" && " No payment adjustment is needed."}
+                          </>}
+                    </p>
+                  </div>
+                )}
                 {vendor.reviewNote && (
                   <div className="pt-4 border-t">
-                    <span className="text-xs font-medium text-muted-foreground block mb-1">Internal Note</span>
+                     <span className="text-xs font-medium text-muted-foreground block mb-1">Review Note</span>
                     <p className="text-sm bg-yellow-50 p-2 text-yellow-900 rounded">{vendor.reviewNote}</p>
                   </div>
                 )}

@@ -343,14 +343,14 @@ export const getRecentActivityQueryLimitMax = 100;
 export const GetRecentActivityQueryParams = zod.object({
   "page": zod.coerce.number().min(1).default(getRecentActivityQueryPageDefault),
   "limit": zod.coerce.number().min(1).max(getRecentActivityQueryLimitMax).default(getRecentActivityQueryLimitDefault),
-  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'deleted']).optional(),
+  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'category_changed', 'category_adjustment_settled', 'deleted']).optional(),
   "entityType": zod.enum(['vendor', 'sponsor', 'volunteer']).optional()
 })
 
 export const GetRecentActivityResponse = zod.object({
   "items": zod.array(zod.object({
   "id": zod.number(),
-  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'deleted']),
+  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'category_changed', 'category_adjustment_settled', 'deleted']),
   "message": zod.string(),
   "entityType": zod.enum(['vendor', 'sponsor', 'volunteer']),
   "entityId": zod.number().optional(),
@@ -650,6 +650,9 @@ export const ListVendorsResponseItem = zod.object({
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
   "paidAt": zod.string().nullish(),
+  "settledAmount": zod.number().nullish(),
+  "pendingManualAdjustment": zod.number().nullish(),
+  "pendingAdjustmentTargetAmount": zod.number().nullish(),
   "approvedAt": zod.string().nullish(),
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
@@ -680,6 +683,9 @@ export const GetVendorResponse = zod.object({
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
   "paidAt": zod.string().nullish(),
+  "settledAmount": zod.number().nullish(),
+  "pendingManualAdjustment": zod.number().nullish(),
+  "pendingAdjustmentTargetAmount": zod.number().nullish(),
   "approvedAt": zod.string().nullish(),
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
@@ -724,6 +730,95 @@ export const ReviewVendorResponse = zod.object({
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
   "paidAt": zod.string().nullish(),
+  "settledAmount": zod.number().nullish(),
+  "pendingManualAdjustment": zod.number().nullish(),
+  "pendingAdjustmentTargetAmount": zod.number().nullish(),
+  "approvedAt": zod.string().nullish(),
+  "finalApprovedAt": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Correct a vendor category and calculate any payment adjustment
+ */
+export const UpdateVendorCategoryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateVendorCategoryBodyReasonMin = 3;
+export const updateVendorCategoryBodyReasonMax = 2000;
+
+
+
+export const UpdateVendorCategoryBody = zod.object({
+  "vendorType": zod.enum(['major_food', 'specialty_food', 'retail', 'nonprofit']),
+  "reason": zod.string().min(updateVendorCategoryBodyReasonMin).max(updateVendorCategoryBodyReasonMax)
+})
+
+export const UpdateVendorCategoryResponse = zod.object({
+  "vendor": zod.object({
+  "id": zod.number(),
+  "yearId": zod.number(),
+  "name": zod.string(),
+  "businessName": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string(),
+  "vendorType": zod.string(),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'payment_pending', 'paid', 'final_approved']),
+  "applicationData": zod.record(zod.string(), zod.unknown()),
+  "agreementSigned": zod.boolean().optional(),
+  "agreementSignedName": zod.string().nullish(),
+  "spotNumber": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "reviewNote": zod.string().nullish(),
+  "paidAt": zod.string().nullish(),
+  "settledAmount": zod.number().nullish(),
+  "pendingManualAdjustment": zod.number().nullish(),
+  "pendingAdjustmentTargetAmount": zod.number().nullish(),
+  "approvedAt": zod.string().nullish(),
+  "finalApprovedAt": zod.string().nullish(),
+  "createdAt": zod.string()
+}),
+  "previousVendorType": zod.string(),
+  "newVendorType": zod.enum(['major_food', 'specialty_food', 'retail', 'nonprofit']),
+  "oldAmount": zod.number().nullable(),
+  "newAmount": zod.number(),
+  "boothDimensions": zod.string().nullable(),
+  "paymentAdjustment": zod.object({
+  "isPaid": zod.boolean(),
+  "direction": zod.enum(['collect', 'refund', 'none']),
+  "amount": zod.number()
+})
+})
+
+
+/**
+ * @summary Mark a paid vendor's manual category adjustment as handled
+ */
+export const SettleVendorCategoryAdjustmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const SettleVendorCategoryAdjustmentResponse = zod.object({
+  "id": zod.number(),
+  "yearId": zod.number(),
+  "name": zod.string(),
+  "businessName": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string(),
+  "vendorType": zod.string(),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'payment_pending', 'paid', 'final_approved']),
+  "applicationData": zod.record(zod.string(), zod.unknown()),
+  "agreementSigned": zod.boolean().optional(),
+  "agreementSignedName": zod.string().nullish(),
+  "spotNumber": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "reviewNote": zod.string().nullish(),
+  "paidAt": zod.string().nullish(),
+  "settledAmount": zod.number().nullish(),
+  "pendingManualAdjustment": zod.number().nullish(),
+  "pendingAdjustmentTargetAmount": zod.number().nullish(),
   "approvedAt": zod.string().nullish(),
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
@@ -753,6 +848,9 @@ export const FinalApproveVendorResponse = zod.object({
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
   "paidAt": zod.string().nullish(),
+  "settledAmount": zod.number().nullish(),
+  "pendingManualAdjustment": zod.number().nullish(),
+  "pendingAdjustmentTargetAmount": zod.number().nullish(),
   "approvedAt": zod.string().nullish(),
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
@@ -787,6 +885,9 @@ export const AssignVendorSpotResponse = zod.object({
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
   "paidAt": zod.string().nullish(),
+  "settledAmount": zod.number().nullish(),
+  "pendingManualAdjustment": zod.number().nullish(),
+  "pendingAdjustmentTargetAmount": zod.number().nullish(),
   "approvedAt": zod.string().nullish(),
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
