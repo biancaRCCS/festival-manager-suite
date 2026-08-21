@@ -1,6 +1,6 @@
 import { useState, useRef } from "react"
 import { useLocation, useParams } from "wouter"
-import { useGetSponsor, useReviewSponsor, useFinalApproveSponsor, useAssignSponsorSpot, getGetSponsorQueryKey, useDeleteSponsor } from "@workspace/api-client-react"
+import { useGetSponsor, useReviewSponsor, useFinalApproveSponsor, useAssignSponsorSpot, getGetSponsorQueryKey, useDeleteSponsor, useResendSponsorConfirmation } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { ArrowLeft, CheckCircle2, MapPin, Clock, Trash2, Check, Circle } from "lucide-react"
+import { ArrowLeft, CheckCircle2, MapPin, Clock, Trash2, Check, Circle, Mail } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 // ---------------------------------------------------------------------------
@@ -186,6 +186,7 @@ export default function SponsorDetailPage() {
   const finalApproveMutation = useFinalApproveSponsor({ mutation: { mutationKey: ["finalApproveSponsor", id] } })
   const assignSpotMutation   = useAssignSponsorSpot({ mutation: { mutationKey: ["assignSpotSponsor", id] } })
   const deleteMutation       = useDeleteSponsor()
+  const resendMutation       = useResendSponsorConfirmation()
 
   const [reviewNote, setReviewNote]             = useState("")
   const [spotNumber, setSpotNumber]             = useState("")
@@ -251,6 +252,16 @@ export default function SponsorDetailPage() {
       {
         onSuccess: () => { toast({ title: "Sponsor record deleted" }); setLocation("/sponsors") },
         onError: () => toast({ title: "Failed to delete sponsor", variant: "destructive" }),
+      }
+    )
+  }
+
+  const handleResend = () => {
+    resendMutation.mutate(
+      { id },
+      {
+        onSuccess: () => toast({ title: "Confirmation email resent successfully" }),
+        onError: () => toast({ title: "Failed to resend confirmation email", variant: "destructive" }),
       }
     )
   }
@@ -390,6 +401,16 @@ export default function SponsorDetailPage() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+
+            <Button
+              variant="outline"
+              className="border-secondary/30 hover:bg-secondary/10 text-secondary-foreground"
+              onClick={handleResend}
+              disabled={resendMutation.isPending}
+            >
+              <Mail className="w-4 h-4 mr-2" />
+              {resendMutation.isPending ? "Sending…" : "Resend Confirmation"}
+            </Button>
 
             <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
               <DialogTrigger asChild>

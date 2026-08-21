@@ -631,6 +631,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/Vendor"
 
+  /vendors/{id}/resend-confirmation:
+    post:
+      operationId: resendVendorConfirmation
+      tags: [vendors]
+      summary: Resend applicant confirmation email to a vendor
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Email queued
+        "404":
+          description: Not found
+
   # ─── SPONSORS ────────────────────────────────────────────
   /sponsors:
     get:
@@ -773,6 +792,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/Sponsor"
 
+  /sponsors/{id}/resend-confirmation:
+    post:
+      operationId: resendSponsorConfirmation
+      tags: [sponsors]
+      summary: Resend applicant confirmation email to a sponsor
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Email queued
+        "404":
+          description: Not found
+
   # ─── VOLUNTEERS ──────────────────────────────────────────
   /volunteers:
     get:
@@ -866,6 +904,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Volunteer"
+
+  /volunteers/{id}/resend-confirmation:
+    post:
+      operationId: resendVolunteerConfirmation
+      tags: [volunteers]
+      summary: Resend applicant confirmation email to a volunteer
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Email queued
+        "404":
+          description: Not found
 
   # ─── STAFF ───────────────────────────────────────────────
   /staff:

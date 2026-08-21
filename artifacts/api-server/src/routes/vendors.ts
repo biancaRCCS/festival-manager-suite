@@ -14,7 +14,12 @@ import {
   AssignVendorSpotBody,
 } from "@workspace/api-zod";
 import { randomBytes } from "crypto";
-import { sendVendorCategoryAdjustedEmail, sendVendorPortalInviteEmail } from "../lib/email";
+import {
+  sendApplicantConfirmation,
+  sendVendorCategoryAdjustedEmail,
+  sendVendorPortalInviteEmail,
+  VENDOR_LABELS,
+} from "../lib/email";
 import { getUncachableStripeClient } from "../lib/stripeClient";
 
 const router: IRouter = Router();
@@ -432,6 +437,38 @@ router.patch("/vendors/:id/assign", requireStaff, async (req, res): Promise<void
   });
 
   res.json(formatVendor(updated));
+});
+
+router.post("/vendors/:id/resend-confirmation", requireStaff, async (req, res): Promise<void> => {
+  const parsed = GetVendorParams.safeParse(req.params);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid ID" });
+    return;
+  }
+
+  const [vendor] = await db.select().from(vendorsTable).where(eq(vendorsTable.id, parsed.data.id));
+  if (!vendor) {
+    res.status(404).json({ error: "Vendor not found" });
+    return;
+  }
+
+  sendApplicantConfirmation({
+    to: vendor.email,
+    applicantName: vendor.name,
+    applicationType: "vendor",
+    organizationOrBusiness: vendor.businessName,
+    categoryOrTier: VENDOR_LABELS[vendor.vendorType] ?? vendor.vendorType,
+  });
+
+  await db.insert(activityLogTable).values({
+    type: "email_resent",
+    message: `Confirmation email resent to vendor ${vendor.name} (${vendor.businessName}) at ${vendor.email}`,
+    entityType: "vendor",
+    entityId: vendor.id,
+    performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
+  });
+
+  res.status(204).send();
 });
 
 router.delete("/vendors/:id", requireStaff, async (req, res): Promise<void> => {

@@ -12,7 +12,7 @@ import {
   AssignSponsorSpotBody,
 } from "@workspace/api-zod";
 import { randomBytes } from "crypto";
-import { sendSponsorDetailsInviteEmail, sendSponsorPaymentReadyEmail } from "../lib/email";
+import { sendSponsorDetailsInviteEmail, sendSponsorPaymentReadyEmail, sendApplicantConfirmation, TIER_LABELS } from "../lib/email";
 
 const router: IRouter = Router();
 
@@ -226,6 +226,37 @@ router.patch("/sponsors/:id/assign", requireStaff, async (req, res): Promise<voi
   });
 
   res.json(formatSponsor(updated));
+});
+
+router.post("/sponsors/:id/resend-confirmation", requireStaff, async (req, res): Promise<void> => {
+  const parsed = GetSponsorParams.safeParse(req.params);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid ID" });
+    return;
+  }
+  const [sponsor] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, parsed.data.id));
+  if (!sponsor) {
+    res.status(404).json({ error: "Sponsor not found" });
+    return;
+  }
+
+  sendApplicantConfirmation({
+    to: sponsor.email,
+    applicantName: sponsor.name,
+    applicationType: "sponsor",
+    organizationOrBusiness: sponsor.orgName,
+    categoryOrTier: TIER_LABELS[sponsor.tier] ?? sponsor.tier,
+  });
+
+  await db.insert(activityLogTable).values({
+    type: "email_resent",
+    message: `Confirmation email resent to sponsor ${sponsor.name} (${sponsor.orgName}) at ${sponsor.email}`,
+    entityType: "sponsor",
+    entityId: sponsor.id,
+    performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
+  });
+
+  res.status(204).send();
 });
 
 router.delete("/sponsors/:id", requireStaff, async (req, res): Promise<void> => {

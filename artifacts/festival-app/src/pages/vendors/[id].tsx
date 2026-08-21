@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ArrowLeft, CheckCircle2, XCircle, MapPin, Clock, Trash2, Pencil, AlertTriangle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useGetVendor, useReviewVendor, useFinalApproveVendor, useAssignVendorSpot, getGetVendorQueryKey, useDeleteVendor, useResendVendorConfirmation } from "@workspace/api-client-react"
+import { ArrowLeft, CheckCircle2, XCircle, MapPin, Clock, Trash2, Mail } from "lucide-react"
 
 // ---------------------------------------------------------------------------
 // Display helpers
@@ -112,6 +114,7 @@ export default function VendorDetailPage() {
   const finalApproveMutation = useFinalApproveVendor({ mutation: { mutationKey: ["finalApproveVendor", id] } })
   const assignSpotMutation = useAssignVendorSpot({ mutation: { mutationKey: ["assignSpotVendor", id] } })
   const deleteMutation = useDeleteVendor()
+  const resendMutation = useResendVendorConfirmation()
 
   const [reviewNote, setReviewNote] = useState("")
   const [spotNumber, setSpotNumber] = useState("")
@@ -233,6 +236,16 @@ export default function VendorDetailPage() {
           setLocation("/vendors")
         },
         onError: () => toast({ title: "Failed to delete vendor", variant: "destructive" })
+      }
+    )
+  }
+
+  const handleResend = () => {
+    resendMutation.mutate(
+      { id },
+      {
+        onSuccess: () => toast({ title: "Confirmation email resent successfully" }),
+        onError: () => toast({ title: "Failed to resend confirmation email", variant: "destructive" }),
       }
     )
   }
@@ -429,6 +442,16 @@ export default function VendorDetailPage() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+
+            <Button
+              variant="outline"
+              className="border-primary/20 hover:bg-primary/5 text-primary"
+              onClick={handleResend}
+              disabled={resendMutation.isPending}
+            >
+              <Mail className="w-4 h-4 mr-2" />
+              {resendMutation.isPending ? "Sending…" : "Resend Confirmation"}
+            </Button>
 
             <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
               <DialogTrigger asChild>

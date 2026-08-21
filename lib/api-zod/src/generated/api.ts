@@ -90,7 +90,6 @@ export const SubmitVolunteerApplicationResponse = zod.object({
 export const createContributionCheckoutBodyAmountMin = 5;
 
 
-
 export const CreateContributionCheckoutBody = zod.object({
   "name": zod.string().min(1),
   "email": zod.string(),
@@ -337,7 +336,6 @@ export const getRecentActivityQueryPageDefault = 1;
 
 export const getRecentActivityQueryLimitDefault = 50;
 export const getRecentActivityQueryLimitMax = 100;
-
 
 
 export const GetRecentActivityQueryParams = zod.object({
@@ -750,7 +748,6 @@ export const updateVendorCategoryBodyReasonMin = 3;
 export const updateVendorCategoryBodyReasonMax = 2000;
 
 
-
 export const UpdateVendorCategoryBody = zod.object({
   "vendorType": zod.enum(['major_food', 'specialty_food', 'retail', 'nonprofit']),
   "reason": zod.string().min(updateVendorCategoryBodyReasonMin).max(updateVendorCategoryBodyReasonMax)
@@ -893,7 +890,12 @@ export const AssignVendorSpotResponse = zod.object({
   "createdAt": zod.string()
 })
 
-
+/**
+ * @summary Resend applicant confirmation email to a vendor
+ */
+export const ResendVendorConfirmationParams = zod.object({
+  "id": zod.coerce.number()
+})
 /**
  * @summary List sponsors (optionally filtered by year)
  */
@@ -1070,7 +1072,12 @@ export const AssignSponsorSpotResponse = zod.object({
   "createdAt": zod.string()
 })
 
-
+/**
+ * @summary Resend applicant confirmation email to a sponsor
+ */
+export const ResendSponsorConfirmationParams = zod.object({
+  "id": zod.coerce.number()
+})
 /**
  * @summary List volunteers (optionally filtered by year)
  */
@@ -1154,7 +1161,12 @@ export const ReviewVolunteerResponse = zod.object({
   "createdAt": zod.string()
 })
 
-
+/**
+ * @summary Resend applicant confirmation email to a volunteer
+ */
+export const ResendVolunteerConfirmationParams = zod.object({
+  "id": zod.coerce.number()
+})
 /**
  * @summary List staff members
  */
@@ -1228,3 +1240,8 @@ export const ExportVolunteersQueryParams = zod.object({
 export const ExportVolunteersResponse = zod.unknown()
 
 
+export const ResendSponsorConfirmationResponse = zod.void()
+
+export const ResendVendorConfirmationResponse = zod.void()
+
+export const ResendVolunteerConfirmationResponse = zod.void()

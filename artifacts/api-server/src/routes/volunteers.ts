@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, volunteersTable, activityLogTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { requireStaff } from "../lib/auth";
+import { sendApplicantConfirmation } from "../lib/email";
 import {
   GetVolunteerParams,
   ListVolunteersQueryParams,
@@ -87,6 +88,37 @@ router.patch("/volunteers/:id/review", requireStaff, async (req, res): Promise<v
   });
 
   res.json(formatVolunteer(updated));
+});
+
+router.post("/volunteers/:id/resend-confirmation", requireStaff, async (req, res): Promise<void> => {
+  const parsed = GetVolunteerParams.safeParse(req.params);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid ID" });
+    return;
+  }
+  const [volunteer] = await db.select().from(volunteersTable).where(eq(volunteersTable.id, parsed.data.id));
+  if (!volunteer) {
+    res.status(404).json({ error: "Volunteer not found" });
+    return;
+  }
+
+  sendApplicantConfirmation({
+    to: volunteer.email,
+    applicantName: volunteer.name,
+    applicationType: "volunteer",
+    organizationOrBusiness: null,
+    categoryOrTier: volunteer.availability ?? null,
+  });
+
+  await db.insert(activityLogTable).values({
+    type: "email_resent",
+    message: `Confirmation email resent to volunteer ${volunteer.name} at ${volunteer.email}`,
+    entityType: "volunteer",
+    entityId: volunteer.id,
+    performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
+  });
+
+  res.status(204).send();
 });
 
 router.delete("/volunteers/:id", requireStaff, async (req, res): Promise<void> => {

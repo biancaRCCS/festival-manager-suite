@@ -1,6 +1,6 @@
 import { useState, useRef } from "react"
 import { useLocation, useParams } from "wouter"
-import { useGetVolunteer, useReviewVolunteer, getGetVolunteerQueryKey, useDeleteVolunteer } from "@workspace/api-client-react"
+import { useGetVolunteer, useReviewVolunteer, getGetVolunteerQueryKey, useDeleteVolunteer, useResendVolunteerConfirmation } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -22,6 +22,7 @@ export default function VolunteerDetailPage() {
   const { data: volunteer, isLoading } = useGetVolunteer(id, { query: { enabled: !!id, queryKey: getGetVolunteerQueryKey(id) } })
   const reviewMutation = useReviewVolunteer({ mutation: { mutationKey: ["reviewVolunteer", id] } })
   const deleteMutation = useDeleteVolunteer()
+  const resendMutation = useResendVolunteerConfirmation()
 
   const [reviewNote, setReviewNote] = useState("")
   const [assignedRole, setAssignedRole] = useState("")
@@ -54,6 +55,16 @@ export default function VolunteerDetailPage() {
           setLocation("/volunteers")
         },
         onError: () => toast({ title: "Failed to delete volunteer", variant: "destructive" })
+      }
+    )
+  }
+
+  const handleResend = () => {
+    resendMutation.mutate(
+      { id },
+      {
+        onSuccess: () => toast({ title: "Confirmation email resent successfully" }),
+        onError: () => toast({ title: "Failed to resend confirmation email", variant: "destructive" }),
       }
     )
   }
@@ -103,6 +114,16 @@ export default function VolunteerDetailPage() {
                 </DialogContent>
               </Dialog>
             )}
+
+            <Button
+              variant="outline"
+              className="border-primary/20 hover:bg-primary/5 text-primary"
+              onClick={handleResend}
+              disabled={resendMutation.isPending}
+            >
+              <Mail className="w-4 h-4 mr-2" />
+              {resendMutation.isPending ? "Sending…" : "Resend Confirmation"}
+            </Button>
 
             <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
               <DialogTrigger asChild>
