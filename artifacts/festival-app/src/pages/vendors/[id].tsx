@@ -1,6 +1,6 @@
 import { useState, useRef } from "react"
 import { useLocation, useParams } from "wouter"
-import { useGetVendor, useGetSettings, useReviewVendor, useUpdateVendorCategory, useSettleVendorCategoryAdjustment, useFinalApproveVendor, useAssignVendorSpot, getGetVendorQueryKey, getGetSettingsQueryKey, useDeleteVendor } from "@workspace/api-client-react"
+import { useGetVendor, useGetSettings, useReviewVendor, useUpdateVendorCategory, useSettleVendorCategoryAdjustment, useFinalApproveVendor, useAssignVendorSpot, getGetVendorQueryKey, getGetSettingsQueryKey, useDeleteVendor, useResendVendorConfirmation } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,10 +10,8 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { ArrowLeft, CheckCircle2, XCircle, MapPin, Clock, Trash2, Pencil, AlertTriangle } from "lucide-react"
+import { ArrowLeft, CheckCircle2, XCircle, MapPin, Clock, Trash2, Pencil, AlertTriangle, Mail } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { useGetVendor, useReviewVendor, useFinalApproveVendor, useAssignVendorSpot, getGetVendorQueryKey, useDeleteVendor, useResendVendorConfirmation } from "@workspace/api-client-react"
-import { ArrowLeft, CheckCircle2, XCircle, MapPin, Clock, Trash2, Mail } from "lucide-react"
 
 // ---------------------------------------------------------------------------
 // Display helpers

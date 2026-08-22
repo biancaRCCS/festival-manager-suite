@@ -41,11 +41,12 @@ async function fetchSponsorConfig(): Promise<FormConfig> {
 const TIER_KEYS_DESC = ["diamond", "platinum", "gold", "silver", "bronze"] as const
 
 // Row label → [diamond, platinum, gold, silver, bronze]
-const BENEFITS_ROWS: Array<{ label: string; asterisk?: boolean; values: [string, string, string, string, string] }> = [
+const BENEFITS_ROWS: Array<{ label: string; asterisk?: boolean; bold?: boolean; values: [string, string, string, string, string] }> = [
   { label: "Availability",                                   values: ["3",               "5",                "10",              "10",           "10"]             },
-  { label: "Booth space",                                    values: ["VIP location",    "Prime location",   "Prime location",  "Standard location", "Standard location"] },
+  { label: "Complimentary 10'×10' Sponsor Booth Space", bold: true, values: ["VIP location", "Prime location", "Prime location", "Standard location", "Standard location"] },
+  { label: "Complimentary Hospitality (Meal & Drink)", bold: true, values: ["10 Guests", "6 Guests", "4 Guests", "2 Guests", "2 Guests"] },
+  { label: "Private Sponsor VIP Seating Area", bold: true, values: ["10 Guests", "6 Guests", "–", "–", "–"] },
   { label: "Recognition on RCCS & Festival websites",        values: ["Premier logo & link", "Prominent logo & link", "Logo & link", "Logo & link", "Name listing"] },
-  { label: "Complimentary 10′×10′ promo booth space",        values: ["Included",        "Included",         "Included",        "Included",     "Included"]       },
   { label: "Logo on stage LED screen",  asterisk: true,      values: ["Premier display", "Prominent display","Standard display","Logo listing", "–"]              },
   { label: "Recognition in email campaigns",                 values: ["Premier placement","Prominent placement","Grouped logo", "Logo listing", "–"]              },
   { label: "Acknowledgment during the event",                values: ["Throughout event","Multiple mentions", "One mention",    "–",            "–"]              },
@@ -54,7 +55,6 @@ const BENEFITS_ROWS: Array<{ label: string; asterisk?: boolean; values: [string,
   { label: "Additional on-site signage at key locations",    values: ["Premier logo",    "Prominent logo",   "–",               "–",            "–"]              },
   { label: "Post-event thank-you email & social post",       values: ["Premier mention", "Prominent mention","–",               "–",            "–"]              },
   { label: "Company logo on official event flyer", asterisk: true, values: ["Premier logo", "Prominent logo","–",              "–",            "–"]              },
-  { label: "Reserved sponsor VIP area seating",              values: ["6 Seats",         "4 Seats",          "–",               "–",            "–"]              },
   { label: "Additional company-provided banner",             values: ["Included",        "–",                "–",               "–",            "–"]              },
 ]
 
@@ -163,7 +163,7 @@ function BenefitsTable({ tiers }: { tiers: SponsorTier[] }) {
           <tbody>
             {BENEFITS_ROWS.map((row, i) => (
               <tr key={row.label} className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}>
-                <td className="px-4 py-2.5 text-foreground leading-snug">
+                  <td className={`px-4 py-2.5 text-foreground leading-snug${row.bold ? " font-semibold" : ""}`}>
                   {row.label}{row.asterisk && <span className="text-muted-foreground"> *</span>}
                 </td>
                 {TIER_KEYS_DESC.map((key, ci) => {
@@ -187,11 +187,11 @@ function BenefitsTable({ tiers }: { tiers: SponsorTier[] }) {
         </table>
       </div>
 
-      {/* VIP seating note — verbatim from spec */}
+      {/* Sponsor hospitality note */}
       <p className="text-sm text-muted-foreground leading-relaxed">
-        Diamond includes six reserved seats and Platinum sponsorship includes four reserved seats
-        in a designated 10′ × 10′ sponsor viewing area. Seating is separate from the sponsor booth
-        and does not include food, beverages, parking, or other hospitality unless confirmed by RCCS.
+        <span className="font-medium text-foreground">Sponsor Hospitality &amp; VIP Seating</span>
+        <br />
+        Complimentary Hospitality includes one meal and one beverage per guest, based on sponsorship level. Diamond and Platinum sponsors also receive a private, tented VIP seating area with preferred stage viewing, reserved exclusively for their sponsor guests.
       </p>
 
       {/* Production deadline note — verbatim from spec */}
