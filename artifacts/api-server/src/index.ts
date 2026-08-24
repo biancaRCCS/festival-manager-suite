@@ -40,11 +40,6 @@ async function initStripe() {
     .catch((err) => logger.error({ err }, "Stripe backfill error."));
 }
 
-// Initialize Stripe before starting the HTTP server
-await initStripe().catch((err) => {
-  logger.error({ err }, "Stripe initialization failed — server will still start but payments may not work.");
-});
-
 const rawPort = process.env["PORT"];
 
 if (!rawPort) {
@@ -66,4 +61,11 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  // Keep the readiness endpoint available during Stripe setup. Stripe failures were
+  // already non-fatal, and checkout/webhook requests continue to use their existing
+  // Stripe client handling once initialization completes.
+  void initStripe().catch((err) => {
+    logger.error({ err }, "Stripe initialization failed — server remains available but payments may not work.");
+  });
 });
