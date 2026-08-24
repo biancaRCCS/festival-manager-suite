@@ -345,7 +345,7 @@ paths:
           name: type
           schema:
             type: string
-            enum: [new_application, approved, rejected, paid, final_approved, assigned, category_changed, category_adjustment_settled, special_agreement_created, special_agreement_signed, deleted]
+            enum: [new_application, approved, rejected, paid, final_approved, assigned, category_changed, category_adjustment_settled, special_agreement_created, special_agreement_signed, special_agreement_settlement_updated, deleted]
         - in: query
           name: entityType
           schema:
@@ -533,6 +533,28 @@ paths:
               schema:
                 $ref: "#/components/schemas/Vendor"
 
+  /special-agreements/settlement-summary:
+    get:
+      operationId: getSpecialAgreementSettlementSummary
+      tags: [vendors]
+      summary: Get Special Agreement Vendor settlement summary
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: yearId
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Special Agreement Vendor settlement summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpecialAgreementSettlementSummary"
+
   /vendors/{id}:
     get:
       operationId: getVendor
@@ -555,6 +577,7 @@ paths:
                 $ref: "#/components/schemas/Vendor"
         "404":
           description: Not found
+
     delete:
       operationId: deleteVendor
       tags: [vendors]
@@ -570,6 +593,39 @@ paths:
       responses:
         "204":
           description: Deleted
+        "404":
+          description: Not found
+
+  /vendors/{id}/special-agreement-settlement:
+    patch:
+      operationId: updateSpecialAgreementSettlement
+      tags: [vendors]
+      summary: Update a Special Agreement Vendor settlement
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpecialAgreementSettlementUpdate"
+      responses:
+        "200":
+          description: Updated Special Agreement Vendor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vendor"
+        "400":
+          description: Invalid settlement details
+        "409":
+          description: Settlement was updated by another staff member
         "404":
           description: Not found
 
@@ -1443,6 +1499,30 @@ components:
           type: ["string", "null"]
         specialAgreementSignedAt:
           type: ["string", "null"]
+        specialAgreementGrossSales:
+          type: ["number", "null"]
+        specialAgreementDeductions:
+          type: ["number", "null"]
+        specialAgreementDeductionsNotes:
+          type: ["string", "null"]
+        specialAgreementNetProfit:
+          type: ["number", "null"]
+        specialAgreementAmountOwed:
+          type: ["number", "null"]
+        specialAgreementAmountPaid:
+          type: ["number", "null"]
+        specialAgreementPaidDate:
+          type: ["string", "null"]
+        specialAgreementOutstandingBalance:
+          type: ["number", "null"]
+        specialAgreementSettlementStatus:
+          type: string
+          enum: [awaiting_figures, calculated, paid]
+        specialAgreementSettlementNotes:
+          type: ["string", "null"]
+        specialAgreementSettlementVersion:
+          type: integer
+          minimum: 0
         approvedAt:
           type: ["string", "null"]
         finalApprovedAt:
@@ -1894,6 +1974,90 @@ components:
           maximum: 100
         internalNotes:
           type: ["string", "null"]
+
+    SpecialAgreementSettlementUpdate:
+      type: object
+      required: [grossSales, deductions, deductionsNotes, amountPaid, paidDate, settlementNotes, expectedSettlementVersion]
+      properties:
+        grossSales:
+          type: ["number", "null"]
+          minimum: 0
+        deductions:
+          type: ["number", "null"]
+          minimum: 0
+        deductionsNotes:
+          type: ["string", "null"]
+          maxLength: 5000
+        amountPaid:
+          type: ["number", "null"]
+          minimum: 0
+        paidDate:
+          type: ["string", "null"]
+          format: date
+        settlementNotes:
+          type: ["string", "null"]
+          maxLength: 5000
+        expectedSettlementVersion:
+          type: integer
+          minimum: 0
+
+    SpecialAgreementSettlementRow:
+      type: object
+      required: [id, businessName, name, specialAgreementRevenueSharePercentage, grossSales, deductions, netProfit, amountOwed, amountPaid, outstandingBalance, settlementStatus]
+      properties:
+        id:
+          type: integer
+        businessName:
+          type: string
+        name:
+          type: string
+        specialAgreementRevenueSharePercentage:
+          type: number
+        grossSales:
+          type: ["number", "null"]
+        deductions:
+          type: ["number", "null"]
+        netProfit:
+          type: ["number", "null"]
+        amountOwed:
+          type: ["number", "null"]
+        amountPaid:
+          type: ["number", "null"]
+        outstandingBalance:
+          type: ["number", "null"]
+        settlementStatus:
+          type: string
+          enum: [awaiting_figures, calculated, paid]
+
+    SpecialAgreementSettlementTotals:
+      type: object
+      required: [grossSales, deductions, netProfit, amountOwed, amountPaid, outstandingBalance]
+      properties:
+        grossSales:
+          type: number
+        deductions:
+          type: number
+        netProfit:
+          type: number
+        amountOwed:
+          type: number
+        amountPaid:
+          type: number
+        outstandingBalance:
+          type: number
+
+    SpecialAgreementSettlementSummary:
+      type: object
+      required: [yearId, vendors, totals]
+      properties:
+        yearId:
+          type: integer
+        vendors:
+          type: array
+          items:
+            $ref: "#/components/schemas/SpecialAgreementSettlementRow"
+        totals:
+          $ref: "#/components/schemas/SpecialAgreementSettlementTotals"
 
     SpecialAgreementSignature:
       type: object

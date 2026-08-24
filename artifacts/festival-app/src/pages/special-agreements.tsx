@@ -86,9 +86,14 @@ export default function SpecialAgreementsPage() {
             </h1>
             <p className="text-muted-foreground">Create and track revenue-share vendors with no booth fee or Stripe payment.</p>
           </div>
-          <Button onClick={() => setIsCreating((open) => !open)}>
-            <Plus className="w-4 h-4 mr-2" /> {isCreating ? "Close Form" : "New Special Agreement"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/special-agreement-settlements">
+              <Button variant="outline">Settlement Summary</Button>
+            </Link>
+            <Button onClick={() => setIsCreating((open) => !open)}>
+              <Plus className="w-4 h-4 mr-2" /> {isCreating ? "Close Form" : "New Special Agreement"}
+            </Button>
+          </div>
         </div>
 
         {isCreating && (

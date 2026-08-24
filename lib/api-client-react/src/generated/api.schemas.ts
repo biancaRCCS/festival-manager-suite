@@ -172,6 +172,15 @@ export const VendorStatus = {
 
 export type VendorApplicationData = { [key: string]: unknown };
 
+export type VendorSpecialAgreementSettlementStatus = typeof VendorSpecialAgreementSettlementStatus[keyof typeof VendorSpecialAgreementSettlementStatus];
+
+
+export const VendorSpecialAgreementSettlementStatus = {
+  awaiting_figures: 'awaiting_figures',
+  calculated: 'calculated',
+  paid: 'paid',
+} as const;
+
 export interface Vendor {
   id: number;
   yearId: number;
@@ -217,6 +226,27 @@ export interface Vendor {
   specialAgreementSignedDate?: string | null;
   /** @nullable */
   specialAgreementSignedAt?: string | null;
+  /** @nullable */
+  specialAgreementGrossSales?: number | null;
+  /** @nullable */
+  specialAgreementDeductions?: number | null;
+  /** @nullable */
+  specialAgreementDeductionsNotes?: string | null;
+  /** @nullable */
+  specialAgreementNetProfit?: number | null;
+  /** @nullable */
+  specialAgreementAmountOwed?: number | null;
+  /** @nullable */
+  specialAgreementAmountPaid?: number | null;
+  /** @nullable */
+  specialAgreementPaidDate?: string | null;
+  /** @nullable */
+  specialAgreementOutstandingBalance?: number | null;
+  specialAgreementSettlementStatus?: VendorSpecialAgreementSettlementStatus;
+  /** @nullable */
+  specialAgreementSettlementNotes?: string | null;
+  /** @minimum 0 */
+  specialAgreementSettlementVersion?: number;
   /** @nullable */
   approvedAt?: string | null;
   /** @nullable */
@@ -586,6 +616,82 @@ export interface SpecialAgreementVendorInput {
   internalNotes?: string | null;
 }
 
+export interface SpecialAgreementSettlementUpdate {
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  grossSales: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  deductions: number | null;
+  /**
+     * @maxLength 5000
+     * @nullable
+     */
+  deductionsNotes: string | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  amountPaid: number | null;
+  /** @nullable */
+  paidDate: string | null;
+  /**
+     * @maxLength 5000
+     * @nullable
+     */
+  settlementNotes: string | null;
+  /** @minimum 0 */
+  expectedSettlementVersion: number;
+}
+
+export type SpecialAgreementSettlementRowSettlementStatus = typeof SpecialAgreementSettlementRowSettlementStatus[keyof typeof SpecialAgreementSettlementRowSettlementStatus];
+
+
+export const SpecialAgreementSettlementRowSettlementStatus = {
+  awaiting_figures: 'awaiting_figures',
+  calculated: 'calculated',
+  paid: 'paid',
+} as const;
+
+export interface SpecialAgreementSettlementRow {
+  id: number;
+  businessName: string;
+  name: string;
+  specialAgreementRevenueSharePercentage: number;
+  /** @nullable */
+  grossSales: number | null;
+  /** @nullable */
+  deductions: number | null;
+  /** @nullable */
+  netProfit: number | null;
+  /** @nullable */
+  amountOwed: number | null;
+  /** @nullable */
+  amountPaid: number | null;
+  /** @nullable */
+  outstandingBalance: number | null;
+  settlementStatus: SpecialAgreementSettlementRowSettlementStatus;
+}
+
+export interface SpecialAgreementSettlementTotals {
+  grossSales: number;
+  deductions: number;
+  netProfit: number;
+  amountOwed: number;
+  amountPaid: number;
+  outstandingBalance: number;
+}
+
+export interface SpecialAgreementSettlementSummary {
+  yearId: number;
+  vendors: SpecialAgreementSettlementRow[];
+  totals: SpecialAgreementSettlementTotals;
+}
+
 export interface SpecialAgreementSignature {
   /** @minLength 1 */
   dayOfContactName: string;
@@ -757,6 +863,7 @@ export const GetRecentActivityType = {
   category_adjustment_settled: 'category_adjustment_settled',
   special_agreement_created: 'special_agreement_created',
   special_agreement_signed: 'special_agreement_signed',
+  special_agreement_settlement_updated: 'special_agreement_settlement_updated',
   deleted: 'deleted',
 } as const;
 
@@ -780,6 +887,13 @@ status?: string;
 
 export type ListSpecialAgreementVendorsParams = {
 yearId?: number;
+};
+
+export type GetSpecialAgreementSettlementSummaryParams = {
+/**
+ * @minimum 1
+ */
+yearId: number;
 };
 
 export type ListSponsorsParams = {

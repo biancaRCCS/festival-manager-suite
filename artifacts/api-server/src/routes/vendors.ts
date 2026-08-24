@@ -14,6 +14,11 @@ import {
   AssignVendorSpotBody,
   ListSpecialAgreementVendorsQueryParams,
   CreateSpecialAgreementVendorBody,
+  GetSpecialAgreementSettlementSummaryQueryParams,
+  GetSpecialAgreementSettlementSummaryResponse,
+  UpdateSpecialAgreementSettlementParams,
+  UpdateSpecialAgreementSettlementBody,
+  UpdateSpecialAgreementSettlementResponse,
 } from "@workspace/api-zod";
 import { randomBytes } from "crypto";
 import {
@@ -25,10 +30,12 @@ import {
   VENDOR_LABELS,
 } from "../lib/email";
 import { getUncachableStripeClient } from "../lib/stripeClient";
+import { deriveSpecialAgreementSettlement } from "../lib/specialAgreementSettlement";
 
 const router: IRouter = Router();
 
 function formatVendor(v: typeof vendorsTable.$inferSelect) {
+  const settlement = deriveSpecialAgreementSettlement(v);
   return {
     id: v.id,
     yearId: v.yearId,
@@ -59,6 +66,17 @@ function formatVendor(v: typeof vendorsTable.$inferSelect) {
     specialAgreementBackupContactPhone: v.specialAgreementBackupContactPhone ?? null,
     specialAgreementSignedDate: v.specialAgreementSignedDate ?? null,
     specialAgreementSignedAt: v.specialAgreementSignedAt ? v.specialAgreementSignedAt.toISOString() : null,
+    specialAgreementGrossSales: settlement.grossSales,
+    specialAgreementDeductions: settlement.deductions,
+    specialAgreementDeductionsNotes: v.specialAgreementDeductionsNotes ?? null,
+    specialAgreementNetProfit: settlement.netProfit,
+    specialAgreementAmountOwed: settlement.amountOwed,
+    specialAgreementAmountPaid: settlement.amountPaid,
+    specialAgreementPaidDate: settlement.paidDate,
+    specialAgreementOutstandingBalance: settlement.outstandingBalance,
+    specialAgreementSettlementStatus: settlement.settlementStatus,
+    specialAgreementSettlementNotes: v.specialAgreementSettlementNotes ?? null,
+    specialAgreementSettlementVersion: v.specialAgreementSettlementVersion,
     approvedAt: v.approvedAt ? v.approvedAt.toISOString() : null,
     finalApprovedAt: v.finalApprovedAt ? v.finalApprovedAt.toISOString() : null,
     createdAt: v.createdAt.toISOString(),
@@ -78,6 +96,20 @@ const VENDOR_CATEGORY_PRICE_FIELDS = {
   retail: "vendorPriceRetail",
   nonprofit: "vendorPriceNonprofit",
 } as const;
+
+const MAX_SETTLEMENT_AMOUNT = 9_999_999_999.99;
+
+function isWholeCents(value: number | null): boolean {
+  return value === null || (
+    Number.isFinite(value)
+    && value <= MAX_SETTLEMENT_AMOUNT
+    && Math.abs(value * 100 - Math.round(value * 100)) < 0.0000001
+  );
+}
+
+function asCents(value: number): number {
+  return Math.round(value * 100);
+}
 
 const VENDOR_BOOTH_DIMENSIONS = {
   major_food: { single: "10′×20′", double: "20′×20′" },
@@ -136,6 +168,54 @@ router.get("/special-agreements", requireStaff, async (req, res): Promise<void> 
     .where(and(...conditions))
     .orderBy(desc(vendorsTable.createdAt));
   res.json(rows.map(formatVendor));
+});
+
+router.get("/special-agreements/settlement-summary", requireStaff, async (req, res): Promise<void> => {
+  const parsed = GetSpecialAgreementSettlementSummaryQueryParams.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Choose a valid festival year." });
+    return;
+  }
+
+  const rows = await db.select().from(vendorsTable)
+    .where(and(
+      eq(vendorsTable.vendorType, "special_agreement"),
+      eq(vendorsTable.yearId, parsed.data.yearId),
+    ))
+    .orderBy(desc(vendorsTable.createdAt));
+
+  const vendors = rows.map((vendor) => {
+    const settlement = deriveSpecialAgreementSettlement(vendor);
+    return {
+      id: vendor.id,
+      businessName: vendor.businessName,
+      name: vendor.name,
+      specialAgreementRevenueSharePercentage: Number(vendor.specialAgreementRevenueSharePercentage ?? 0),
+      grossSales: settlement.grossSales,
+      deductions: settlement.deductions,
+      netProfit: settlement.netProfit,
+      amountOwed: settlement.amountOwed,
+      amountPaid: settlement.amountPaid,
+      outstandingBalance: settlement.outstandingBalance,
+      settlementStatus: settlement.settlementStatus,
+    };
+  });
+
+  const sum = (field: "grossSales" | "deductions" | "netProfit" | "amountOwed" | "amountPaid" | "outstandingBalance") =>
+    Math.round(vendors.reduce((total, vendor) => total + (vendor[field] ?? 0), 0) * 100) / 100;
+  const response = {
+    yearId: parsed.data.yearId,
+    vendors,
+    totals: {
+      grossSales: sum("grossSales"),
+      deductions: sum("deductions"),
+      netProfit: sum("netProfit"),
+      amountOwed: sum("amountOwed"),
+      amountPaid: sum("amountPaid"),
+      outstandingBalance: sum("outstandingBalance"),
+    },
+  };
+  res.json(GetSpecialAgreementSettlementSummaryResponse.parse(response));
 });
 
 router.post("/special-agreements", requireStaff, async (req, res): Promise<void> => {
@@ -223,6 +303,103 @@ router.get("/vendors/:id", requireStaff, async (req, res): Promise<void> => {
     return;
   }
   res.json(formatVendor(vendor));
+});
+
+router.patch("/vendors/:id/special-agreement-settlement", requireStaff, async (req, res): Promise<void> => {
+  const params = UpdateSpecialAgreementSettlementParams.safeParse(req.params);
+  const body = UpdateSpecialAgreementSettlementBody.safeParse(req.body);
+  if (!params.success || !body.success) {
+    res.status(400).json({ error: "Enter valid settlement amounts and payment details." });
+    return;
+  }
+
+  const [vendor] = await db.select().from(vendorsTable).where(eq(vendorsTable.id, params.data.id));
+  if (!vendor) {
+    res.status(404).json({ error: "Vendor not found" });
+    return;
+  }
+  if (vendor.vendorType !== "special_agreement") {
+    res.status(409).json({ error: "Settlement tracking is only available for Special Agreement Vendors." });
+    return;
+  }
+
+  const { grossSales, deductions, deductionsNotes, amountPaid, paidDate, settlementNotes, expectedSettlementVersion } = body.data;
+  if (![grossSales, deductions, amountPaid].every(isWholeCents)) {
+    res.status(400).json({ error: "Settlement amounts must use whole cents and fit within the supported range." });
+    return;
+  }
+  if (expectedSettlementVersion !== vendor.specialAgreementSettlementVersion) {
+    res.status(409).json({ error: "This settlement was updated by another staff member. Refresh the page before saving your changes." });
+    return;
+  }
+  const hasFigures = grossSales !== null || deductions !== null;
+  if (hasFigures && (grossSales === null || deductions === null)) {
+    res.status(400).json({ error: "Enter both gross sales and deductions before calculating a settlement." });
+    return;
+  }
+  const grossSalesCents = grossSales === null ? null : asCents(grossSales);
+  const deductionsCents = deductions === null ? null : asCents(deductions);
+  const amountPaidCents = amountPaid === null ? null : asCents(amountPaid);
+  if (grossSalesCents !== null && deductionsCents !== null && deductionsCents > grossSalesCents) {
+    res.status(400).json({ error: "Deductions cannot be greater than gross sales." });
+    return;
+  }
+  if (deductions !== null && deductions > 0 && !deductionsNotes?.trim()) {
+    res.status(400).json({ error: "Add notes explaining any deductions or costs." });
+    return;
+  }
+  if (amountPaid !== null && (grossSales === null || deductions === null)) {
+    res.status(400).json({ error: "Enter gross sales and deductions before recording a payment." });
+    return;
+  }
+  if (amountPaid !== null && amountPaid > 0 && paidDate === null) {
+    res.status(400).json({ error: "Add the payment date when recording an amount paid to the vendor." });
+    return;
+  }
+  if (paidDate !== null && amountPaid === null) {
+    res.status(400).json({ error: "Enter the amount paid when adding a payment date." });
+    return;
+  }
+
+  const percentage = Number(vendor.specialAgreementRevenueSharePercentage);
+  const amountOwedCents = grossSalesCents === null || deductionsCents === null
+    ? null
+    : Math.round((grossSalesCents - deductionsCents) * percentage / 100);
+  if (amountPaidCents !== null && amountOwedCents !== null && amountPaidCents > amountOwedCents) {
+    res.status(400).json({ error: "Amount paid cannot be greater than the calculated amount owed to this vendor." });
+    return;
+  }
+
+  const paidDateString = paidDate
+    ? `${paidDate.getUTCFullYear()}-${String(paidDate.getUTCMonth() + 1).padStart(2, "0")}-${String(paidDate.getUTCDate()).padStart(2, "0")}`
+    : null;
+  const [updated] = await db.update(vendorsTable).set({
+    specialAgreementGrossSales: grossSalesCents === null ? null : (grossSalesCents / 100).toFixed(2),
+    specialAgreementDeductions: deductionsCents === null ? null : (deductionsCents / 100).toFixed(2),
+    specialAgreementDeductionsNotes: deductionsNotes?.trim() || null,
+    specialAgreementAmountPaid: amountPaidCents === null ? null : (amountPaidCents / 100).toFixed(2),
+    specialAgreementPaidDate: paidDateString,
+    specialAgreementSettlementNotes: settlementNotes?.trim() || null,
+    specialAgreementSettlementVersion: sql`${vendorsTable.specialAgreementSettlementVersion} + 1`,
+  }).where(and(
+    eq(vendorsTable.id, vendor.id),
+    eq(vendorsTable.specialAgreementSettlementVersion, expectedSettlementVersion),
+  )).returning();
+
+  if (!updated) {
+    res.status(409).json({ error: "This settlement was updated by another staff member. Refresh the page before saving your changes." });
+    return;
+  }
+
+  await db.insert(activityLogTable).values({
+    type: "special_agreement_settlement_updated",
+    message: `Special Agreement settlement updated for ${updated.name} (${updated.businessName})`,
+    entityType: "vendor",
+    entityId: updated.id,
+    performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
+  });
+
+  res.json(UpdateSpecialAgreementSettlementResponse.parse(formatVendor(updated)));
 });
 
 router.patch("/vendors/:id/review", requireStaff, async (req, res): Promise<void> => {

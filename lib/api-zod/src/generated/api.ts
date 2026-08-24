@@ -452,7 +452,7 @@ export const getRecentActivityQueryLimitMax = 100;
 export const GetRecentActivityQueryParams = zod.object({
   "page": zod.coerce.number().min(1).default(getRecentActivityQueryPageDefault),
   "limit": zod.coerce.number().min(1).max(getRecentActivityQueryLimitMax).default(getRecentActivityQueryLimitDefault),
-  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'category_changed', 'category_adjustment_settled', 'special_agreement_created', 'special_agreement_signed', 'deleted']).optional(),
+  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'category_changed', 'category_adjustment_settled', 'special_agreement_created', 'special_agreement_signed', 'special_agreement_settlement_updated', 'deleted']).optional(),
   "entityType": zod.enum(['vendor', 'sponsor', 'volunteer']).optional()
 })
 
@@ -746,6 +746,10 @@ export const ListVendorsQueryParams = zod.object({
   "status": zod.coerce.string().optional()
 })
 
+export const listVendorsResponseSpecialAgreementSettlementVersionMin = 0;
+
+
+
 export const ListVendorsResponseItem = zod.object({
   "id": zod.number(),
   "yearId": zod.number(),
@@ -774,6 +778,17 @@ export const ListVendorsResponseItem = zod.object({
   "specialAgreementBackupContactPhone": zod.string().nullish(),
   "specialAgreementSignedDate": zod.string().nullish(),
   "specialAgreementSignedAt": zod.string().nullish(),
+  "specialAgreementGrossSales": zod.number().nullish(),
+  "specialAgreementDeductions": zod.number().nullish(),
+  "specialAgreementDeductionsNotes": zod.string().nullish(),
+  "specialAgreementNetProfit": zod.number().nullish(),
+  "specialAgreementAmountOwed": zod.number().nullish(),
+  "specialAgreementAmountPaid": zod.number().nullish(),
+  "specialAgreementPaidDate": zod.string().nullish(),
+  "specialAgreementOutstandingBalance": zod.number().nullish(),
+  "specialAgreementSettlementStatus": zod.enum(['awaiting_figures', 'calculated', 'paid']).optional(),
+  "specialAgreementSettlementNotes": zod.string().nullish(),
+  "specialAgreementSettlementVersion": zod.number().min(listVendorsResponseSpecialAgreementSettlementVersionMin).optional(),
   "approvedAt": zod.string().nullish(),
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
@@ -787,6 +802,10 @@ export const ListVendorsResponse = zod.array(ListVendorsResponseItem)
 export const ListSpecialAgreementVendorsQueryParams = zod.object({
   "yearId": zod.coerce.number().optional()
 })
+
+export const listSpecialAgreementVendorsResponseSpecialAgreementSettlementVersionMin = 0;
+
+
 
 export const ListSpecialAgreementVendorsResponseItem = zod.object({
   "id": zod.number(),
@@ -816,6 +835,17 @@ export const ListSpecialAgreementVendorsResponseItem = zod.object({
   "specialAgreementBackupContactPhone": zod.string().nullish(),
   "specialAgreementSignedDate": zod.string().nullish(),
   "specialAgreementSignedAt": zod.string().nullish(),
+  "specialAgreementGrossSales": zod.number().nullish(),
+  "specialAgreementDeductions": zod.number().nullish(),
+  "specialAgreementDeductionsNotes": zod.string().nullish(),
+  "specialAgreementNetProfit": zod.number().nullish(),
+  "specialAgreementAmountOwed": zod.number().nullish(),
+  "specialAgreementAmountPaid": zod.number().nullish(),
+  "specialAgreementPaidDate": zod.string().nullish(),
+  "specialAgreementOutstandingBalance": zod.number().nullish(),
+  "specialAgreementSettlementStatus": zod.enum(['awaiting_figures', 'calculated', 'paid']).optional(),
+  "specialAgreementSettlementNotes": zod.string().nullish(),
+  "specialAgreementSettlementVersion": zod.number().min(listSpecialAgreementVendorsResponseSpecialAgreementSettlementVersionMin).optional(),
   "approvedAt": zod.string().nullish(),
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
@@ -846,6 +876,10 @@ export const CreateSpecialAgreementVendorBody = zod.object({
   "internalNotes": zod.string().nullish()
 })
 
+export const createSpecialAgreementVendorResponseSpecialAgreementSettlementVersionMin = 0;
+
+
+
 export const CreateSpecialAgreementVendorResponse = zod.object({
   "id": zod.number(),
   "yearId": zod.number(),
@@ -874,9 +908,56 @@ export const CreateSpecialAgreementVendorResponse = zod.object({
   "specialAgreementBackupContactPhone": zod.string().nullish(),
   "specialAgreementSignedDate": zod.string().nullish(),
   "specialAgreementSignedAt": zod.string().nullish(),
+  "specialAgreementGrossSales": zod.number().nullish(),
+  "specialAgreementDeductions": zod.number().nullish(),
+  "specialAgreementDeductionsNotes": zod.string().nullish(),
+  "specialAgreementNetProfit": zod.number().nullish(),
+  "specialAgreementAmountOwed": zod.number().nullish(),
+  "specialAgreementAmountPaid": zod.number().nullish(),
+  "specialAgreementPaidDate": zod.string().nullish(),
+  "specialAgreementOutstandingBalance": zod.number().nullish(),
+  "specialAgreementSettlementStatus": zod.enum(['awaiting_figures', 'calculated', 'paid']).optional(),
+  "specialAgreementSettlementNotes": zod.string().nullish(),
+  "specialAgreementSettlementVersion": zod.number().min(createSpecialAgreementVendorResponseSpecialAgreementSettlementVersionMin).optional(),
   "approvedAt": zod.string().nullish(),
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Get Special Agreement Vendor settlement summary
+ */
+
+
+
+export const GetSpecialAgreementSettlementSummaryQueryParams = zod.object({
+  "yearId": zod.coerce.number().min(1)
+})
+
+export const GetSpecialAgreementSettlementSummaryResponse = zod.object({
+  "yearId": zod.number(),
+  "vendors": zod.array(zod.object({
+  "id": zod.number(),
+  "businessName": zod.string(),
+  "name": zod.string(),
+  "specialAgreementRevenueSharePercentage": zod.number(),
+  "grossSales": zod.number().nullable(),
+  "deductions": zod.number().nullable(),
+  "netProfit": zod.number().nullable(),
+  "amountOwed": zod.number().nullable(),
+  "amountPaid": zod.number().nullable(),
+  "outstandingBalance": zod.number().nullable(),
+  "settlementStatus": zod.enum(['awaiting_figures', 'calculated', 'paid'])
+})),
+  "totals": zod.object({
+  "grossSales": zod.number(),
+  "deductions": zod.number(),
+  "netProfit": zod.number(),
+  "amountOwed": zod.number(),
+  "amountPaid": zod.number(),
+  "outstandingBalance": zod.number()
+})
 })
 
 
@@ -886,6 +967,10 @@ export const CreateSpecialAgreementVendorResponse = zod.object({
 export const GetVendorParams = zod.object({
   "id": zod.coerce.number()
 })
+
+export const getVendorResponseSpecialAgreementSettlementVersionMin = 0;
+
+
 
 export const GetVendorResponse = zod.object({
   "id": zod.number(),
@@ -915,6 +1000,17 @@ export const GetVendorResponse = zod.object({
   "specialAgreementBackupContactPhone": zod.string().nullish(),
   "specialAgreementSignedDate": zod.string().nullish(),
   "specialAgreementSignedAt": zod.string().nullish(),
+  "specialAgreementGrossSales": zod.number().nullish(),
+  "specialAgreementDeductions": zod.number().nullish(),
+  "specialAgreementDeductionsNotes": zod.string().nullish(),
+  "specialAgreementNetProfit": zod.number().nullish(),
+  "specialAgreementAmountOwed": zod.number().nullish(),
+  "specialAgreementAmountPaid": zod.number().nullish(),
+  "specialAgreementPaidDate": zod.string().nullish(),
+  "specialAgreementOutstandingBalance": zod.number().nullish(),
+  "specialAgreementSettlementStatus": zod.enum(['awaiting_figures', 'calculated', 'paid']).optional(),
+  "specialAgreementSettlementNotes": zod.string().nullish(),
+  "specialAgreementSettlementVersion": zod.number().min(getVendorResponseSpecialAgreementSettlementVersionMin).optional(),
   "approvedAt": zod.string().nullish(),
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
@@ -932,6 +1028,86 @@ export const DeleteVendorResponse = zod.void()
 
 
 /**
+ * @summary Update a Special Agreement Vendor settlement
+ */
+export const UpdateSpecialAgreementSettlementParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateSpecialAgreementSettlementBodyGrossSalesMin = 0;
+
+export const updateSpecialAgreementSettlementBodyDeductionsMin = 0;
+
+export const updateSpecialAgreementSettlementBodyDeductionsNotesMax = 5000;
+
+export const updateSpecialAgreementSettlementBodyAmountPaidMin = 0;
+
+export const updateSpecialAgreementSettlementBodySettlementNotesMax = 5000;
+
+export const updateSpecialAgreementSettlementBodyExpectedSettlementVersionMin = 0;
+
+
+
+export const UpdateSpecialAgreementSettlementBody = zod.object({
+  "grossSales": zod.number().min(updateSpecialAgreementSettlementBodyGrossSalesMin).nullable(),
+  "deductions": zod.number().min(updateSpecialAgreementSettlementBodyDeductionsMin).nullable(),
+  "deductionsNotes": zod.string().max(updateSpecialAgreementSettlementBodyDeductionsNotesMax).nullable(),
+  "amountPaid": zod.number().min(updateSpecialAgreementSettlementBodyAmountPaidMin).nullable(),
+  "paidDate": zod.coerce.date().nullable(),
+  "settlementNotes": zod.string().max(updateSpecialAgreementSettlementBodySettlementNotesMax).nullable(),
+  "expectedSettlementVersion": zod.number().min(updateSpecialAgreementSettlementBodyExpectedSettlementVersionMin)
+})
+
+export const updateSpecialAgreementSettlementResponseSpecialAgreementSettlementVersionMin = 0;
+
+
+
+export const UpdateSpecialAgreementSettlementResponse = zod.object({
+  "id": zod.number(),
+  "yearId": zod.number(),
+  "name": zod.string(),
+  "businessName": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string(),
+  "vendorType": zod.string(),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'payment_pending', 'paid', 'final_approved']),
+  "applicationData": zod.record(zod.string(), zod.unknown()),
+  "agreementSigned": zod.boolean().optional(),
+  "agreementSignedName": zod.string().nullish(),
+  "spotNumber": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "reviewNote": zod.string().nullish(),
+  "paidAt": zod.string().nullish(),
+  "settledAmount": zod.number().nullish(),
+  "pendingManualAdjustment": zod.number().nullish(),
+  "pendingAdjustmentTargetAmount": zod.number().nullish(),
+  "specialAgreementOperationType": zod.string().nullish(),
+  "specialAgreementRevenueSharePercentage": zod.number().nullish(),
+  "specialAgreementInternalNotes": zod.string().nullish(),
+  "specialAgreementDayOfContactName": zod.string().nullish(),
+  "specialAgreementDayOfContactPhone": zod.string().nullish(),
+  "specialAgreementBackupContactName": zod.string().nullish(),
+  "specialAgreementBackupContactPhone": zod.string().nullish(),
+  "specialAgreementSignedDate": zod.string().nullish(),
+  "specialAgreementSignedAt": zod.string().nullish(),
+  "specialAgreementGrossSales": zod.number().nullish(),
+  "specialAgreementDeductions": zod.number().nullish(),
+  "specialAgreementDeductionsNotes": zod.string().nullish(),
+  "specialAgreementNetProfit": zod.number().nullish(),
+  "specialAgreementAmountOwed": zod.number().nullish(),
+  "specialAgreementAmountPaid": zod.number().nullish(),
+  "specialAgreementPaidDate": zod.string().nullish(),
+  "specialAgreementOutstandingBalance": zod.number().nullish(),
+  "specialAgreementSettlementStatus": zod.enum(['awaiting_figures', 'calculated', 'paid']).optional(),
+  "specialAgreementSettlementNotes": zod.string().nullish(),
+  "specialAgreementSettlementVersion": zod.number().min(updateSpecialAgreementSettlementResponseSpecialAgreementSettlementVersionMin).optional(),
+  "approvedAt": zod.string().nullish(),
+  "finalApprovedAt": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
  * @summary Approve or reject a vendor
  */
 export const ReviewVendorParams = zod.object({
@@ -942,6 +1118,10 @@ export const ReviewVendorBody = zod.object({
   "status": zod.enum(['approved', 'rejected']),
   "note": zod.string().nullish()
 })
+
+export const reviewVendorResponseSpecialAgreementSettlementVersionMin = 0;
+
+
 
 export const ReviewVendorResponse = zod.object({
   "id": zod.number(),
@@ -971,6 +1151,17 @@ export const ReviewVendorResponse = zod.object({
   "specialAgreementBackupContactPhone": zod.string().nullish(),
   "specialAgreementSignedDate": zod.string().nullish(),
   "specialAgreementSignedAt": zod.string().nullish(),
+  "specialAgreementGrossSales": zod.number().nullish(),
+  "specialAgreementDeductions": zod.number().nullish(),
+  "specialAgreementDeductionsNotes": zod.string().nullish(),
+  "specialAgreementNetProfit": zod.number().nullish(),
+  "specialAgreementAmountOwed": zod.number().nullish(),
+  "specialAgreementAmountPaid": zod.number().nullish(),
+  "specialAgreementPaidDate": zod.string().nullish(),
+  "specialAgreementOutstandingBalance": zod.number().nullish(),
+  "specialAgreementSettlementStatus": zod.enum(['awaiting_figures', 'calculated', 'paid']).optional(),
+  "specialAgreementSettlementNotes": zod.string().nullish(),
+  "specialAgreementSettlementVersion": zod.number().min(reviewVendorResponseSpecialAgreementSettlementVersionMin).optional(),
   "approvedAt": zod.string().nullish(),
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
@@ -993,6 +1184,10 @@ export const UpdateVendorCategoryBody = zod.object({
   "vendorType": zod.enum(['major_food', 'specialty_food', 'retail', 'nonprofit']),
   "reason": zod.string().min(updateVendorCategoryBodyReasonMin).max(updateVendorCategoryBodyReasonMax)
 })
+
+export const updateVendorCategoryResponseVendorSpecialAgreementSettlementVersionMin = 0;
+
+
 
 export const UpdateVendorCategoryResponse = zod.object({
   "vendor": zod.object({
@@ -1023,6 +1218,17 @@ export const UpdateVendorCategoryResponse = zod.object({
   "specialAgreementBackupContactPhone": zod.string().nullish(),
   "specialAgreementSignedDate": zod.string().nullish(),
   "specialAgreementSignedAt": zod.string().nullish(),
+  "specialAgreementGrossSales": zod.number().nullish(),
+  "specialAgreementDeductions": zod.number().nullish(),
+  "specialAgreementDeductionsNotes": zod.string().nullish(),
+  "specialAgreementNetProfit": zod.number().nullish(),
+  "specialAgreementAmountOwed": zod.number().nullish(),
+  "specialAgreementAmountPaid": zod.number().nullish(),
+  "specialAgreementPaidDate": zod.string().nullish(),
+  "specialAgreementOutstandingBalance": zod.number().nullish(),
+  "specialAgreementSettlementStatus": zod.enum(['awaiting_figures', 'calculated', 'paid']).optional(),
+  "specialAgreementSettlementNotes": zod.string().nullish(),
+  "specialAgreementSettlementVersion": zod.number().min(updateVendorCategoryResponseVendorSpecialAgreementSettlementVersionMin).optional(),
   "approvedAt": zod.string().nullish(),
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
@@ -1046,6 +1252,10 @@ export const UpdateVendorCategoryResponse = zod.object({
 export const SettleVendorCategoryAdjustmentParams = zod.object({
   "id": zod.coerce.number()
 })
+
+export const settleVendorCategoryAdjustmentResponseSpecialAgreementSettlementVersionMin = 0;
+
+
 
 export const SettleVendorCategoryAdjustmentResponse = zod.object({
   "id": zod.number(),
@@ -1075,6 +1285,17 @@ export const SettleVendorCategoryAdjustmentResponse = zod.object({
   "specialAgreementBackupContactPhone": zod.string().nullish(),
   "specialAgreementSignedDate": zod.string().nullish(),
   "specialAgreementSignedAt": zod.string().nullish(),
+  "specialAgreementGrossSales": zod.number().nullish(),
+  "specialAgreementDeductions": zod.number().nullish(),
+  "specialAgreementDeductionsNotes": zod.string().nullish(),
+  "specialAgreementNetProfit": zod.number().nullish(),
+  "specialAgreementAmountOwed": zod.number().nullish(),
+  "specialAgreementAmountPaid": zod.number().nullish(),
+  "specialAgreementPaidDate": zod.string().nullish(),
+  "specialAgreementOutstandingBalance": zod.number().nullish(),
+  "specialAgreementSettlementStatus": zod.enum(['awaiting_figures', 'calculated', 'paid']).optional(),
+  "specialAgreementSettlementNotes": zod.string().nullish(),
+  "specialAgreementSettlementVersion": zod.number().min(settleVendorCategoryAdjustmentResponseSpecialAgreementSettlementVersionMin).optional(),
   "approvedAt": zod.string().nullish(),
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
@@ -1087,6 +1308,10 @@ export const SettleVendorCategoryAdjustmentResponse = zod.object({
 export const FinalApproveVendorParams = zod.object({
   "id": zod.coerce.number()
 })
+
+export const finalApproveVendorResponseSpecialAgreementSettlementVersionMin = 0;
+
+
 
 export const FinalApproveVendorResponse = zod.object({
   "id": zod.number(),
@@ -1116,6 +1341,17 @@ export const FinalApproveVendorResponse = zod.object({
   "specialAgreementBackupContactPhone": zod.string().nullish(),
   "specialAgreementSignedDate": zod.string().nullish(),
   "specialAgreementSignedAt": zod.string().nullish(),
+  "specialAgreementGrossSales": zod.number().nullish(),
+  "specialAgreementDeductions": zod.number().nullish(),
+  "specialAgreementDeductionsNotes": zod.string().nullish(),
+  "specialAgreementNetProfit": zod.number().nullish(),
+  "specialAgreementAmountOwed": zod.number().nullish(),
+  "specialAgreementAmountPaid": zod.number().nullish(),
+  "specialAgreementPaidDate": zod.string().nullish(),
+  "specialAgreementOutstandingBalance": zod.number().nullish(),
+  "specialAgreementSettlementStatus": zod.enum(['awaiting_figures', 'calculated', 'paid']).optional(),
+  "specialAgreementSettlementNotes": zod.string().nullish(),
+  "specialAgreementSettlementVersion": zod.number().min(finalApproveVendorResponseSpecialAgreementSettlementVersionMin).optional(),
   "approvedAt": zod.string().nullish(),
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
@@ -1133,6 +1369,10 @@ export const AssignVendorSpotBody = zod.object({
   "spotNumber": zod.string(),
   "location": zod.string()
 })
+
+export const assignVendorSpotResponseSpecialAgreementSettlementVersionMin = 0;
+
+
 
 export const AssignVendorSpotResponse = zod.object({
   "id": zod.number(),
@@ -1162,6 +1402,17 @@ export const AssignVendorSpotResponse = zod.object({
   "specialAgreementBackupContactPhone": zod.string().nullish(),
   "specialAgreementSignedDate": zod.string().nullish(),
   "specialAgreementSignedAt": zod.string().nullish(),
+  "specialAgreementGrossSales": zod.number().nullish(),
+  "specialAgreementDeductions": zod.number().nullish(),
+  "specialAgreementDeductionsNotes": zod.string().nullish(),
+  "specialAgreementNetProfit": zod.number().nullish(),
+  "specialAgreementAmountOwed": zod.number().nullish(),
+  "specialAgreementAmountPaid": zod.number().nullish(),
+  "specialAgreementPaidDate": zod.string().nullish(),
+  "specialAgreementOutstandingBalance": zod.number().nullish(),
+  "specialAgreementSettlementStatus": zod.enum(['awaiting_figures', 'calculated', 'paid']).optional(),
+  "specialAgreementSettlementNotes": zod.string().nullish(),
+  "specialAgreementSettlementVersion": zod.number().min(assignVendorSpotResponseSpecialAgreementSettlementVersionMin).optional(),
   "approvedAt": zod.string().nullish(),
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()

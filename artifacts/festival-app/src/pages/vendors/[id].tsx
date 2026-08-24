@@ -1,6 +1,6 @@
-import { useState, useRef } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useLocation, useParams } from "wouter"
-import { useGetVendor, useGetSettings, useReviewVendor, useUpdateVendorCategory, useSettleVendorCategoryAdjustment, useFinalApproveVendor, useAssignVendorSpot, getGetVendorQueryKey, getGetSettingsQueryKey, useDeleteVendor, useResendVendorConfirmation } from "@workspace/api-client-react"
+import { useGetVendor, useGetSettings, useReviewVendor, useUpdateVendorCategory, useSettleVendorCategoryAdjustment, useFinalApproveVendor, useAssignVendorSpot, getGetVendorQueryKey, getGetSettingsQueryKey, getGetSpecialAgreementSettlementSummaryQueryKey, useDeleteVendor, useResendVendorConfirmation, useUpdateSpecialAgreementSettlement } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -91,6 +91,15 @@ function AckCheck({ checked, label }: { checked: boolean; label: string }) {
   )
 }
 
+const formatCurrency = (value: number | null | undefined) =>
+  value == null ? "—" : value.toLocaleString("en-US", { style: "currency", currency: "USD" })
+
+const settlementStatusLabel: Record<string, string> = {
+  awaiting_figures: "Awaiting figures",
+  calculated: "Calculated",
+  paid: "Paid",
+}
+
 // ---------------------------------------------------------------------------
 // Main page
 // ---------------------------------------------------------------------------
@@ -113,6 +122,7 @@ export default function VendorDetailPage() {
   const assignSpotMutation = useAssignVendorSpot({ mutation: { mutationKey: ["assignSpotVendor", id] } })
   const deleteMutation = useDeleteVendor()
   const resendMutation = useResendVendorConfirmation()
+  const settlementMutation = useUpdateSpecialAgreementSettlement({ mutation: { mutationKey: ["updateSpecialAgreementSettlement", id] } })
 
   const [reviewNote, setReviewNote] = useState("")
   const [spotNumber, setSpotNumber] = useState("")
@@ -123,6 +133,15 @@ export default function VendorDetailPage() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState("")
   const [categoryReason, setCategoryReason] = useState("")
+  const [settlementVendorId, setSettlementVendorId] = useState<number | null>(null)
+  const [settlementForm, setSettlementForm] = useState({
+    grossSales: "",
+    deductions: "",
+    deductionsNotes: "",
+    amountPaid: "",
+    paidDate: "",
+    settlementNotes: "",
+  })
   const [paymentReconciliation, setPaymentReconciliation] = useState<{
     oldAmount: number | null
     newAmount: number
@@ -135,6 +154,19 @@ export default function VendorDetailPage() {
   finalApproveMutateFnRef.current = finalApproveMutation.mutate
   const assignSpotMutateFnRef = useRef(assignSpotMutation.mutate)
   assignSpotMutateFnRef.current = assignSpotMutation.mutate
+
+  useEffect(() => {
+    if (!vendor || vendor.vendorType !== "special_agreement" || settlementVendorId === vendor.id) return
+    setSettlementVendorId(vendor.id)
+    setSettlementForm({
+      grossSales: vendor.specialAgreementGrossSales?.toString() ?? "",
+      deductions: vendor.specialAgreementDeductions?.toString() ?? "",
+      deductionsNotes: vendor.specialAgreementDeductionsNotes ?? "",
+      amountPaid: vendor.specialAgreementAmountPaid?.toString() ?? "",
+      paidDate: vendor.specialAgreementPaidDate ?? "",
+      settlementNotes: vendor.specialAgreementSettlementNotes ?? "",
+    })
+  }, [vendor, settlementVendorId])
 
   const openCategoryDialog = (open: boolean) => {
     setIsCategoryOpen(open)
@@ -246,6 +278,42 @@ export default function VendorDetailPage() {
         onError: () => toast({ title: "Failed to resend confirmation email", variant: "destructive" }),
       }
     )
+  }
+
+  const handleSettlementSave = () => {
+    if (!vendor) return
+    const parseAmount = (value: string) => {
+      if (value.trim() === "") return null
+      const amount = Number(value)
+      return Number.isFinite(amount) ? amount : undefined
+    }
+    const grossSales = parseAmount(settlementForm.grossSales)
+    const deductions = parseAmount(settlementForm.deductions)
+    const amountPaid = parseAmount(settlementForm.amountPaid)
+    if (grossSales === undefined || deductions === undefined || amountPaid === undefined) {
+      toast({ title: "Enter valid dollar amounts", variant: "destructive" })
+      return
+    }
+
+    settlementMutation.mutate({
+      id,
+      data: {
+        grossSales,
+        deductions,
+        deductionsNotes: settlementForm.deductionsNotes.trim() || null,
+        amountPaid,
+        paidDate: settlementForm.paidDate || null,
+        settlementNotes: settlementForm.settlementNotes.trim() || null,
+        expectedSettlementVersion: vendor.specialAgreementSettlementVersion ?? 0,
+      },
+    }, {
+      onSuccess: (updated) => {
+        queryClient.setQueryData(getGetVendorQueryKey(id), updated)
+        queryClient.invalidateQueries({ queryKey: getGetSpecialAgreementSettlementSummaryQueryKey({ yearId: updated.yearId }) })
+        toast({ title: "Settlement saved", description: "Calculated amounts and status have been updated." })
+      },
+      onError: () => toast({ title: "Could not save settlement", description: "Check the amounts, required deduction notes, and payment date.", variant: "destructive" }),
+    })
   }
 
   if (isLoading) return <AdminLayout><div className="p-8">Loading...</div></AdminLayout>
@@ -750,6 +818,65 @@ export default function VendorDetailPage() {
                  )}
               </CardContent>
             </Card>
+
+             {isSpecialAgreement && (
+               <Card className="border-t-4 border-t-violet-600">
+                 <CardHeader>
+                   <CardTitle className="text-xl">Vendor Settlement</CardTitle>
+                   <p className="text-sm text-muted-foreground">All amounts record money RCCS owes this vendor after the festival.</p>
+                 </CardHeader>
+                 <CardContent className="space-y-4">
+                   <div className="flex items-center justify-between rounded-md bg-violet-50 border border-violet-100 px-3 py-2">
+                     <span className="text-sm font-medium">Settlement status</span>
+                     <Badge className={vendor.specialAgreementSettlementStatus === "paid" ? "bg-green-100 text-green-800 hover:bg-green-100" : vendor.specialAgreementSettlementStatus === "calculated" ? "bg-blue-100 text-blue-800 hover:bg-blue-100" : "bg-amber-100 text-amber-900 hover:bg-amber-100"}>
+                       {settlementStatusLabel[vendor.specialAgreementSettlementStatus ?? "awaiting_figures"]}
+                     </Badge>
+                   </div>
+
+                   <div className="space-y-2">
+                     <Label htmlFor="settlement-gross">Gross sales collected by RCCS</Label>
+                     <Input id="settlement-gross" inputMode="decimal" type="number" min="0" step="0.01" placeholder="0.00" value={settlementForm.grossSales} onChange={(event) => setSettlementForm((form) => ({ ...form, grossSales: event.target.value }))} />
+                   </div>
+                   <div className="space-y-2">
+                     <Label htmlFor="settlement-deductions">Deductions or costs</Label>
+                     <Input id="settlement-deductions" inputMode="decimal" type="number" min="0" step="0.01" placeholder="0.00" value={settlementForm.deductions} onChange={(event) => setSettlementForm((form) => ({ ...form, deductions: event.target.value }))} />
+                   </div>
+                   <div className="space-y-2">
+                     <Label htmlFor="settlement-deductions-notes">What deductions cover</Label>
+                     <Textarea id="settlement-deductions-notes" rows={2} placeholder="Required whenever deductions are entered." value={settlementForm.deductionsNotes} onChange={(event) => setSettlementForm((form) => ({ ...form, deductionsNotes: event.target.value }))} />
+                   </div>
+
+                   <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+                     <div className="flex justify-between gap-4 text-sm"><span className="text-muted-foreground">Net profit</span><span className="font-semibold">{formatCurrency(vendor.specialAgreementNetProfit)}</span></div>
+                     <div className="flex justify-between gap-4 text-sm"><span className="text-muted-foreground">Agreed revenue share</span><span className="font-semibold">{vendor.specialAgreementRevenueSharePercentage ?? 0}%</span></div>
+                     <div className="flex justify-between gap-4 border-t pt-2 text-sm"><span className="font-medium">Amount owed to vendor</span><span className="font-bold text-primary">{formatCurrency(vendor.specialAgreementAmountOwed)}</span></div>
+                     <p className="text-xs text-muted-foreground">These values are calculated from the entered figures and cannot be edited directly.</p>
+                   </div>
+
+                   <div className="grid grid-cols-2 gap-3">
+                     <div className="space-y-2">
+                       <Label htmlFor="settlement-paid">Amount paid</Label>
+                       <Input id="settlement-paid" inputMode="decimal" type="number" min="0" step="0.01" placeholder="0.00" value={settlementForm.amountPaid} onChange={(event) => setSettlementForm((form) => ({ ...form, amountPaid: event.target.value }))} />
+                     </div>
+                     <div className="space-y-2">
+                       <Label htmlFor="settlement-paid-date">Date paid</Label>
+                       <Input id="settlement-paid-date" type="date" value={settlementForm.paidDate} onChange={(event) => setSettlementForm((form) => ({ ...form, paidDate: event.target.value }))} />
+                     </div>
+                   </div>
+                   <div className="flex justify-between gap-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm">
+                     <span className="font-medium text-amber-950">Outstanding balance</span>
+                     <span className="font-bold text-amber-950">{formatCurrency(vendor.specialAgreementOutstandingBalance)}</span>
+                   </div>
+                   <div className="space-y-2">
+                     <Label htmlFor="settlement-notes">Settlement notes</Label>
+                     <Textarea id="settlement-notes" rows={3} placeholder="Optional internal notes about this settlement." value={settlementForm.settlementNotes} onChange={(event) => setSettlementForm((form) => ({ ...form, settlementNotes: event.target.value }))} />
+                   </div>
+                   <Button className="w-full" onClick={handleSettlementSave} disabled={settlementMutation.isPending}>
+                     {settlementMutation.isPending ? "Saving settlement…" : "Save Settlement"}
+                   </Button>
+                 </CardContent>
+               </Card>
+             )}
           </div>
         </div>
       </div>

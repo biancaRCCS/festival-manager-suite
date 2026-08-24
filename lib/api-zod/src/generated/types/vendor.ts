@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { VendorApplicationData } from './vendorApplicationData';
+import type { VendorSpecialAgreementSettlementStatus } from './vendorSpecialAgreementSettlementStatus';
 import type { VendorStatus } from './vendorStatus';
 
 export interface Vendor {
@@ -53,6 +54,27 @@ export interface Vendor {
   specialAgreementSignedDate?: string | null;
   /** @nullable */
   specialAgreementSignedAt?: string | null;
+  /** @nullable */
+  specialAgreementGrossSales?: number | null;
+  /** @nullable */
+  specialAgreementDeductions?: number | null;
+  /** @nullable */
+  specialAgreementDeductionsNotes?: string | null;
+  /** @nullable */
+  specialAgreementNetProfit?: number | null;
+  /** @nullable */
+  specialAgreementAmountOwed?: number | null;
+  /** @nullable */
+  specialAgreementAmountPaid?: number | null;
+  /** @nullable */
+  specialAgreementPaidDate?: string | null;
+  /** @nullable */
+  specialAgreementOutstandingBalance?: number | null;
+  specialAgreementSettlementStatus?: VendorSpecialAgreementSettlementStatus;
+  /** @nullable */
+  specialAgreementSettlementNotes?: string | null;
+  /** @minimum 0 */
+  specialAgreementSettlementVersion?: number;
   /** @nullable */
   approvedAt?: string | null;
   /** @nullable */

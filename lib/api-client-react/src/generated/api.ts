@@ -38,6 +38,7 @@ import type {
   GetDashboardFinancialsParams,
   GetRecentActivityParams,
   GetSettingsParams,
+  GetSpecialAgreementSettlementSummaryParams,
   HealthStatus,
   ListContributionsParams,
   ListSpecialAgreementVendorsParams,
@@ -47,6 +48,8 @@ import type {
   PaginatedActivityResponse,
   PortalInfo,
   ReviewDecision,
+  SpecialAgreementSettlementSummary,
+  SpecialAgreementSettlementUpdate,
   SpecialAgreementSignature,
   SpecialAgreementVendorInput,
   Sponsor,
@@ -1836,6 +1839,90 @@ export const useCreateSpecialAgreementVendor = <TError = ErrorType<unknown>,
       return useMutation(getCreateSpecialAgreementVendorMutationOptions(options));
     }
 
+export const getGetSpecialAgreementSettlementSummaryUrl = (params: GetSpecialAgreementSettlementSummaryParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/special-agreements/settlement-summary?${stringifiedParams}` : `/api/special-agreements/settlement-summary`
+}
+
+/**
+ * @summary Get Special Agreement Vendor settlement summary
+ */
+export const getSpecialAgreementSettlementSummary = async (params: GetSpecialAgreementSettlementSummaryParams, options?: RequestInit): Promise<SpecialAgreementSettlementSummary> => {
+
+  return customFetch<SpecialAgreementSettlementSummary>(getGetSpecialAgreementSettlementSummaryUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSpecialAgreementSettlementSummaryQueryKey = (params?: GetSpecialAgreementSettlementSummaryParams,) => {
+    return [
+    `/api/special-agreements/settlement-summary`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetSpecialAgreementSettlementSummaryQueryOptions = <TData = Awaited<ReturnType<typeof getSpecialAgreementSettlementSummary>>, TError = ErrorType<unknown>>(params: GetSpecialAgreementSettlementSummaryParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSpecialAgreementSettlementSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSpecialAgreementSettlementSummaryQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSpecialAgreementSettlementSummary>>> = ({ signal }) => getSpecialAgreementSettlementSummary(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSpecialAgreementSettlementSummary>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSpecialAgreementSettlementSummaryQueryResult = NonNullable<Awaited<ReturnType<typeof getSpecialAgreementSettlementSummary>>>
+export type GetSpecialAgreementSettlementSummaryQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get Special Agreement Vendor settlement summary
+ */
+
+export function useGetSpecialAgreementSettlementSummary<TData = Awaited<ReturnType<typeof getSpecialAgreementSettlementSummary>>, TError = ErrorType<unknown>>(
+ params: GetSpecialAgreementSettlementSummaryParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSpecialAgreementSettlementSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSpecialAgreementSettlementSummaryQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getGetVendorUrl = (id: number,) => {
 
 
@@ -1982,6 +2069,78 @@ export const useDeleteVendor = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getDeleteVendorMutationOptions(options));
+    }
+
+export const getUpdateSpecialAgreementSettlementUrl = (id: number,) => {
+
+
+
+
+  return `/api/vendors/${id}/special-agreement-settlement`
+}
+
+/**
+ * @summary Update a Special Agreement Vendor settlement
+ */
+export const updateSpecialAgreementSettlement = async (id: number,
+    specialAgreementSettlementUpdate: SpecialAgreementSettlementUpdate, options?: RequestInit): Promise<Vendor> => {
+
+  return customFetch<Vendor>(getUpdateSpecialAgreementSettlementUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(specialAgreementSettlementUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateSpecialAgreementSettlementMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSpecialAgreementSettlement>>, TError,{id: number;data: BodyType<SpecialAgreementSettlementUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSpecialAgreementSettlement>>, TError,{id: number;data: BodyType<SpecialAgreementSettlementUpdate>}, TContext> => {
+
+const mutationKey = ['updateSpecialAgreementSettlement'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSpecialAgreementSettlement>>, {id: number;data: BodyType<SpecialAgreementSettlementUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateSpecialAgreementSettlement(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateSpecialAgreementSettlementMutationResult = NonNullable<Awaited<ReturnType<typeof updateSpecialAgreementSettlement>>>
+    export type UpdateSpecialAgreementSettlementMutationBody = BodyType<SpecialAgreementSettlementUpdate>
+    export type UpdateSpecialAgreementSettlementMutationError = ErrorType<void>
+
+    /**
+ * @summary Update a Special Agreement Vendor settlement
+ */
+export const useUpdateSpecialAgreementSettlement = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSpecialAgreementSettlement>>, TError,{id: number;data: BodyType<SpecialAgreementSettlementUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateSpecialAgreementSettlement>>,
+        TError,
+        {id: number;data: BodyType<SpecialAgreementSettlementUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateSpecialAgreementSettlementMutationOptions(options));
     }
 
 export const getReviewVendorUrl = (id: number,) => {
