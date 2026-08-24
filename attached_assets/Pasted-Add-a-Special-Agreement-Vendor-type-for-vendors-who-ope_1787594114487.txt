@@ -1,0 +1,23 @@
+Add a "Special Agreement Vendor" type for vendors who operate under an individual agreement rather than paying a booth fee. Our two alcohol vendors are the current case. They are created by staff, never through the public application form, and they never pay a fee or reach Stripe checkout.
+
+ADMIN. Add a "Special Agreements" page to the sidebar with an "Add vendor" action collecting:
+- Contact name, organization, email, phone
+- Type of operation (free text, e.g. beer, wine)
+- Agreed revenue share percentage paid BY RCCS TO the vendor
+- Internal notes
+
+Saving generates a private tokenized link, the same mechanism the vendor portal uses, and emails it to them. Use the app's existing email layout.
+
+THE LINKED PAGE. Public, reached only by that token, matching the site's styling. It shows:
+- Their organization name and the agreed revenue share percentage, so they can confirm what they are signing
+- A statement that RCCS collects all customer payments and pays the vendor their agreed share after the festival, once reconciliation is complete
+- Day-of on-site contact and backup contact, with mobile numbers — required
+- Instructions to email their ABC licence, certificate of insurance, seller's permit, and health permit if serving food, to vendors@romaniancenter.org by the document deadline in Settings
+- Required acknowledgements: they are responsible for obtaining all permits, licences, and insurance; they provide their own equipment; running water is not provided; power is their responsibility; the load-in and no-vehicles rules; clean-up; that RCCS is not responsible for lost, stolen, or damaged property
+- Typed full name as signature, plus the date
+
+On submit, record the signature and notify the address in Settings.
+
+These vendors must appear in the normal vendor list and be assignable a spot exactly like any other vendor, so day-of logistics work the same. Mark them clearly as Special Agreement so nobody expects a payment from them.
+
+No fee, no payment, no Stripe checkout anywhere in this flow.
