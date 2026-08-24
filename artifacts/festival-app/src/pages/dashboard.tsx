@@ -18,12 +18,28 @@ function formatFestivalDate(dateStr: string): string {
   return `${weekday}, ${month} ${day}${suffix}, ${date.getFullYear()}`
 }
 
+function calculateDaysUntilFestival(festivalDate: string | null | undefined): number | null {
+  if (!festivalDate) return null
+
+  const festival = new Date(`${festivalDate}T12:00:00`)
+  if (Number.isNaN(festival.getTime())) return null
+
+  return Math.ceil((festival.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+}
+
 export default function DashboardPage() {
   const { data: currentYear, isLoading: yearLoading } = useGetCurrentYear()
-  const { data: summary, isLoading: summaryLoading } = useGetDashboardSummary({ query: { enabled: !!currentYear, queryKey: ["dashboardSummary"] } })
+  const { data: summary, isLoading: summaryLoading } = useGetDashboardSummary({
+    query: {
+      enabled: !!currentYear,
+      queryKey: ["dashboardSummary"],
+      refetchInterval: 60_000,
+    },
+  })
   const { data: activityData, isLoading: activityLoading } = useGetRecentActivity({ limit: 10 }, { query: { enabled: !!currentYear, queryKey: ["recentActivity"] } })
 
   const [smtpConfigured, setSmtpConfigured] = useState<boolean | null>(null)
+  const [daysUntilFestival, setDaysUntilFestival] = useState<number | null>(() => calculateDaysUntilFestival(summary?.festivalDate))
 
   useEffect(() => {
     fetch("/api/settings/email-status")
@@ -31,6 +47,14 @@ export default function DashboardPage() {
       .then(data => { if (data) setSmtpConfigured(data.configured) })
       .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    const updateCountdown = () => setDaysUntilFestival(calculateDaysUntilFestival(summary?.festivalDate))
+
+    updateCountdown()
+    const timer = window.setInterval(updateCountdown, 60_000)
+    return () => window.clearInterval(timer)
+  }, [summary?.festivalDate])
 
   const isLoading = yearLoading || summaryLoading || activityLoading
 
@@ -77,7 +101,6 @@ export default function DashboardPage() {
             {/* ── Countdown banner ── */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <Card className="md:col-span-4 bg-gradient-to-br from-primary/10 to-transparent border-primary/20 shadow-sm relative overflow-hidden">
-                <div className="absolute right-0 top-0 w-64 h-full bg-noise mix-blend-multiply opacity-50 pointer-events-none" />
                 <CardContent className="p-8 flex items-center justify-between">
                   <div>
                     <h2 className="text-sm font-medium text-primary uppercase tracking-wider mb-1">
@@ -87,12 +110,12 @@ export default function DashboardPage() {
                     {summary.festivalDate ? (
                       <>
                         <div className="text-5xl font-serif text-foreground mt-2">
-                          {summary.countdown !== null && summary.countdown > 0 ? (
+                          {daysUntilFestival !== null && daysUntilFestival > 0 ? (
                             <>
-                              <span className="text-primary font-bold">{summary.countdown}</span>
+                              <span className="text-primary font-bold">{daysUntilFestival}</span>
                               {" "}days left
                             </>
-                          ) : summary.countdown === 0 ? (
+                          ) : daysUntilFestival === 0 ? (
                             <span className="text-secondary font-bold">Today!</span>
                           ) : (
                             <span className="text-muted-foreground font-bold">Completed</span>

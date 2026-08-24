@@ -4,3 +4,4 @@
 - [Durable code execution limits](durable-code-execution-limits.md) — use fixed, cleaned-up test fixtures when durable sandbox runtime IDs are unavailable.
 - [Vendor payment reconciliation](vendor-payment-reconciliation.md) — category changes must invalidate stale Checkout state and preserve an explicit settled baseline.
 - [OpenAPI URL format codegen](openapi-url-format-codegen.md) — avoid `format: uri` in this spec until the generated Zod client supports `zod.url()`.
+- [Dashboard decorative layers](dashboard-decorative-layers.md) — keep visual overlays out of normal layout flow or they can displace and clip card content.
