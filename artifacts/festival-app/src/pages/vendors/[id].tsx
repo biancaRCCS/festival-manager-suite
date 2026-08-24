@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react"
 import { useLocation, useParams } from "wouter"
-import { useGetVendor, useGetSettings, useReviewVendor, useUpdateVendorCategory, useSettleVendorCategoryAdjustment, useFinalApproveVendor, useAssignVendorSpot, getGetVendorQueryKey, getGetSettingsQueryKey, getGetSpecialAgreementSettlementSummaryQueryKey, useDeleteVendor, useResendVendorConfirmation, useUpdateSpecialAgreementSettlement } from "@workspace/api-client-react"
+import { useGetVendor, useGetSettings, useReviewVendor, useUpdateVendorCategory, useSettleVendorCategoryAdjustment, useFinalApproveVendor, useAssignVendorSpot, getGetVendorQueryKey, getGetSettingsQueryKey, getGetSpecialAgreementSettlementSummaryQueryKey, useDeleteVendor, useResendVendorConfirmation, useUpdateSpecialAgreementSettlement, useUpdateVendorDetails } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ArrowLeft, CheckCircle2, XCircle, MapPin, Clock, Trash2, Pencil, AlertTriangle, Mail } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { ApplicantDetailsEditorDialog, type ApplicantDetailsField } from "@/components/applicant-details-editor-dialog"
 
 // ---------------------------------------------------------------------------
 // Display helpers
@@ -57,6 +58,16 @@ const ACK_LABELS: Record<string, string> = {
 }
 
 const FOOD_KEYS = new Set(["major_food", "specialty_food"])
+const VENDOR_DETAIL_FIELDS: ApplicantDetailsField[] = [
+  { key: "name", label: "Contact name" },
+  { key: "businessName", label: "Business / organization name" },
+  { key: "email", label: "Email" },
+  { key: "phone", label: "Phone" },
+  { key: "website", label: "Website" },
+  { key: "social", label: "Facebook / Instagram" },
+  { key: "productsDescription", label: "Products / services", multiline: true },
+  { key: "businessDescription", label: "Business description", multiline: true },
+]
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -124,6 +135,7 @@ export default function VendorDetailPage() {
   const deleteMutation = useDeleteVendor()
   const resendMutation = useResendVendorConfirmation()
   const settlementMutation = useUpdateSpecialAgreementSettlement({ mutation: { mutationKey: ["updateSpecialAgreementSettlement", id] } })
+  const detailsMutation = useUpdateVendorDetails({ mutation: { mutationKey: ["updateVendorDetails", id] } })
 
   const [reviewNote, setReviewNote] = useState("")
   const [spotNumber, setSpotNumber] = useState("")
@@ -132,6 +144,7 @@ export default function VendorDetailPage() {
   const [isCategoryOpen, setIsCategoryOpen] = useState(false)
   const [isSpotOpen, setIsSpotOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState("")
   const [categoryReason, setCategoryReason] = useState("")
   const [settlementVendorId, setSettlementVendorId] = useState<number | null>(null)
@@ -241,6 +254,32 @@ export default function VendorDetailPage() {
         },
         onError: () => toast({ title: "Failed to update vendor category", variant: "destructive" })
       }
+    )
+  }
+
+  const handleSaveDetails = (values: Record<string, string>) => {
+    detailsMutation.mutate(
+      {
+        id,
+        data: {
+          name: values.name ?? "",
+          businessName: values.businessName ?? "",
+          email: values.email ?? "",
+          phone: values.phone ?? "",
+          website: values.website?.trim() || null,
+          social: values.social?.trim() || null,
+          productsDescription: values.productsDescription?.trim() || null,
+          businessDescription: values.businessDescription?.trim() || null,
+        },
+      },
+      {
+        onSuccess: (data) => {
+          queryClient.setQueryData(getGetVendorQueryKey(id), data)
+          setIsDetailsOpen(false)
+          toast({ title: "Vendor details updated" })
+        },
+        onError: () => toast({ title: "Failed to update vendor details", variant: "destructive" }),
+      },
     )
   }
 
@@ -373,6 +412,27 @@ export default function VendorDetailPage() {
             <p className="text-muted-foreground">{vendor.name}</p>
           </div>
           <div className="flex gap-3 items-center flex-wrap">
+            <Button variant="outline" className="border-primary/20 hover:bg-primary/5 text-primary" onClick={() => setIsDetailsOpen(true)}>
+              <Pencil className="w-4 h-4 mr-2" /> Edit details
+            </Button>
+            <ApplicantDetailsEditorDialog
+              entityLabel="vendor"
+              fields={VENDOR_DETAIL_FIELDS}
+              initialValues={{
+                name: vendor.name,
+                businessName: vendor.businessName,
+                email: vendor.email,
+                phone: vendor.phone,
+                website: str("website") ?? "",
+                social: str("social") ?? "",
+                productsDescription: str("productsDescription") ?? "",
+                businessDescription: str("businessDescription") ?? "",
+              }}
+              open={isDetailsOpen}
+              onOpenChange={setIsDetailsOpen}
+              onSave={handleSaveDetails}
+              isSaving={detailsMutation.isPending}
+            />
             {vendor.status === 'pending' && (
               <Dialog open={isReviewOpen} onOpenChange={setIsReviewOpen}>
                 <DialogTrigger asChild>

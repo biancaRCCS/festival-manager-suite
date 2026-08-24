@@ -54,6 +54,7 @@ import type {
   SpecialAgreementVendorInput,
   Sponsor,
   SponsorApplicationInput,
+  SponsorDetailsUpdate,
   SponsorStage2Data,
   SpotAssignment,
   StaffInvite,
@@ -62,8 +63,10 @@ import type {
   VendorApplicationInput,
   VendorCategoryUpdate,
   VendorCategoryUpdateResult,
+  VendorDetailsUpdate,
   Volunteer,
   VolunteerApplicationInput,
+  VolunteerDetailsUpdate,
   VolunteerReview
 } from './api.schemas';
 
@@ -2287,6 +2290,78 @@ export const useUpdateVendorCategory = <TError = ErrorType<void>,
       return useMutation(getUpdateVendorCategoryMutationOptions(options));
     }
 
+export const getUpdateVendorDetailsUrl = (id: number,) => {
+
+
+
+
+  return `/api/vendors/${id}/details`
+}
+
+/**
+ * @summary Correct staff-editable vendor contact and business details without sending email
+ */
+export const updateVendorDetails = async (id: number,
+    vendorDetailsUpdate: VendorDetailsUpdate, options?: RequestInit): Promise<Vendor> => {
+
+  return customFetch<Vendor>(getUpdateVendorDetailsUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(vendorDetailsUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateVendorDetailsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateVendorDetails>>, TError,{id: number;data: BodyType<VendorDetailsUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateVendorDetails>>, TError,{id: number;data: BodyType<VendorDetailsUpdate>}, TContext> => {
+
+const mutationKey = ['updateVendorDetails'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateVendorDetails>>, {id: number;data: BodyType<VendorDetailsUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateVendorDetails(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateVendorDetailsMutationResult = NonNullable<Awaited<ReturnType<typeof updateVendorDetails>>>
+    export type UpdateVendorDetailsMutationBody = BodyType<VendorDetailsUpdate>
+    export type UpdateVendorDetailsMutationError = ErrorType<void>
+
+    /**
+ * @summary Correct staff-editable vendor contact and business details without sending email
+ */
+export const useUpdateVendorDetails = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateVendorDetails>>, TError,{id: number;data: BodyType<VendorDetailsUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateVendorDetails>>,
+        TError,
+        {id: number;data: BodyType<VendorDetailsUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateVendorDetailsMutationOptions(options));
+    }
+
 export const getSettleVendorCategoryAdjustmentUrl = (id: number,) => {
 
 
@@ -2876,6 +2951,78 @@ export const useReviewSponsor = <TError = ErrorType<unknown>,
       return useMutation(getReviewSponsorMutationOptions(options));
     }
 
+export const getUpdateSponsorDetailsUrl = (id: number,) => {
+
+
+
+
+  return `/api/sponsors/${id}/details`
+}
+
+/**
+ * @summary Correct staff-editable sponsor contact and business details without sending email
+ */
+export const updateSponsorDetails = async (id: number,
+    sponsorDetailsUpdate: SponsorDetailsUpdate, options?: RequestInit): Promise<Sponsor> => {
+
+  return customFetch<Sponsor>(getUpdateSponsorDetailsUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(sponsorDetailsUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateSponsorDetailsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSponsorDetails>>, TError,{id: number;data: BodyType<SponsorDetailsUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSponsorDetails>>, TError,{id: number;data: BodyType<SponsorDetailsUpdate>}, TContext> => {
+
+const mutationKey = ['updateSponsorDetails'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSponsorDetails>>, {id: number;data: BodyType<SponsorDetailsUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateSponsorDetails(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateSponsorDetailsMutationResult = NonNullable<Awaited<ReturnType<typeof updateSponsorDetails>>>
+    export type UpdateSponsorDetailsMutationBody = BodyType<SponsorDetailsUpdate>
+    export type UpdateSponsorDetailsMutationError = ErrorType<void>
+
+    /**
+ * @summary Correct staff-editable sponsor contact and business details without sending email
+ */
+export const useUpdateSponsorDetails = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSponsorDetails>>, TError,{id: number;data: BodyType<SponsorDetailsUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateSponsorDetails>>,
+        TError,
+        {id: number;data: BodyType<SponsorDetailsUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateSponsorDetailsMutationOptions(options));
+    }
+
 export const getFinalApproveSponsorUrl = (id: number,) => {
 
 
@@ -3392,6 +3539,78 @@ export const useReviewVolunteer = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getReviewVolunteerMutationOptions(options));
+    }
+
+export const getUpdateVolunteerDetailsUrl = (id: number,) => {
+
+
+
+
+  return `/api/volunteers/${id}/details`
+}
+
+/**
+ * @summary Correct staff-editable volunteer contact and organization details without sending email
+ */
+export const updateVolunteerDetails = async (id: number,
+    volunteerDetailsUpdate: VolunteerDetailsUpdate, options?: RequestInit): Promise<Volunteer> => {
+
+  return customFetch<Volunteer>(getUpdateVolunteerDetailsUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(volunteerDetailsUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateVolunteerDetailsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateVolunteerDetails>>, TError,{id: number;data: BodyType<VolunteerDetailsUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateVolunteerDetails>>, TError,{id: number;data: BodyType<VolunteerDetailsUpdate>}, TContext> => {
+
+const mutationKey = ['updateVolunteerDetails'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateVolunteerDetails>>, {id: number;data: BodyType<VolunteerDetailsUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateVolunteerDetails(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateVolunteerDetailsMutationResult = NonNullable<Awaited<ReturnType<typeof updateVolunteerDetails>>>
+    export type UpdateVolunteerDetailsMutationBody = BodyType<VolunteerDetailsUpdate>
+    export type UpdateVolunteerDetailsMutationError = ErrorType<void>
+
+    /**
+ * @summary Correct staff-editable volunteer contact and organization details without sending email
+ */
+export const useUpdateVolunteerDetails = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateVolunteerDetails>>, TError,{id: number;data: BodyType<VolunteerDetailsUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateVolunteerDetails>>,
+        TError,
+        {id: number;data: BodyType<VolunteerDetailsUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateVolunteerDetailsMutationOptions(options));
     }
 
 export const getResendVolunteerConfirmationUrl = (id: number,) => {

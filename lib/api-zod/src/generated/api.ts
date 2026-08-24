@@ -457,19 +457,22 @@ export const getRecentActivityQueryLimitMax = 100;
 export const GetRecentActivityQueryParams = zod.object({
   "page": zod.coerce.number().min(1).default(getRecentActivityQueryPageDefault),
   "limit": zod.coerce.number().min(1).max(getRecentActivityQueryLimitMax).default(getRecentActivityQueryLimitDefault),
-  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'category_changed', 'category_adjustment_settled', 'special_agreement_created', 'special_agreement_signed', 'special_agreement_settlement_updated', 'deleted']).optional(),
+  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'category_changed', 'category_adjustment_settled', 'details_updated', 'special_agreement_created', 'special_agreement_signed', 'special_agreement_settlement_updated', 'deleted']).optional(),
   "entityType": zod.enum(['vendor', 'sponsor', 'volunteer']).optional()
 })
 
 export const GetRecentActivityResponse = zod.object({
   "items": zod.array(zod.object({
   "id": zod.number(),
-  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'category_changed', 'category_adjustment_settled', 'special_agreement_created', 'special_agreement_signed', 'deleted']),
+  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'category_changed', 'category_adjustment_settled', 'details_updated', 'special_agreement_created', 'special_agreement_signed', 'deleted']),
   "message": zod.string(),
   "entityType": zod.enum(['vendor', 'sponsor', 'volunteer']),
   "entityId": zod.number().optional(),
   "performedBy": zod.string().nullish(),
-  "createdAt": zod.string()
+  "createdAt": zod.string(),
+  "fieldName": zod.string().nullish(),
+  "oldValue": zod.string().nullish(),
+  "newValue": zod.string().nullish()
 })),
   "total": zod.number(),
   "page": zod.number(),
@@ -1255,6 +1258,91 @@ export const UpdateVendorCategoryResponse = zod.object({
 
 
 /**
+ * @summary Correct staff-editable vendor contact and business details without sending email
+ */
+export const UpdateVendorDetailsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateVendorDetailsBodyNameMax = 200;
+
+export const updateVendorDetailsBodyBusinessNameMax = 200;
+
+export const updateVendorDetailsBodyEmailMax = 320;
+
+export const updateVendorDetailsBodyPhoneMax = 100;
+
+export const updateVendorDetailsBodyWebsiteMax = 500;
+
+export const updateVendorDetailsBodySocialMax = 500;
+
+export const updateVendorDetailsBodyProductsDescriptionMax = 5000;
+
+export const updateVendorDetailsBodyBusinessDescriptionMax = 5000;
+
+
+
+export const UpdateVendorDetailsBody = zod.object({
+  "name": zod.string().min(1).max(updateVendorDetailsBodyNameMax),
+  "businessName": zod.string().min(1).max(updateVendorDetailsBodyBusinessNameMax),
+  "email": zod.string().max(updateVendorDetailsBodyEmailMax),
+  "phone": zod.string().max(updateVendorDetailsBodyPhoneMax),
+  "website": zod.string().max(updateVendorDetailsBodyWebsiteMax).nullable(),
+  "social": zod.string().max(updateVendorDetailsBodySocialMax).nullable(),
+  "productsDescription": zod.string().max(updateVendorDetailsBodyProductsDescriptionMax).nullable(),
+  "businessDescription": zod.string().max(updateVendorDetailsBodyBusinessDescriptionMax).nullable()
+})
+
+export const updateVendorDetailsResponseSpecialAgreementSettlementVersionMin = 0;
+
+
+
+export const UpdateVendorDetailsResponse = zod.object({
+  "id": zod.number(),
+  "yearId": zod.number(),
+  "name": zod.string(),
+  "businessName": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string(),
+  "vendorType": zod.string(),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'payment_pending', 'paid', 'final_approved']),
+  "applicationData": zod.record(zod.string(), zod.unknown()),
+  "agreementSigned": zod.boolean().optional(),
+  "agreementSignedName": zod.string().nullish(),
+  "spotNumber": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "reviewNote": zod.string().nullish(),
+  "paidAt": zod.string().nullish(),
+  "settledAmount": zod.number().nullish(),
+  "pendingManualAdjustment": zod.number().nullish(),
+  "pendingAdjustmentTargetAmount": zod.number().nullish(),
+  "specialAgreementOperationType": zod.string().nullish(),
+  "specialAgreementRevenueSharePercentage": zod.number().nullish(),
+  "specialAgreementInternalNotes": zod.string().nullish(),
+  "specialAgreementDayOfContactName": zod.string().nullish(),
+  "specialAgreementDayOfContactPhone": zod.string().nullish(),
+  "specialAgreementBackupContactName": zod.string().nullish(),
+  "specialAgreementBackupContactPhone": zod.string().nullish(),
+  "specialAgreementSignedDate": zod.string().nullish(),
+  "specialAgreementSignedAt": zod.string().nullish(),
+  "specialAgreementGrossSales": zod.number().nullish(),
+  "specialAgreementDeductions": zod.number().nullish(),
+  "specialAgreementDeductionsNotes": zod.string().nullish(),
+  "specialAgreementNetProfit": zod.number().nullish(),
+  "specialAgreementAmountOwed": zod.number().nullish(),
+  "specialAgreementAmountPaid": zod.number().nullish(),
+  "specialAgreementPaidDate": zod.string().nullish(),
+  "specialAgreementOutstandingBalance": zod.number().nullish(),
+  "specialAgreementSettlementStatus": zod.enum(['awaiting_figures', 'calculated', 'paid']).optional(),
+  "specialAgreementSettlementNotes": zod.string().nullish(),
+  "specialAgreementSettlementVersion": zod.number().min(updateVendorDetailsResponseSpecialAgreementSettlementVersionMin).optional(),
+  "approvedAt": zod.string().nullish(),
+  "finalApprovedAt": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
  * @summary Mark a paid vendor's manual category adjustment as handled
  */
 export const SettleVendorCategoryAdjustmentParams = zod.object({
@@ -1548,6 +1636,60 @@ export const ReviewSponsorResponse = zod.object({
 
 
 /**
+ * @summary Correct staff-editable sponsor contact and business details without sending email
+ */
+export const UpdateSponsorDetailsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateSponsorDetailsBodyNameMax = 200;
+
+export const updateSponsorDetailsBodyOrgNameMax = 200;
+
+export const updateSponsorDetailsBodyEmailMax = 320;
+
+export const updateSponsorDetailsBodyPhoneMax = 100;
+
+export const updateSponsorDetailsBodyWebsiteMax = 500;
+
+export const updateSponsorDetailsBodySocialMax = 500;
+
+
+
+export const UpdateSponsorDetailsBody = zod.object({
+  "name": zod.string().min(1).max(updateSponsorDetailsBodyNameMax),
+  "orgName": zod.string().min(1).max(updateSponsorDetailsBodyOrgNameMax),
+  "email": zod.string().max(updateSponsorDetailsBodyEmailMax),
+  "phone": zod.string().max(updateSponsorDetailsBodyPhoneMax),
+  "website": zod.string().max(updateSponsorDetailsBodyWebsiteMax).nullable(),
+  "social": zod.string().max(updateSponsorDetailsBodySocialMax).nullable()
+})
+
+export const UpdateSponsorDetailsResponse = zod.object({
+  "id": zod.number(),
+  "yearId": zod.number(),
+  "name": zod.string(),
+  "orgName": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string(),
+  "tier": zod.string(),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'details_submitted', 'details_approved', 'payment_pending', 'paid', 'final_approved']),
+  "applicationData": zod.record(zod.string(), zod.unknown()),
+  "agreementSigned": zod.boolean().optional(),
+  "agreementSignedName": zod.string().nullish(),
+  "sponsorshipAmount": zod.number().nullish(),
+  "spotNumber": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "reviewNote": zod.string().nullish(),
+  "paidAt": zod.string().nullish(),
+  "approvedAt": zod.string().nullish(),
+  "detailsSubmittedAt": zod.string().nullish(),
+  "finalApprovedAt": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
  * @summary Final approve a sponsor after payment
  */
 export const FinalApproveSponsorParams = zod.object({
@@ -1694,6 +1836,51 @@ export const ReviewVolunteerBody = zod.object({
 })
 
 export const ReviewVolunteerResponse = zod.object({
+  "id": zod.number(),
+  "yearId": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string(),
+  "availability": zod.string().nullish(),
+  "status": zod.enum(['pending', 'approved', 'rejected']),
+  "applicationData": zod.record(zod.string(), zod.unknown()),
+  "assignedRole": zod.string().nullish(),
+  "reviewNote": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Correct staff-editable volunteer contact and organization details without sending email
+ */
+export const UpdateVolunteerDetailsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateVolunteerDetailsBodyNameMax = 200;
+
+export const updateVolunteerDetailsBodyOrganizationNameMax = 200;
+
+export const updateVolunteerDetailsBodyEmailMax = 320;
+
+export const updateVolunteerDetailsBodyPhoneMax = 100;
+
+export const updateVolunteerDetailsBodyWebsiteMax = 500;
+
+export const updateVolunteerDetailsBodySocialMax = 500;
+
+
+
+export const UpdateVolunteerDetailsBody = zod.object({
+  "name": zod.string().min(1).max(updateVolunteerDetailsBodyNameMax),
+  "organizationName": zod.string().max(updateVolunteerDetailsBodyOrganizationNameMax).nullable(),
+  "email": zod.string().max(updateVolunteerDetailsBodyEmailMax),
+  "phone": zod.string().max(updateVolunteerDetailsBodyPhoneMax),
+  "website": zod.string().max(updateVolunteerDetailsBodyWebsiteMax).nullable(),
+  "social": zod.string().max(updateVolunteerDetailsBodySocialMax).nullable()
+})
+
+export const UpdateVolunteerDetailsResponse = zod.object({
   "id": zod.number(),
   "yearId": zod.number(),
   "name": zod.string(),

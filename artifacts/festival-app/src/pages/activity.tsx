@@ -29,6 +29,7 @@ import {
   Download,
   User,
   FileSignature,
+  PencilLine,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -40,6 +41,7 @@ const TYPE_LABELS: Record<string, string> = {
   assigned:        "Assigned",
   category_changed: "Category Changed",
   category_adjustment_settled: "Category Adjustment Handled",
+  details_updated: "Details Updated",
   special_agreement_created: "Special Agreement Created",
   special_agreement_signed: "Special Agreement Signed",
   deleted:         "Deleted",
@@ -61,6 +63,7 @@ function typeIcon(type: string) {
     case "assigned":        return <Briefcase    className="w-4 h-4 text-violet-500" />
     case "category_changed": return <ClipboardList className="w-4 h-4 text-amber-600" />
     case "category_adjustment_settled": return <DollarSign className="w-4 h-4 text-amber-700" />
+    case "details_updated": return <PencilLine className="w-4 h-4 text-sky-600" />
     case "special_agreement_created": return <FileSignature className="w-4 h-4 text-violet-600" />
     case "special_agreement_signed": return <CheckCircle className="w-4 h-4 text-violet-600" />
     case "deleted":         return <Trash2       className="w-4 h-4 text-gray-400" />
@@ -206,6 +209,7 @@ export default function ActivityPage() {
                   <SelectItem value="assigned">Assigned</SelectItem>
                   <SelectItem value="category_changed">Category changed</SelectItem>
                   <SelectItem value="category_adjustment_settled">Category adjustment handled</SelectItem>
+                   <SelectItem value="details_updated">Details updated</SelectItem>
                   <SelectItem value="deleted">Deleted</SelectItem>
                   <SelectItem value="new_application">New application</SelectItem>
                 </SelectContent>
@@ -318,6 +322,14 @@ export default function ActivityPage() {
                             {formatDate(item.createdAt)}
                           </span>
                         </div>
+                        {item.type === "details_updated" && (
+                          <div className="mt-2 rounded-md border border-sky-100 bg-sky-50/60 px-3 py-2 text-xs text-slate-700 dark:border-sky-900/50 dark:bg-sky-950/30 dark:text-slate-200">
+                            <span className="font-medium">{item.fieldName ?? "Field"}:</span>{" "}
+                            <span className="line-through text-muted-foreground">{item.oldValue || "—"}</span>
+                            <span className="mx-1.5 text-muted-foreground">→</span>
+                            <span>{item.newValue || "—"}</span>
+                          </div>
+                        )}
                       </div>
 
                       {/* Link arrow */}

@@ -9,6 +9,9 @@ import {
   ReviewVendorBody,
   UpdateVendorCategoryParams,
   UpdateVendorCategoryBody,
+  UpdateVendorDetailsParams,
+  UpdateVendorDetailsBody,
+  UpdateVendorDetailsResponse,
   FinalApproveVendorParams,
   AssignVendorSpotParams,
   AssignVendorSpotBody,
@@ -31,6 +34,16 @@ import {
 } from "../lib/email";
 import { getUncachableStripeClient } from "../lib/stripeClient";
 import { deriveSpecialAgreementSettlement } from "../lib/specialAgreementSettlement";
+import {
+  addDetailChange,
+  applicationText,
+  asApplicationData,
+  type ApplicantDetailChange,
+  isExactObjectWithKeys,
+  isValidEmail,
+  normalizeOptionalText,
+  normalizeRequiredText,
+} from "../lib/applicantDetails";
 
 const router: IRouter = Router();
 
@@ -303,6 +316,86 @@ router.get("/vendors/:id", requireStaff, async (req, res): Promise<void> => {
     return;
   }
   res.json(formatVendor(vendor));
+});
+
+router.patch("/vendors/:id/details", requireStaff, async (req, res): Promise<void> => {
+  const allowedKeys = [
+    "name", "businessName", "email", "phone", "website", "social",
+    "productsDescription", "businessDescription",
+  ] as const;
+  if (!isExactObjectWithKeys(req.body, allowedKeys)) {
+    res.status(400).json({ error: "Only staff-editable vendor detail fields may be updated." });
+    return;
+  }
+
+  const params = UpdateVendorDetailsParams.safeParse(req.params);
+  const body = UpdateVendorDetailsBody.safeParse(req.body);
+  if (!params.success || !body.success) {
+    res.status(400).json({ error: "Enter valid vendor details." });
+    return;
+  }
+
+  const input = {
+    name: normalizeRequiredText(body.data.name),
+    businessName: normalizeRequiredText(body.data.businessName),
+    email: normalizeRequiredText(body.data.email),
+    phone: normalizeRequiredText(body.data.phone),
+    website: normalizeOptionalText(body.data.website),
+    social: normalizeOptionalText(body.data.social),
+    productsDescription: normalizeOptionalText(body.data.productsDescription),
+    businessDescription: normalizeOptionalText(body.data.businessDescription),
+  };
+  if (!input.name || !input.businessName || !isValidEmail(input.email)) {
+    res.status(400).json({ error: "Enter a name, business name, and valid email address." });
+    return;
+  }
+
+  const updated = await db.transaction(async (tx) => {
+    const [vendor] = await tx.select().from(vendorsTable).where(eq(vendorsTable.id, params.data.id));
+    if (!vendor) return null;
+
+    const nextApplicationData = asApplicationData(vendor.applicationData);
+    const changes: ApplicantDetailChange[] = [];
+    addDetailChange(changes, "Contact name", vendor.name, input.name);
+    addDetailChange(changes, "Business name", vendor.businessName, input.businessName);
+    addDetailChange(changes, "Email", vendor.email, input.email);
+    addDetailChange(changes, "Phone", vendor.phone, input.phone);
+
+    for (const [key, label, value] of [
+      ["website", "Website", input.website],
+      ["social", "Social media", input.social],
+      ["productsDescription", "Products description", input.productsDescription],
+      ["businessDescription", "Business description", input.businessDescription],
+    ] as const) {
+      const oldValue = applicationText(nextApplicationData[key]);
+      if (addDetailChange(changes, label, oldValue, value)) nextApplicationData[key] = value;
+    }
+
+    if (changes.length === 0) return vendor;
+    const [saved] = await tx.update(vendorsTable).set({
+      name: input.name,
+      businessName: input.businessName,
+      email: input.email,
+      phone: input.phone,
+      applicationData: nextApplicationData,
+    }).where(eq(vendorsTable.id, vendor.id)).returning();
+
+    await tx.insert(activityLogTable).values(changes.map((change) => ({
+      type: "details_updated",
+      message: `Vendor details updated: ${change.fieldName}`,
+      entityType: "vendor",
+      entityId: vendor.id,
+      performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
+      ...change,
+    })));
+    return saved;
+  });
+
+  if (!updated) {
+    res.status(404).json({ error: "Vendor not found" });
+    return;
+  }
+  res.json(UpdateVendorDetailsResponse.parse(formatVendor(updated)));
 });
 
 router.patch("/vendors/:id/special-agreement-settlement", requireStaff, async (req, res): Promise<void> => {

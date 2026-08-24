@@ -8,7 +8,20 @@ import {
   ListVolunteersQueryParams,
   ReviewVolunteerParams,
   ReviewVolunteerBody,
+  UpdateVolunteerDetailsParams,
+  UpdateVolunteerDetailsBody,
+  UpdateVolunteerDetailsResponse,
 } from "@workspace/api-zod";
+import {
+  addDetailChange,
+  applicationText,
+  asApplicationData,
+  type ApplicantDetailChange,
+  isExactObjectWithKeys,
+  isValidEmail,
+  normalizeOptionalText,
+  normalizeRequiredText,
+} from "../lib/applicantDetails";
 
 const router: IRouter = Router();
 
@@ -56,6 +69,77 @@ router.get("/volunteers/:id", requireStaff, async (req, res): Promise<void> => {
     return;
   }
   res.json(formatVolunteer(volunteer));
+});
+
+router.patch("/volunteers/:id/details", requireStaff, async (req, res): Promise<void> => {
+  const allowedKeys = ["name", "organizationName", "email", "phone", "website", "social"] as const;
+  if (!isExactObjectWithKeys(req.body, allowedKeys)) {
+    res.status(400).json({ error: "Only staff-editable volunteer detail fields may be updated." });
+    return;
+  }
+
+  const params = UpdateVolunteerDetailsParams.safeParse(req.params);
+  const body = UpdateVolunteerDetailsBody.safeParse(req.body);
+  if (!params.success || !body.success) {
+    res.status(400).json({ error: "Enter valid volunteer details." });
+    return;
+  }
+
+  const input = {
+    name: normalizeRequiredText(body.data.name),
+    organizationName: normalizeOptionalText(body.data.organizationName),
+    email: normalizeRequiredText(body.data.email),
+    phone: normalizeRequiredText(body.data.phone),
+    website: normalizeOptionalText(body.data.website),
+    social: normalizeOptionalText(body.data.social),
+  };
+  if (!input.name || !isValidEmail(input.email)) {
+    res.status(400).json({ error: "Enter a name and valid email address." });
+    return;
+  }
+
+  const updated = await db.transaction(async (tx) => {
+    const [volunteer] = await tx.select().from(volunteersTable).where(eq(volunteersTable.id, params.data.id));
+    if (!volunteer) return null;
+
+    const nextApplicationData = asApplicationData(volunteer.applicationData);
+    const changes: ApplicantDetailChange[] = [];
+    addDetailChange(changes, "Contact name", volunteer.name, input.name);
+    addDetailChange(changes, "Email", volunteer.email, input.email);
+    addDetailChange(changes, "Phone", volunteer.phone, input.phone);
+    for (const [key, label, value] of [
+      ["organizationName", "Organization or business name", input.organizationName],
+      ["website", "Website", input.website],
+      ["social", "Social media", input.social],
+    ] as const) {
+      const oldValue = applicationText(nextApplicationData[key]);
+      if (addDetailChange(changes, label, oldValue, value)) nextApplicationData[key] = value;
+    }
+
+    if (changes.length === 0) return volunteer;
+    const [saved] = await tx.update(volunteersTable).set({
+      name: input.name,
+      email: input.email,
+      phone: input.phone,
+      applicationData: nextApplicationData,
+    }).where(eq(volunteersTable.id, volunteer.id)).returning();
+
+    await tx.insert(activityLogTable).values(changes.map((change) => ({
+      type: "details_updated",
+      message: `Volunteer details updated: ${change.fieldName}`,
+      entityType: "volunteer",
+      entityId: volunteer.id,
+      performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
+      ...change,
+    })));
+    return saved;
+  });
+
+  if (!updated) {
+    res.status(404).json({ error: "Volunteer not found" });
+    return;
+  }
+  res.json(UpdateVolunteerDetailsResponse.parse(formatVolunteer(updated)));
 });
 
 router.patch("/volunteers/:id/review", requireStaff, async (req, res): Promise<void> => {

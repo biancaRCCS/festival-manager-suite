@@ -413,6 +413,7 @@ export const ActivityItemType = {
   assigned: 'assigned',
   category_changed: 'category_changed',
   category_adjustment_settled: 'category_adjustment_settled',
+  details_updated: 'details_updated',
   special_agreement_created: 'special_agreement_created',
   special_agreement_signed: 'special_agreement_signed',
   deleted: 'deleted',
@@ -435,6 +436,12 @@ export interface ActivityItem {
   entityId?: number;
   performedBy?: string | null;
   createdAt: string;
+  /** @nullable */
+  fieldName?: string | null;
+  /** @nullable */
+  oldValue?: string | null;
+  /** @nullable */
+  newValue?: string | null;
 }
 
 export interface PaginatedActivityResponse {
@@ -754,6 +761,97 @@ export interface VendorCategoryUpdate {
   reason: string;
 }
 
+export interface VendorDetailsUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  name: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  businessName: string;
+  /** @maxLength 320 */
+  email: string;
+  /** @maxLength 100 */
+  phone: string;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  website: string | null;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  social: string | null;
+  /**
+     * @maxLength 5000
+     * @nullable
+     */
+  productsDescription: string | null;
+  /**
+     * @maxLength 5000
+     * @nullable
+     */
+  businessDescription: string | null;
+}
+
+export interface SponsorDetailsUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  name: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  orgName: string;
+  /** @maxLength 320 */
+  email: string;
+  /** @maxLength 100 */
+  phone: string;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  website: string | null;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  social: string | null;
+}
+
+export interface VolunteerDetailsUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  name: string;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  organizationName: string | null;
+  /** @maxLength 320 */
+  email: string;
+  /** @maxLength 100 */
+  phone: string;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  website: string | null;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  social: string | null;
+}
+
 export type VendorCategoryUpdateResultNewVendorType = typeof VendorCategoryUpdateResultNewVendorType[keyof typeof VendorCategoryUpdateResultNewVendorType];
 
 
@@ -868,6 +966,7 @@ export const GetRecentActivityType = {
   assigned: 'assigned',
   category_changed: 'category_changed',
   category_adjustment_settled: 'category_adjustment_settled',
+  details_updated: 'details_updated',
   special_agreement_created: 'special_agreement_created',
   special_agreement_signed: 'special_agreement_signed',
   special_agreement_settlement_updated: 'special_agreement_settlement_updated',

@@ -16,4 +16,10 @@ export interface ActivityItem {
   entityId?: number;
   performedBy?: string | null;
   createdAt: string;
+  /** @nullable */
+  fieldName?: string | null;
+  /** @nullable */
+  oldValue?: string | null;
+  /** @nullable */
+  newValue?: string | null;
 }

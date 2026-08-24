@@ -1,6 +1,6 @@
 import { useState, useRef } from "react"
 import { useLocation, useParams } from "wouter"
-import { useGetSponsor, useReviewSponsor, useFinalApproveSponsor, useAssignSponsorSpot, getGetSponsorQueryKey, useDeleteSponsor, useResendSponsorConfirmation } from "@workspace/api-client-react"
+import { useGetSponsor, useReviewSponsor, useFinalApproveSponsor, useAssignSponsorSpot, getGetSponsorQueryKey, useDeleteSponsor, useResendSponsorConfirmation, useUpdateSponsorDetails } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { ArrowLeft, CheckCircle2, MapPin, Clock, Trash2, Check, Circle, Mail } from "lucide-react"
+import { ArrowLeft, CheckCircle2, MapPin, Clock, Trash2, Check, Circle, Mail, Pencil } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { ApplicantDetailsEditorDialog, type ApplicantDetailsField } from "@/components/applicant-details-editor-dialog"
 
 // ---------------------------------------------------------------------------
 // Display helpers
@@ -30,6 +31,14 @@ const TIER_RANGES: Record<string, string> = {
   platinum: "$5,000 – $9,999",
   diamond:  "$10,000 and above",
 }
+const SPONSOR_DETAIL_FIELDS: ApplicantDetailsField[] = [
+  { key: "name", label: "Contact name" },
+  { key: "orgName", label: "Organization / business name" },
+  { key: "email", label: "Email" },
+  { key: "phone", label: "Phone" },
+  { key: "website", label: "Website" },
+  { key: "social", label: "Facebook / Instagram" },
+]
 
 const STATUS_META: Record<string, { label: string; color: string; step: number }> = {
   pending:            { label: "Pending Review",                    color: "bg-yellow-100 text-yellow-800 border-yellow-200",  step: 1 },
@@ -187,6 +196,7 @@ export default function SponsorDetailPage() {
   const assignSpotMutation   = useAssignSponsorSpot({ mutation: { mutationKey: ["assignSpotSponsor", id] } })
   const deleteMutation       = useDeleteSponsor()
   const resendMutation       = useResendSponsorConfirmation()
+  const detailsMutation      = useUpdateSponsorDetails({ mutation: { mutationKey: ["updateSponsorDetails", id] } })
 
   const [reviewNote, setReviewNote]             = useState("")
   const [spotNumber, setSpotNumber]             = useState("")
@@ -195,6 +205,7 @@ export default function SponsorDetailPage() {
   const [isApproveDetailsOpen, setIsApproveDetailsOpen] = useState(false)
   const [isSpotOpen, setIsSpotOpen]             = useState(false)
   const [isDeleteOpen, setIsDeleteOpen]         = useState(false)
+  const [isDetailsOpen, setIsDetailsOpen]       = useState(false)
 
   const reviewMutateFnRef = useRef(reviewMutation.mutate)
   reviewMutateFnRef.current = reviewMutation.mutate
@@ -266,6 +277,30 @@ export default function SponsorDetailPage() {
     )
   }
 
+  const handleSaveDetails = (values: Record<string, string>) => {
+    detailsMutation.mutate(
+      {
+        id,
+        data: {
+          name: values.name ?? "",
+          orgName: values.orgName ?? "",
+          email: values.email ?? "",
+          phone: values.phone ?? "",
+          website: values.website?.trim() || null,
+          social: values.social?.trim() || null,
+        },
+      },
+      {
+        onSuccess: (data) => {
+          queryClient.setQueryData(getGetSponsorQueryKey(id), data)
+          setIsDetailsOpen(false)
+          toast({ title: "Sponsor details updated" })
+        },
+        onError: () => toast({ title: "Failed to update sponsor details", variant: "destructive" }),
+      },
+    )
+  }
+
   if (isLoading) return <AdminLayout><div className="p-8">Loading…</div></AdminLayout>
   if (!sponsor)  return <AdminLayout><div className="p-8">Sponsor not found.</div></AdminLayout>
 
@@ -309,6 +344,25 @@ export default function SponsorDetailPage() {
           <div className="flex gap-3 items-center flex-wrap">
 
             {/* Stage 1 review — pending only */}
+            <Button variant="outline" className="border-secondary/30 hover:bg-secondary/10 text-secondary-foreground" onClick={() => setIsDetailsOpen(true)}>
+              <Pencil className="w-4 h-4 mr-2" /> Edit details
+            </Button>
+            <ApplicantDetailsEditorDialog
+              entityLabel="sponsor"
+              fields={SPONSOR_DETAIL_FIELDS}
+              initialValues={{
+                name: sponsor.name,
+                orgName: sponsor.orgName,
+                email: sponsor.email,
+                phone: sponsor.phone,
+                website: str("website") ?? "",
+                social: str("social") ?? "",
+              }}
+              open={isDetailsOpen}
+              onOpenChange={setIsDetailsOpen}
+              onSave={handleSaveDetails}
+              isSaving={detailsMutation.isPending}
+            />
             {sponsor.status === 'pending' && (
               <Dialog open={isReviewOpen} onOpenChange={setIsReviewOpen}>
                 <DialogTrigger asChild>

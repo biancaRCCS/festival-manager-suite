@@ -1,6 +1,6 @@
 import { useState, useRef } from "react"
 import { useLocation, useParams } from "wouter"
-import { useGetVolunteer, useReviewVolunteer, getGetVolunteerQueryKey, useDeleteVolunteer, useResendVolunteerConfirmation } from "@workspace/api-client-react"
+import { useGetVolunteer, useReviewVolunteer, getGetVolunteerQueryKey, useDeleteVolunteer, useResendVolunteerConfirmation, useUpdateVolunteerDetails } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,8 +9,18 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { ArrowLeft, Mail, Phone, Clock, UserCog, Trash2 } from "lucide-react"
+import { ArrowLeft, Mail, Phone, Clock, UserCog, Trash2, Pencil } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { ApplicantDetailsEditorDialog, type ApplicantDetailsField } from "@/components/applicant-details-editor-dialog"
+
+const VOLUNTEER_DETAIL_FIELDS: ApplicantDetailsField[] = [
+  { key: "name", label: "Contact name" },
+  { key: "organizationName", label: "Organization / business name" },
+  { key: "email", label: "Email" },
+  { key: "phone", label: "Phone" },
+  { key: "website", label: "Website" },
+  { key: "social", label: "Facebook / Instagram" },
+]
 
 function AcknowledgementStatus({ checked }: { checked: boolean }) {
   return (
@@ -34,11 +44,13 @@ export default function VolunteerDetailPage() {
   const reviewMutation = useReviewVolunteer({ mutation: { mutationKey: ["reviewVolunteer", id] } })
   const deleteMutation = useDeleteVolunteer()
   const resendMutation = useResendVolunteerConfirmation()
+  const detailsMutation = useUpdateVolunteerDetails({ mutation: { mutationKey: ["updateVolunteerDetails", id] } })
 
   const [reviewNote, setReviewNote] = useState("")
   const [assignedRole, setAssignedRole] = useState("")
   const [isReviewOpen, setIsReviewOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
 
   const reviewMutateFnRef = useRef(reviewMutation.mutate)
   reviewMutateFnRef.current = reviewMutation.mutate
@@ -80,6 +92,30 @@ export default function VolunteerDetailPage() {
     )
   }
 
+  const handleSaveDetails = (values: Record<string, string>) => {
+    detailsMutation.mutate(
+      {
+        id,
+        data: {
+          name: values.name ?? "",
+          organizationName: values.organizationName?.trim() || null,
+          email: values.email ?? "",
+          phone: values.phone ?? "",
+          website: values.website?.trim() || null,
+          social: values.social?.trim() || null,
+        },
+      },
+      {
+        onSuccess: (data) => {
+          queryClient.setQueryData(getGetVolunteerQueryKey(id), data)
+          setIsDetailsOpen(false)
+          toast({ title: "Volunteer details updated" })
+        },
+        onError: () => toast({ title: "Failed to update volunteer details", variant: "destructive" }),
+      },
+    )
+  }
+
   if (isLoading) return <AdminLayout><div className="p-8">Loading...</div></AdminLayout>
   if (!volunteer) return <AdminLayout><div className="p-8">Volunteer not found.</div></AdminLayout>
 
@@ -98,6 +134,29 @@ export default function VolunteerDetailPage() {
             </p>
           </div>
           <div className="flex gap-3 items-center">
+            <Button
+              variant="outline"
+              className="border-primary/20 hover:bg-primary/5 text-primary"
+              onClick={() => setIsDetailsOpen(true)}
+            >
+              <Pencil className="w-4 h-4 mr-2" /> Edit details
+            </Button>
+            <ApplicantDetailsEditorDialog
+              entityLabel="volunteer"
+              fields={VOLUNTEER_DETAIL_FIELDS}
+              initialValues={{
+                name: volunteer.name,
+                organizationName: String((volunteer.applicationData as Record<string, unknown> | null)?.organizationName ?? ""),
+                email: volunteer.email,
+                phone: volunteer.phone,
+                website: String((volunteer.applicationData as Record<string, unknown> | null)?.website ?? ""),
+                social: String((volunteer.applicationData as Record<string, unknown> | null)?.social ?? ""),
+              }}
+              open={isDetailsOpen}
+              onOpenChange={setIsDetailsOpen}
+              onSave={handleSaveDetails}
+              isSaving={detailsMutation.isPending}
+            />
             {volunteer.status === 'pending' && (
               <Dialog open={isReviewOpen} onOpenChange={setIsReviewOpen}>
                 <DialogTrigger asChild>

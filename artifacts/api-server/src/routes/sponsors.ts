@@ -7,12 +7,25 @@ import {
   ListSponsorsQueryParams,
   ReviewSponsorParams,
   ReviewSponsorBody,
+  UpdateSponsorDetailsParams,
+  UpdateSponsorDetailsBody,
+  UpdateSponsorDetailsResponse,
   FinalApproveSponsorParams,
   AssignSponsorSpotParams,
   AssignSponsorSpotBody,
 } from "@workspace/api-zod";
 import { randomBytes } from "crypto";
 import { sendSponsorDetailsInviteEmail, sendSponsorPaymentReadyEmail, sendApplicantConfirmation, TIER_LABELS } from "../lib/email";
+import {
+  addDetailChange,
+  applicationText,
+  asApplicationData,
+  type ApplicantDetailChange,
+  isExactObjectWithKeys,
+  isValidEmail,
+  normalizeOptionalText,
+  normalizeRequiredText,
+} from "../lib/applicantDetails";
 
 const router: IRouter = Router();
 
@@ -69,6 +82,78 @@ router.get("/sponsors/:id", requireStaff, async (req, res): Promise<void> => {
     return;
   }
   res.json(formatSponsor(sponsor));
+});
+
+router.patch("/sponsors/:id/details", requireStaff, async (req, res): Promise<void> => {
+  const allowedKeys = ["name", "orgName", "email", "phone", "website", "social"] as const;
+  if (!isExactObjectWithKeys(req.body, allowedKeys)) {
+    res.status(400).json({ error: "Only staff-editable sponsor detail fields may be updated." });
+    return;
+  }
+
+  const params = UpdateSponsorDetailsParams.safeParse(req.params);
+  const body = UpdateSponsorDetailsBody.safeParse(req.body);
+  if (!params.success || !body.success) {
+    res.status(400).json({ error: "Enter valid sponsor details." });
+    return;
+  }
+
+  const input = {
+    name: normalizeRequiredText(body.data.name),
+    orgName: normalizeRequiredText(body.data.orgName),
+    email: normalizeRequiredText(body.data.email),
+    phone: normalizeRequiredText(body.data.phone),
+    website: normalizeOptionalText(body.data.website),
+    social: normalizeOptionalText(body.data.social),
+  };
+  if (!input.name || !input.orgName || !isValidEmail(input.email)) {
+    res.status(400).json({ error: "Enter a name, organization name, and valid email address." });
+    return;
+  }
+
+  const updated = await db.transaction(async (tx) => {
+    const [sponsor] = await tx.select().from(sponsorsTable).where(eq(sponsorsTable.id, params.data.id));
+    if (!sponsor) return null;
+
+    const nextApplicationData = asApplicationData(sponsor.applicationData);
+    const changes: ApplicantDetailChange[] = [];
+    addDetailChange(changes, "Contact name", sponsor.name, input.name);
+    addDetailChange(changes, "Organization name", sponsor.orgName, input.orgName);
+    addDetailChange(changes, "Email", sponsor.email, input.email);
+    addDetailChange(changes, "Phone", sponsor.phone, input.phone);
+    for (const [key, label, value] of [
+      ["website", "Website", input.website],
+      ["social", "Social media", input.social],
+    ] as const) {
+      const oldValue = applicationText(nextApplicationData[key]);
+      if (addDetailChange(changes, label, oldValue, value)) nextApplicationData[key] = value;
+    }
+
+    if (changes.length === 0) return sponsor;
+    const [saved] = await tx.update(sponsorsTable).set({
+      name: input.name,
+      orgName: input.orgName,
+      email: input.email,
+      phone: input.phone,
+      applicationData: nextApplicationData,
+    }).where(eq(sponsorsTable.id, sponsor.id)).returning();
+
+    await tx.insert(activityLogTable).values(changes.map((change) => ({
+      type: "details_updated",
+      message: `Sponsor details updated: ${change.fieldName}`,
+      entityType: "sponsor",
+      entityId: sponsor.id,
+      performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
+      ...change,
+    })));
+    return saved;
+  });
+
+  if (!updated) {
+    res.status(404).json({ error: "Sponsor not found" });
+    return;
+  }
+  res.json(UpdateSponsorDetailsResponse.parse(formatSponsor(updated)));
 });
 
 // ---------------------------------------------------------------------------

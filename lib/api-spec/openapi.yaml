@@ -345,7 +345,7 @@ paths:
           name: type
           schema:
             type: string
-            enum: [new_application, approved, rejected, paid, final_approved, assigned, category_changed, category_adjustment_settled, special_agreement_created, special_agreement_signed, special_agreement_settlement_updated, deleted]
+            enum: [new_application, approved, rejected, paid, final_approved, assigned, category_changed, category_adjustment_settled, details_updated, special_agreement_created, special_agreement_signed, special_agreement_settlement_updated, deleted]
         - in: query
           name: entityType
           schema:
@@ -687,6 +687,37 @@ paths:
         "404":
           description: Not found
 
+  /vendors/{id}/details:
+    patch:
+      operationId: updateVendorDetails
+      tags: [vendors]
+      summary: Correct staff-editable vendor contact and business details without sending email
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VendorDetailsUpdate"
+      responses:
+        "200":
+          description: Updated vendor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vendor"
+        "400":
+          description: Invalid details
+        "404":
+          description: Not found
+
   /vendors/{id}/settle-category-adjustment:
     patch:
       operationId: settleVendorCategoryAdjustment
@@ -873,6 +904,37 @@ paths:
               schema:
                 $ref: "#/components/schemas/Sponsor"
 
+  /sponsors/{id}/details:
+    patch:
+      operationId: updateSponsorDetails
+      tags: [sponsors]
+      summary: Correct staff-editable sponsor contact and business details without sending email
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SponsorDetailsUpdate"
+      responses:
+        "200":
+          description: Updated sponsor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sponsor"
+        "400":
+          description: Invalid details
+        "404":
+          description: Not found
+
   /sponsors/{id}/final-approve:
     patch:
       operationId: finalApproveSponsor
@@ -1033,6 +1095,37 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Volunteer"
+
+  /volunteers/{id}/details:
+    patch:
+      operationId: updateVolunteerDetails
+      tags: [volunteers]
+      summary: Correct staff-editable volunteer contact and organization details without sending email
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VolunteerDetailsUpdate"
+      responses:
+        "200":
+          description: Updated volunteer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Volunteer"
+        "400":
+          description: Invalid details
+        "404":
+          description: Not found
 
   /volunteers/{id}/resend-confirmation:
     post:
@@ -1713,7 +1806,7 @@ components:
           type: integer
         type:
           type: string
-          enum: [new_application, approved, rejected, paid, final_approved, assigned, category_changed, category_adjustment_settled, special_agreement_created, special_agreement_signed, deleted]
+          enum: [new_application, approved, rejected, paid, final_approved, assigned, category_changed, category_adjustment_settled, details_updated, special_agreement_created, special_agreement_signed, deleted]
         message:
           type: string
         entityType:
@@ -1726,6 +1819,12 @@ components:
           nullable: true
         createdAt:
           type: string
+        fieldName:
+          type: ["string", "null"]
+        oldValue:
+          type: ["string", "null"]
+        newValue:
+          type: ["string", "null"]
 
     PaginatedActivityResponse:
       type: object
@@ -2127,6 +2226,89 @@ components:
           type: string
           minLength: 3
           maxLength: 2000
+
+    VendorDetailsUpdate:
+      type: object
+      additionalProperties: false
+      required: [name, businessName, email, phone, website, social, productsDescription, businessDescription]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        businessName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        email:
+          type: string
+          maxLength: 320
+        phone:
+          type: string
+          maxLength: 100
+        website:
+          type: ["string", "null"]
+          maxLength: 500
+        social:
+          type: ["string", "null"]
+          maxLength: 500
+        productsDescription:
+          type: ["string", "null"]
+          maxLength: 5000
+        businessDescription:
+          type: ["string", "null"]
+          maxLength: 5000
+
+    SponsorDetailsUpdate:
+      type: object
+      additionalProperties: false
+      required: [name, orgName, email, phone, website, social]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        orgName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        email:
+          type: string
+          maxLength: 320
+        phone:
+          type: string
+          maxLength: 100
+        website:
+          type: ["string", "null"]
+          maxLength: 500
+        social:
+          type: ["string", "null"]
+          maxLength: 500
+
+    VolunteerDetailsUpdate:
+      type: object
+      additionalProperties: false
+      required: [name, organizationName, email, phone, website, social]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        organizationName:
+          type: ["string", "null"]
+          maxLength: 200
+        email:
+          type: string
+          maxLength: 320
+        phone:
+          type: string
+          maxLength: 100
+        website:
+          type: ["string", "null"]
+          maxLength: 500
+        social:
+          type: ["string", "null"]
+          maxLength: 500
 
     VendorCategoryUpdateResult:
       type: object
