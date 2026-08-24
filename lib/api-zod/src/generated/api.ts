@@ -146,6 +146,7 @@ export const GetPortalInfoResponse = zod.object({
   "specialAgreementNetProfitDefinition": zod.string().nullish(),
   "documentDeadline": zod.string().nullish(),
   "notificationEmail": zod.string().nullish(),
+  "styleGuidelinesUrl": zod.string().nullish(),
   "specialAgreementDayOfContactName": zod.string().nullish(),
   "specialAgreementDayOfContactPhone": zod.string().nullish(),
   "specialAgreementBackupContactName": zod.string().nullish(),
@@ -199,6 +200,7 @@ export const SubmitSponsorDetailsResponse = zod.object({
   "specialAgreementNetProfitDefinition": zod.string().nullish(),
   "documentDeadline": zod.string().nullish(),
   "notificationEmail": zod.string().nullish(),
+  "styleGuidelinesUrl": zod.string().nullish(),
   "specialAgreementDayOfContactName": zod.string().nullish(),
   "specialAgreementDayOfContactPhone": zod.string().nullish(),
   "specialAgreementBackupContactName": zod.string().nullish(),
@@ -266,6 +268,7 @@ export const SignPortalAgreementResponse = zod.object({
   "specialAgreementNetProfitDefinition": zod.string().nullish(),
   "documentDeadline": zod.string().nullish(),
   "notificationEmail": zod.string().nullish(),
+  "styleGuidelinesUrl": zod.string().nullish(),
   "specialAgreementDayOfContactName": zod.string().nullish(),
   "specialAgreementDayOfContactPhone": zod.string().nullish(),
   "specialAgreementBackupContactName": zod.string().nullish(),
@@ -300,6 +303,7 @@ export const SubmitSpecialAgreementBody = zod.object({
   "ackLoadInVehicles": zod.boolean(),
   "ackCleanUp": zod.boolean(),
   "ackPropertyLiability": zod.boolean(),
+  "ackStyleGuidelines": zod.boolean(),
   "signedName": zod.string().min(1),
   "signedDate": zod.coerce.date()
 })
@@ -341,6 +345,7 @@ export const SubmitSpecialAgreementResponse = zod.object({
   "specialAgreementNetProfitDefinition": zod.string().nullish(),
   "documentDeadline": zod.string().nullish(),
   "notificationEmail": zod.string().nullish(),
+  "styleGuidelinesUrl": zod.string().nullish(),
   "specialAgreementDayOfContactName": zod.string().nullish(),
   "specialAgreementDayOfContactPhone": zod.string().nullish(),
   "specialAgreementBackupContactName": zod.string().nullish(),
@@ -572,6 +577,7 @@ export const GetSettingsResponse = zod.object({
   "documentDeadline": zod.string().nullish(),
   "paymentWindowDays": zod.number().optional(),
   "notificationEmail": zod.string().nullish(),
+  "styleGuidelinesUrl": zod.string().nullish(),
   "specialAgreementNetProfitDefinition": zod.string().optional(),
   "vendorFormQuestions": zod.array(zod.object({
   "id": zod.string(),
@@ -640,6 +646,7 @@ export const UpdateSettingsBody = zod.object({
   "documentDeadline": zod.string().nullish(),
   "paymentWindowDays": zod.number().optional(),
   "notificationEmail": zod.string().nullish(),
+  "styleGuidelinesUrl": zod.string().nullish(),
   "specialAgreementNetProfitDefinition": zod.string().optional(),
   "vendorFormQuestions": zod.array(zod.object({
   "id": zod.string(),
@@ -706,6 +713,7 @@ export const UpdateSettingsResponse = zod.object({
   "documentDeadline": zod.string().nullish(),
   "paymentWindowDays": zod.number().optional(),
   "notificationEmail": zod.string().nullish(),
+  "styleGuidelinesUrl": zod.string().nullish(),
   "specialAgreementNetProfitDefinition": zod.string().optional(),
   "vendorFormQuestions": zod.array(zod.object({
   "id": zod.string(),

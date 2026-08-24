@@ -55,6 +55,19 @@ function AckRow({
   )
 }
 
+function StyleGuidelinesLink({ url }: { url: string | null | undefined }) {
+  const isSafeUrl = !!url && (() => {
+    try {
+      return ["http:", "https:"].includes(new URL(url).protocol)
+    } catch {
+      return false
+    }
+  })()
+  return isSafeUrl
+    ? <a href={url!} target="_blank" rel="noreferrer" className="text-primary underline underline-offset-2">style guidelines</a>
+    : <>style guidelines</>
+}
+
 function YesNoRadio({ id, value, onChange }: { id: string; value: string; onChange: (v: string) => void }) {
   return (
     <RadioGroup value={value} onValueChange={onChange} className="flex gap-6 mt-1">
@@ -77,6 +90,7 @@ const SPECIAL_AGREEMENT_ACKS = [
   ["ackLoadInVehicles", "I will follow RCCS load-in instructions and will not keep vehicles in the event area during festival hours."],
   ["ackCleanUp", "I will keep my assigned area clean and remove all equipment, materials, and waste after the event."],
   ["ackPropertyLiability", "I accept responsibility for my property, equipment, staff, and operations and release RCCS from liability except where prohibited by law."],
+  ["ackStyleGuidelines", "I agree to follow the Romanian Festival style guidelines provided by RCCS."],
 ] as const
 
 function SpecialAgreementPortal({ portal, token }: { portal: PortalInfo; token: string }) {
@@ -99,6 +113,7 @@ function SpecialAgreementPortal({ portal, token }: { portal: PortalInfo; token: 
     ackLoadInVehicles: false,
     ackCleanUp: false,
     ackPropertyLiability: false,
+    ackStyleGuidelines: false,
   })
   const todayIso = new Date().toISOString().slice(0, 10)
 
@@ -193,7 +208,13 @@ function SpecialAgreementPortal({ portal, token }: { portal: PortalInfo; token: 
             <Card>
               <CardHeader><CardTitle>Participation Requirements</CardTitle><CardDescription>Every item must be accepted before you can sign.</CardDescription></CardHeader>
               <CardContent className="divide-y divide-border">
-                {SPECIAL_AGREEMENT_ACKS.map(([key, label]) => <AckRow key={key} id={key} checked={acks[key]} onChange={(checked) => setAcks((current) => ({ ...current, [key]: checked }))}>{label}</AckRow>)}
+                {SPECIAL_AGREEMENT_ACKS.map(([key, label]) => (
+                  <AckRow key={key} id={key} checked={acks[key]} onChange={(checked) => setAcks((current) => ({ ...current, [key]: checked }))}>
+                    {key === "ackStyleGuidelines"
+                      ? <>I agree to follow the Romanian Festival <StyleGuidelinesLink url={portal.styleGuidelinesUrl} /> provided by RCCS for signage, booth presentation, and promotional materials, to help present a consistent festival identity.</>
+                      : label}
+                  </AckRow>
+                ))}
               </CardContent>
             </Card>
 
@@ -242,6 +263,7 @@ const EMPTY_STAGE2 = {
   ackPromoOnly: false,
   ackPermits: false,
   ackPaymentRequired: false,
+  ackStyleGuidelines: false,
   // Signature (all)
   signatureName: "",
 }
@@ -321,6 +343,7 @@ export default function PortalPage() {
     if (!stage2.ackPromoOnly)     errors.push("Please acknowledge the booth terms.")
     if (!stage2.ackPermits)       errors.push("Please acknowledge the permits and insurance requirement.")
     if (!stage2.ackPaymentRequired) errors.push("Please acknowledge that sponsorship requires payment.")
+    if (!stage2.ackStyleGuidelines) errors.push("Please acknowledge the festival style guidelines.")
     if (!stage2.signatureName.trim()) errors.push("Please type your full name as your signature.")
 
     if (errors.length > 0) {
@@ -716,6 +739,13 @@ export default function PortalPage() {
                   >
                     I understand that my sponsorship is <strong>not confirmed</strong> until payment is received
                     in full.
+                  </AckRow>
+                  <AckRow
+                    id="ackStyleGuidelines"
+                    checked={stage2.ackStyleGuidelines}
+                    onChange={v => setS2("ackStyleGuidelines", v)}
+                  >
+                    I agree to follow the Romanian Festival <StyleGuidelinesLink url={portal.styleGuidelinesUrl} /> provided by RCCS for sponsor signage, booth presentation, and promotional materials, to help present a consistent festival identity.
                   </AckRow>
                 </div>
               </section>

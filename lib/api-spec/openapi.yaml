@@ -1301,6 +1301,8 @@ components:
           type: integer
         notificationEmail:
           type: ["string", "null"]
+        styleGuidelinesUrl:
+          type: ["string", "null"]
         specialAgreementNetProfitDefinition:
           type: string
         # Form customisation
@@ -1394,6 +1396,8 @@ components:
         paymentWindowDays:
           type: integer
         notificationEmail:
+          type: ["string", "null"]
+        styleGuidelinesUrl:
           type: ["string", "null"]
         specialAgreementNetProfitDefinition:
           type: string
@@ -1880,6 +1884,8 @@ components:
           type: ["string", "null"]
         notificationEmail:
           type: ["string", "null"]
+        styleGuidelinesUrl:
+          type: ["string", "null"]
         specialAgreementDayOfContactName:
           type: ["string", "null"]
         specialAgreementDayOfContactPhone:
@@ -2061,7 +2067,7 @@ components:
 
     SpecialAgreementSignature:
       type: object
-      required: [dayOfContactName, dayOfContactPhone, backupContactName, backupContactPhone, ackRevenueShare, ackPermitsInsurance, ackEquipment, ackNoRunningWater, ackPower, ackLoadInVehicles, ackCleanUp, ackPropertyLiability, signedName, signedDate]
+      required: [dayOfContactName, dayOfContactPhone, backupContactName, backupContactPhone, ackRevenueShare, ackPermitsInsurance, ackEquipment, ackNoRunningWater, ackPower, ackLoadInVehicles, ackCleanUp, ackPropertyLiability, ackStyleGuidelines, signedName, signedDate]
       properties:
         dayOfContactName:
           type: string
@@ -2090,6 +2096,8 @@ components:
         ackCleanUp:
           type: boolean
         ackPropertyLiability:
+          type: boolean
+        ackStyleGuidelines:
           type: boolean
         signedName:
           type: string

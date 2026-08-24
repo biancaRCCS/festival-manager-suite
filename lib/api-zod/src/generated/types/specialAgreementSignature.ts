@@ -23,6 +23,7 @@ export interface SpecialAgreementSignature {
   ackLoadInVehicles: boolean;
   ackCleanUp: boolean;
   ackPropertyLiability: boolean;
+  ackStyleGuidelines: boolean;
   /** @minLength 1 */
   signedName: string;
   signedDate: Date;

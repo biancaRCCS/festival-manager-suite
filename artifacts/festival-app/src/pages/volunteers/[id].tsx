@@ -12,6 +12,17 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ArrowLeft, Mail, Phone, Clock, UserCog, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
+function AcknowledgementStatus({ checked }: { checked: boolean }) {
+  return (
+    <div className="flex items-start gap-2.5 py-2 text-sm">
+      <span className={`mt-0.5 h-4 w-4 rounded border flex items-center justify-center ${checked ? "border-green-600 bg-green-600 text-white" : "border-muted-foreground/40 bg-muted/30"}`}>
+        {checked ? "✓" : ""}
+      </span>
+      <span>Agreed to follow RCCS Romanian Festival style guidelines for volunteer attire, presentation, and conduct.</span>
+    </div>
+  )
+}
+
 export default function VolunteerDetailPage() {
   const params = useParams()
   const id = Number(params.id)
@@ -184,6 +195,10 @@ export default function VolunteerDetailPage() {
                     </div>
                   ))}
                 </div>
+              </div>
+              <div className="border-t pt-6 mt-6">
+                <h3 className="font-serif text-lg mb-2">Acknowledgement</h3>
+                <AcknowledgementStatus checked={(volunteer.applicationData as Record<string, unknown> | null)?.ack_styleGuidelines === true} />
               </div>
             </CardContent>
           </Card>

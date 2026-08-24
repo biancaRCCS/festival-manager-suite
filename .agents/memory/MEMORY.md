@@ -3,3 +3,4 @@
 - [Vendor category + sponsor tier model](category-tier-model.md) — 4 vendor categories (major_food/specialty_food/retail/nonprofit) replaced the old 5; sponsor tiers now have min+max price ranges; see this file for key names and amounts.
 - [Durable code execution limits](durable-code-execution-limits.md) — use fixed, cleaned-up test fixtures when durable sandbox runtime IDs are unavailable.
 - [Vendor payment reconciliation](vendor-payment-reconciliation.md) — category changes must invalidate stale Checkout state and preserve an explicit settled baseline.
+- [OpenAPI URL format codegen](openapi-url-format-codegen.md) — avoid `format: uri` in this spec until the generated Zod client supports `zod.url()`.

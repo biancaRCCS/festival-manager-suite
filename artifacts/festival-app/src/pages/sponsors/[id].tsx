@@ -541,6 +541,9 @@ export default function SponsorDetailPage() {
                     <AckDisplay checked={ack("ackPaymentRequired")}>
                       Sponsorship is <strong>not confirmed</strong> until payment is received in full.
                     </AckDisplay>
+                    <AckDisplay checked={ack("ackStyleGuidelines")}>
+                      Agreed to follow RCCS Romanian Festival style guidelines for sponsor signage, booth presentation, and promotional materials.
+                    </AckDisplay>
                   </div>
 
                   {str("signatureName") && (

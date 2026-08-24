@@ -53,6 +53,7 @@ const ACK_LABELS: Record<string, string> = {
   ack_notResponsible:    "RCCS is not responsible for lost, stolen, or damaged property.",
   ack_rccsRight:         "RCCS reserves the right to approve, deny, or reclassify any application.",
   ack_documents:         "Required documents emailed to vendors@romaniancenter.org by 18 September 2026.",
+  ack_styleGuidelines:   "Agreed to follow RCCS Romanian Festival style guidelines for signage, booth presentation, and promotional materials.",
 }
 
 const FOOD_KEYS = new Set(["major_food", "specialty_food"])
@@ -605,6 +606,11 @@ export default function VendorDetailPage() {
                    ) : (
                      <p className="text-muted-foreground">The contact has not yet submitted the Special Agreement.</p>
                    )}
+                    <SectionDivider title="Acknowledgements" />
+                    <AckCheck
+                      checked={(((vendor as { specialAgreementAcknowledgements?: Record<string, unknown> }).specialAgreementAcknowledgements ?? {}).ackStyleGuidelines === true)}
+                      label="Agreed to follow RCCS Romanian Festival style guidelines for signage, booth presentation, and promotional materials."
+                    />
                  </>
                ) : (
                  <>

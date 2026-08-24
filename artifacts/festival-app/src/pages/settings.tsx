@@ -278,6 +278,19 @@ export default function SettingsPage() {
                     </div>
                     <p className="text-xs text-muted-foreground">All new vendor, sponsor, and volunteer applications are emailed here.</p>
                   </div>
+                   <div className="space-y-2 md:col-span-2">
+                     <Label htmlFor="styleGuidelinesUrl">Style Guidelines URL</Label>
+                     <Input
+                       id="styleGuidelinesUrl"
+                       type="url"
+                       value={localSettings.styleGuidelinesUrl ?? ""}
+                       onChange={e => set("styleGuidelinesUrl", e.target.value || null)}
+                       placeholder="https://example.org/festival-style-guidelines"
+                     />
+                     <p className="text-xs text-muted-foreground">
+                       This link appears in required vendor, sponsor, volunteer, and Special Agreement acknowledgements.
+                     </p>
+                   </div>
                   <div className="space-y-2 md:col-span-2">
                     <Label>Special Agreement Net-Profit Definition</Label>
                     <Textarea

@@ -92,6 +92,8 @@ export interface FestivalSettings {
   paymentWindowDays?: number;
   /** @nullable */
   notificationEmail?: string | null;
+  /** @nullable */
+  styleGuidelinesUrl?: string | null;
   specialAgreementNetProfitDefinition?: string;
   vendorFormQuestions: FormQuestion[];
   sponsorFormQuestions: FormQuestion[];
@@ -144,6 +146,8 @@ export interface FestivalSettingsUpdate {
   paymentWindowDays?: number;
   /** @nullable */
   notificationEmail?: string | null;
+  /** @nullable */
+  styleGuidelinesUrl?: string | null;
   specialAgreementNetProfitDefinition?: string;
   vendorFormQuestions?: FormQuestion[];
   sponsorFormQuestions?: FormQuestion[];
@@ -556,6 +560,8 @@ export interface PortalInfo {
   /** @nullable */
   notificationEmail?: string | null;
   /** @nullable */
+  styleGuidelinesUrl?: string | null;
+  /** @nullable */
   specialAgreementDayOfContactName?: string | null;
   /** @nullable */
   specialAgreementDayOfContactPhone?: string | null;
@@ -709,6 +715,7 @@ export interface SpecialAgreementSignature {
   ackLoadInVehicles: boolean;
   ackCleanUp: boolean;
   ackPropertyLiability: boolean;
+  ackStyleGuidelines: boolean;
   /** @minLength 1 */
   signedName: string;
   signedDate: string;

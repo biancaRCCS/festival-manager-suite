@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2 } from "lucide-react"
@@ -21,10 +22,23 @@ interface FormQuestion {
   placeholder?: string
 }
 
-async function fetchFormQuestions(type: string): Promise<{ questions: FormQuestion[]; applicationDeadline: string | null }> {
+async function fetchFormQuestions(type: string): Promise<{ questions: FormQuestion[]; applicationDeadline: string | null; styleGuidelinesUrl: string | null }> {
   const res = await fetch(`/api/public/form-questions?type=${type}`)
-  if (!res.ok) return { questions: [], applicationDeadline: null }
+  if (!res.ok) return { questions: [], applicationDeadline: null, styleGuidelinesUrl: null }
   return res.json()
+}
+
+function StyleGuidelinesLink({ url }: { url: string | null | undefined }) {
+  const isSafeUrl = !!url && (() => {
+    try {
+      return ["http:", "https:"].includes(new URL(url).protocol)
+    } catch {
+      return false
+    }
+  })()
+  return isSafeUrl
+    ? <a href={url!} target="_blank" rel="noreferrer" className="text-primary underline underline-offset-2">style guidelines</a>
+    : <>style guidelines</>
 }
 
 export default function ApplyVolunteerPage() {
@@ -47,6 +61,7 @@ export default function ApplyVolunteerPage() {
   })
 
   const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [styleGuidelinesAcknowledged, setStyleGuidelinesAcknowledged] = useState(false)
 
   const isLoading = yearLoading || questionsLoading
   const questions = questionsData?.questions ?? []
@@ -60,9 +75,13 @@ export default function ApplyVolunteerPage() {
         return
       }
     }
+    if (!styleGuidelinesAcknowledged) {
+      toast({ title: "Please acknowledge the festival style guidelines.", variant: "destructive" })
+      return
+    }
 
     submitMutation.mutate(
-      { data: { ...formData, answers } },
+      { data: { ...formData, answers: { ...answers, ack_styleGuidelines: styleGuidelinesAcknowledged } } },
       {
         onSuccess: () => setLocation("/apply/success"),
         onError: () => toast({ title: "Failed to submit application. Please try again.", variant: "destructive" }),
@@ -163,6 +182,21 @@ export default function ApplyVolunteerPage() {
                   </div>
                 </div>
               )}
+
+              <div className="space-y-3">
+                <h3 className="font-serif text-xl border-b pb-2">Acknowledgement</h3>
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="ack_styleGuidelines"
+                    checked={styleGuidelinesAcknowledged}
+                    onCheckedChange={checked => setStyleGuidelinesAcknowledged(checked === true)}
+                    className="mt-0.5 shrink-0"
+                  />
+                  <Label htmlFor="ack_styleGuidelines" className="font-normal leading-snug cursor-pointer">
+                    I agree to follow the Romanian Festival <StyleGuidelinesLink url={questionsData?.styleGuidelinesUrl} /> provided by RCCS for volunteer attire, presentation, and conduct, to help present a welcoming and consistent festival identity.
+                  </Label>
+                </div>
+              </div>
 
               <Button data-testid="submit" type="submit" className="w-full h-12 text-lg" disabled={submitMutation.isPending}>
                 {submitMutation.isPending ? "Submitting..." : "Submit as Volunteer"}

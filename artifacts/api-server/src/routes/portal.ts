@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, vendorsTable, sponsorsTable, festivalYearsTable, festivalSettingsTable, activityLogTable } from "@workspace/db";
 import { and, eq, ne } from "drizzle-orm";
-import { SignPortalAgreementBody, SubmitSpecialAgreementBody } from "@workspace/api-zod";
+import { SignPortalAgreementBody, SubmitSpecialAgreementBody, SubmitSponsorDetailsBody } from "@workspace/api-zod";
 import { logger } from "../lib/logger";
 import { sendSponsorDetailsSubmittedNotification, sendSpecialAgreementSignedNotification } from "../lib/email";
 
@@ -42,6 +42,7 @@ function buildSponsorPortalInfo(
     sponsorPriceGold: s ? parseFloat(s.sponsorPriceGold) : null,
     sponsorPricePlatinum: s ? parseFloat(s.sponsorPricePlatinum) : null,
     sponsorPriceDiamond: s ? parseFloat(s.sponsorPriceDiamond) : null,
+    styleGuidelinesUrl: s?.styleGuidelinesUrl ?? null,
   };
 }
 
@@ -75,6 +76,7 @@ function buildSpecialAgreementPortalInfo(
     specialAgreementNetProfitDefinition: settings?.specialAgreementNetProfitDefinition ?? null,
     documentDeadline: settings?.documentDeadline ?? null,
     notificationEmail: settings?.notificationEmail ?? null,
+    styleGuidelinesUrl: settings?.styleGuidelinesUrl ?? null,
   };
 }
 
@@ -155,6 +157,7 @@ router.post("/portal/:token/special-agreement", async (req, res): Promise<void> 
     ackLoadInVehicles: parsed.data.ackLoadInVehicles,
     ackCleanUp: parsed.data.ackCleanUp,
     ackPropertyLiability: parsed.data.ackPropertyLiability,
+    ackStyleGuidelines: parsed.data.ackStyleGuidelines,
   };
   if (Object.values(acknowledgements).some((value) => !value)) {
     res.status(400).json({ error: "Every Special Agreement acknowledgement must be accepted before signing." });
@@ -214,6 +217,15 @@ router.post("/portal/:token/special-agreement", async (req, res): Promise<void> 
 // ---------------------------------------------------------------------------
 router.post("/portal/:token/submit-details", async (req, res): Promise<void> => {
   const { token } = req.params;
+  const parsed = SubmitSponsorDetailsBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  if (parsed.data.ackStyleGuidelines !== true) {
+    res.status(400).json({ error: "Festival style guidelines must be acknowledged before submitting details." });
+    return;
+  }
 
   const sponsors = await db.select().from(sponsorsTable).where(eq(sponsorsTable.portalToken, token)).limit(1);
   if (sponsors.length === 0) {
@@ -231,7 +243,7 @@ router.post("/portal/:token/submit-details", async (req, res): Promise<void> => 
 
   // Merge submitted stage-2 fields into applicationData
   const existing = (sponsor.applicationData ?? {}) as Record<string, unknown>;
-  const submitted = (req.body ?? {}) as Record<string, unknown>;
+  const submitted = parsed.data;
   const merged = { ...existing, ...submitted, stage2SubmittedAt: new Date().toISOString() };
 
   const [updated] = await db.update(sponsorsTable)

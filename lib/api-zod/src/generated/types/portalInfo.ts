@@ -74,6 +74,8 @@ export interface PortalInfo {
   /** @nullable */
   notificationEmail?: string | null;
   /** @nullable */
+  styleGuidelinesUrl?: string | null;
+  /** @nullable */
   specialAgreementDayOfContactName?: string | null;
   /** @nullable */
   specialAgreementDayOfContactPhone?: string | null;

@@ -102,9 +102,9 @@ interface VendorType {
   booth: string
 }
 
-async function fetchFormConfig(): Promise<{ vendorTypes: VendorType[]; applicationDeadline: string | null }> {
+async function fetchFormConfig(): Promise<{ vendorTypes: VendorType[]; applicationDeadline: string | null; styleGuidelinesUrl: string | null }> {
   const res = await fetch(`/api/public/form-questions?type=vendor`)
-  if (!res.ok) return { vendorTypes: [], applicationDeadline: null }
+  if (!res.ok) return { vendorTypes: [], applicationDeadline: null, styleGuidelinesUrl: null }
   return res.json()
 }
 
@@ -142,7 +142,7 @@ interface FormData {
   ack_electricity: boolean; ack_permits: boolean; ack_foodCompliance: boolean
   ack_fireMarshal: boolean
   ack_loadIn: boolean; ack_cleanBooth: boolean; ack_notResponsible: boolean
-  ack_rccsRight: boolean
+  ack_rccsRight: boolean; ack_styleGuidelines: boolean
   // 4.11 Signature
   signatureName: string
 }
@@ -165,7 +165,7 @@ const INITIAL: FormData = {
   ack_electricity: false, ack_permits: false, ack_foodCompliance: false,
   ack_fireMarshal: false,
   ack_loadIn: false, ack_cleanBooth: false, ack_notResponsible: false,
-  ack_rccsRight: false,
+  ack_rccsRight: false, ack_styleGuidelines: false,
   signatureName: "",
 }
 
@@ -222,6 +222,19 @@ function AckRow({ id, checked, onChange, children }: {
       <Label htmlFor={id} className="font-normal leading-snug cursor-pointer">{children}</Label>
     </div>
   )
+}
+
+function StyleGuidelinesLink({ url }: { url: string | null | undefined }) {
+  const isSafeUrl = !!url && (() => {
+    try {
+      return ["http:", "https:"].includes(new URL(url).protocol)
+    } catch {
+      return false
+    }
+  })()
+  return isSafeUrl
+    ? <a href={url!} target="_blank" rel="noreferrer" className="text-primary underline underline-offset-2">style guidelines</a>
+    : <>style guidelines</>
 }
 
 // ---------------------------------------------------------------------------
@@ -302,6 +315,7 @@ export default function ApplyVendorPage() {
     if (!form.ack_cleanBooth)          errors.push("Please check all acknowledgements")
     if (!form.ack_notResponsible)      errors.push("Please check all acknowledgements")
     if (!form.ack_rccsRight)           errors.push("Please check all acknowledgements")
+    if (!form.ack_styleGuidelines)     errors.push("Please acknowledge the festival style guidelines")
     if (!form.signatureName.trim())    errors.push("Typed signature is required")
 
     if (errors.length > 0) {
@@ -356,6 +370,7 @@ export default function ApplyVendorPage() {
       ack_cleanBooth: form.ack_cleanBooth,
       ack_notResponsible: form.ack_notResponsible,
       ack_rccsRight: form.ack_rccsRight,
+      ack_styleGuidelines: form.ack_styleGuidelines,
       signatureName: form.signatureName,
       signatureDate: submittedDate,
     }
@@ -871,6 +886,9 @@ export default function ApplyVendorPage() {
                   </AckRow>
                   <AckRow id="ack_rccsRight" checked={form.ack_rccsRight} onChange={v => set("ack_rccsRight", v)}>
                     I understand RCCS reserves the right to approve, deny, or reclassify any application based on the overall needs of the festival.
+                  </AckRow>
+                  <AckRow id="ack_styleGuidelines" checked={form.ack_styleGuidelines} onChange={v => set("ack_styleGuidelines", v)}>
+                    I agree to follow the Romanian Festival <StyleGuidelinesLink url={config?.styleGuidelinesUrl} /> provided by RCCS for signage, booth presentation, and promotional materials, to help present a consistent festival identity.
                   </AckRow>
                 </div>
               </section>

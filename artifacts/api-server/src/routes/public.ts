@@ -243,14 +243,14 @@ router.get("/public/form-questions", async (req, res): Promise<void> => {
 
   const years = await db.select().from(festivalYearsTable).where(eq(festivalYearsTable.isActive, true)).limit(1);
   if (years.length === 0) {
-    res.json({ vendorFormQuestions: [], sponsorFormQuestions: [], volunteerFormQuestions: [] });
+    res.json({ vendorFormQuestions: [], sponsorFormQuestions: [], volunteerFormQuestions: [], styleGuidelinesUrl: null });
     return;
   }
 
   const settings = await db.select().from(festivalSettingsTable).where(eq(festivalSettingsTable.yearId, years[0].id)).limit(1);
   const s = settings[0];
   if (!s) {
-    res.json({ vendorFormQuestions: [], sponsorFormQuestions: [], volunteerFormQuestions: [] });
+    res.json({ vendorFormQuestions: [], sponsorFormQuestions: [], volunteerFormQuestions: [], styleGuidelinesUrl: null });
     return;
   }
 
@@ -264,7 +264,7 @@ router.get("/public/form-questions", async (req, res): Promise<void> => {
   ];
 
   if (type === "vendor") {
-    res.json({ questions: s.vendorFormQuestions, applicationDeadline: deadline, vendorTypes });
+    res.json({ questions: s.vendorFormQuestions, applicationDeadline: deadline, vendorTypes, styleGuidelinesUrl: s.styleGuidelinesUrl ?? null });
   } else if (type === "sponsor") {
     const sponsorTiers = [
       { key: "bronze",   label: "Bronze",   min: parseFloat(s.sponsorPriceBronze ?? "750"),    max: s.sponsorPriceMaxBronze   != null ? parseFloat(s.sponsorPriceMaxBronze)   : 1499, spotLimit: s.sponsorSpotLimitBronze   ?? 10 },
@@ -273,15 +273,16 @@ router.get("/public/form-questions", async (req, res): Promise<void> => {
       { key: "platinum", label: "Platinum", min: parseFloat(s.sponsorPricePlatinum ?? "5000"), max: s.sponsorPriceMaxPlatinum != null ? parseFloat(s.sponsorPriceMaxPlatinum) : 9999, spotLimit: s.sponsorSpotLimitPlatinum ?? 5  },
       { key: "diamond",  label: "Diamond",  min: parseFloat(s.sponsorPriceDiamond ?? "10000"), max: null,                                                                              spotLimit: s.sponsorSpotLimitDiamond  ?? 3  },
     ];
-    res.json({ questions: s.sponsorFormQuestions, applicationDeadline: deadline, sponsorTiers });
+    res.json({ questions: s.sponsorFormQuestions, applicationDeadline: deadline, sponsorTiers, styleGuidelinesUrl: s.styleGuidelinesUrl ?? null });
   } else if (type === "volunteer") {
-    res.json({ questions: s.volunteerFormQuestions, applicationDeadline: deadline });
+    res.json({ questions: s.volunteerFormQuestions, applicationDeadline: deadline, styleGuidelinesUrl: s.styleGuidelinesUrl ?? null });
   } else {
     res.json({
       vendorFormQuestions: s.vendorFormQuestions,
       sponsorFormQuestions: s.sponsorFormQuestions,
       volunteerFormQuestions: s.volunteerFormQuestions,
       applicationDeadline: deadline,
+      styleGuidelinesUrl: s.styleGuidelinesUrl ?? null,
     });
   }
 });

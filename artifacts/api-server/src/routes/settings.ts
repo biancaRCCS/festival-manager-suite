@@ -7,6 +7,15 @@ import { sendTestEmail, getEmailStatus } from "../lib/email";
 
 const router: IRouter = Router();
 
+function isSafeStyleGuidelinesUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 // Convenience: format a settings row into the API response shape
 function formatSettings(s: typeof festivalSettingsTable.$inferSelect) {
   return {
@@ -50,6 +59,7 @@ function formatSettings(s: typeof festivalSettingsTable.$inferSelect) {
     documentDeadline:    s.documentDeadline ?? null,
     paymentWindowDays:   s.paymentWindowDays,
     notificationEmail:   s.notificationEmail ?? null,
+    styleGuidelinesUrl:  s.styleGuidelinesUrl ?? null,
     specialAgreementNetProfitDefinition: s.specialAgreementNetProfitDefinition,
 
     // Form customisation
@@ -114,6 +124,11 @@ router.patch("/settings", requireStaff, async (req, res): Promise<void> => {
   const d = parsed.data as Record<string, unknown>;
   const updates: Record<string, unknown> = {};
 
+  if (typeof d.styleGuidelinesUrl === "string" && !isSafeStyleGuidelinesUrl(d.styleGuidelinesUrl)) {
+    res.status(400).json({ error: "Style Guidelines URL must be a valid http:// or https:// URL" });
+    return;
+  }
+
   // Vendor categories
   if (d.vendorTypeLabelMajorFood    != null) updates.vendorTypeLabelMajorFood    = d.vendorTypeLabelMajorFood;
   if (d.vendorTypeLabelSpecialtyFood != null) updates.vendorTypeLabelSpecialtyFood = d.vendorTypeLabelSpecialtyFood;
@@ -153,6 +168,7 @@ router.patch("/settings", requireStaff, async (req, res): Promise<void> => {
   if ("documentDeadline"    in d) updates.documentDeadline    = d.documentDeadline    ?? null;
   if (d.paymentWindowDays   != null) updates.paymentWindowDays = d.paymentWindowDays;
   if ("notificationEmail"   in d) updates.notificationEmail   = d.notificationEmail   ?? null;
+  if ("styleGuidelinesUrl"  in d) updates.styleGuidelinesUrl  = d.styleGuidelinesUrl  ?? null;
   if (d.specialAgreementNetProfitDefinition != null) {
     updates.specialAgreementNetProfitDefinition = d.specialAgreementNetProfitDefinition;
   }
