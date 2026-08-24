@@ -452,12 +452,12 @@ export default function PortalPage() {
           <h1 className="text-3xl md:text-4xl font-serif mb-2">
             Welcome, {portal.businessName || portal.orgName || portal.name}
           </h1>
-          <p className="text-muted-foreground text-lg">
+          <div className="text-muted-foreground text-lg">
             Application Status:{" "}
             <Badge className="ml-2 capitalize">
               {portal.status.replace(/_/g, " ")}
             </Badge>
-          </p>
+          </div>
         </div>
 
         {/* ── Sponsor stage 2: complete details ─────────────────────────── */}
