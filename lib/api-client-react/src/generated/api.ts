@@ -39,6 +39,7 @@ import type {
   GetRecentActivityParams,
   GetSettingsParams,
   HealthStatus,
+  ListContributionsParams,
   ListSpecialAgreementVendorsParams,
   ListSponsorsParams,
   ListVendorsParams,
@@ -1053,20 +1054,27 @@ export function useGetDashboardFinancials<TData = Awaited<ReturnType<typeof getD
 
 
 
-export const getListContributionsUrl = () => {
+export const getListContributionsUrl = (params: ListContributionsParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/contributions`
+  return stringifiedParams.length > 0 ? `/api/contributions?${stringifiedParams}` : `/api/contributions`
 }
 
 /**
- * @summary List completed contributions for staff
+ * @summary List completed contributions for a festival year
  */
-export const listContributions = async ( options?: RequestInit): Promise<ContributionListResponse> => {
+export const listContributions = async (params: ListContributionsParams, options?: RequestInit): Promise<ContributionListResponse> => {
 
-  return customFetch<ContributionListResponse>(getListContributionsUrl(),
+  return customFetch<ContributionListResponse>(getListContributionsUrl(params),
   {
     ...options,
     method: 'GET'
@@ -1079,23 +1087,23 @@ export const listContributions = async ( options?: RequestInit): Promise<Contrib
 
 
 
-export const getListContributionsQueryKey = () => {
+export const getListContributionsQueryKey = (params?: ListContributionsParams,) => {
     return [
-    `/api/contributions`
+    `/api/contributions`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListContributionsQueryOptions = <TData = Awaited<ReturnType<typeof listContributions>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listContributions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListContributionsQueryOptions = <TData = Awaited<ReturnType<typeof listContributions>>, TError = ErrorType<unknown>>(params: ListContributionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listContributions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListContributionsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListContributionsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listContributions>>> = ({ signal }) => listContributions({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listContributions>>> = ({ signal }) => listContributions(params, { signal, ...requestOptions });
 
 
 
@@ -1109,15 +1117,15 @@ export type ListContributionsQueryError = ErrorType<unknown>
 
 
 /**
- * @summary List completed contributions for staff
+ * @summary List completed contributions for a festival year
  */
 
 export function useListContributions<TData = Awaited<ReturnType<typeof listContributions>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listContributions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params: ListContributionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listContributions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListContributionsQueryOptions(options)
+  const queryOptions = getListContributionsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

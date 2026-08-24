@@ -1,8 +1,7 @@
 import { Router, type IRouter } from "express";
-import { desc } from "drizzle-orm";
-import { CreateContributionCheckoutBody } from "@workspace/api-zod";
+import { desc, eq } from "drizzle-orm";
+import { CreateContributionCheckoutBody, ListContributionsQueryParams } from "@workspace/api-zod";
 import { contributionsTable, db, festivalYearsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
 import { requireStaff } from "../lib/auth";
 import { createContributionCheckout } from "./stripe";
 
@@ -43,10 +42,17 @@ router.post("/public/contributions/checkout", async (req, res): Promise<void> =>
   }
 });
 
-router.get("/contributions", requireStaff, async (_req, res): Promise<void> => {
+router.get("/contributions", requireStaff, async (req, res): Promise<void> => {
+  const queryParsed = ListContributionsQueryParams.safeParse(req.query);
+  if (!queryParsed.success) {
+    res.status(400).json({ error: "A valid festival year is required." });
+    return;
+  }
+
   const rows = await db
     .select()
     .from(contributionsTable)
+    .where(eq(contributionsTable.yearId, queryParsed.data.yearId))
     .orderBy(desc(contributionsTable.paidAt));
 
   const items = rows.map((row) => ({

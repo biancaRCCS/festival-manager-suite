@@ -722,6 +722,13 @@ export type GetDashboardFinancialsParams = {
 yearId?: number;
 };
 
+export type ListContributionsParams = {
+/**
+ * @minimum 1
+ */
+yearId: number;
+};
+
 export type GetRecentActivityParams = {
 /**
  * @minimum 1

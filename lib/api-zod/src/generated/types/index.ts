@@ -34,6 +34,7 @@ export * from './getRecentActivityParams';
 export * from './getRecentActivityType';
 export * from './getSettingsParams';
 export * from './healthStatus';
+export * from './listContributionsParams';
 export * from './listSpecialAgreementVendorsParams';
 export * from './listSponsorsParams';
 export * from './listVendorsParams';

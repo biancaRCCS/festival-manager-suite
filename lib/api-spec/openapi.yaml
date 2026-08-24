@@ -302,9 +302,16 @@ paths:
     get:
       operationId: listContributions
       tags: [contributions]
-      summary: List completed contributions for staff
+      summary: List completed contributions for a festival year
       security:
         - clerkAuth: []
+      parameters:
+        - name: yearId
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
       responses:
         "200":
           description: Completed contributions and total received

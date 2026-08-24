@@ -1,19 +1,43 @@
-import { useState } from "react"
-import { useListContributions } from "@workspace/api-client-react"
+import { useEffect, useMemo, useState } from "react"
+import { useGetCurrentYear, useListContributions, useListFestivalYears } from "@workspace/api-client-react"
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
-import { Search, Heart, Receipt } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Search, Heart } from "lucide-react"
 import { format } from "date-fns"
 
 export default function ContributionsPage() {
   const [search, setSearch] = useState("")
-  
-  const { data: response, isLoading } = useListContributions()
+  const [selectedYearId, setSelectedYearId] = useState<number | undefined>()
+
+  const { data: currentYear } = useGetCurrentYear()
+  const { data: festivalYears, isLoading: yearsLoading } = useListFestivalYears()
+
+  useEffect(() => {
+    if (selectedYearId === undefined && currentYear?.id) {
+      setSelectedYearId(currentYear.id)
+    }
+  }, [currentYear?.id, selectedYearId])
+
+  const selectedYear = useMemo(
+    () => festivalYears?.find((year) => year.id === selectedYearId),
+    [festivalYears, selectedYearId],
+  )
+  const { data: response, isLoading: contributionsLoading } = useListContributions(
+    { yearId: selectedYearId ?? 0 },
+    {
+      query: {
+        enabled: selectedYearId !== undefined,
+        queryKey: ["contributions", selectedYearId],
+      },
+    },
+  )
   
   const items = response?.items ?? []
   const totalAmount = response?.total ?? 0
+  const isLoading = yearsLoading || contributionsLoading
 
   const filtered = items.filter(c => {
     const q = search.toLowerCase()
@@ -45,7 +69,23 @@ export default function ContributionsPage() {
         <Card>
           <CardContent className="p-0">
             {/* Toolbar */}
-            <div className="p-4 border-b bg-muted/20 space-y-3">
+            <div className="p-4 border-b bg-muted/20 flex flex-col sm:flex-row gap-3">
+              <Select
+                value={selectedYearId?.toString()}
+                onValueChange={(value) => setSelectedYearId(Number(value))}
+                disabled={yearsLoading || !festivalYears?.length}
+              >
+                <SelectTrigger className="w-full sm:w-56 bg-background">
+                  <SelectValue placeholder="Choose festival year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {festivalYears?.map((year) => (
+                    <SelectItem key={year.id} value={year.id.toString()}>
+                      {year.year} {year.isActive ? "(Active)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -66,7 +106,13 @@ export default function ContributionsPage() {
                   <Heart className="w-8 h-8 text-muted-foreground opacity-50" />
                 </div>
                 <h3 className="text-lg font-medium text-foreground mb-1">No contributions found</h3>
-                <p className="text-muted-foreground">No records match your search.</p>
+                <p className="text-muted-foreground">
+                  {search
+                    ? "No records match your search."
+                    : selectedYear
+                      ? `No verified contributions were received for ${selectedYear.year}.`
+                      : "Choose a festival year to view contributions."}
+                </p>
               </div>
             ) : (
               <Table>

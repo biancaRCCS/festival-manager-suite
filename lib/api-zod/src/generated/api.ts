@@ -416,8 +416,15 @@ export const GetDashboardFinancialsResponse = zod.object({
 
 
 /**
- * @summary List completed contributions for staff
+ * @summary List completed contributions for a festival year
  */
+
+
+
+export const ListContributionsQueryParams = zod.object({
+  "yearId": zod.coerce.number().min(1)
+})
+
 export const ListContributionsResponse = zod.object({
   "items": zod.array(zod.object({
   "id": zod.number(),
