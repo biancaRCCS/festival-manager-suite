@@ -12,6 +12,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import DashboardPage from '@/pages/dashboard';
 import VendorsPage from '@/pages/vendors/index';
 import VendorDetailPage from '@/pages/vendors/[id]';
+import SpecialAgreementsPage from '@/pages/special-agreements';
 import SponsorsPage from '@/pages/sponsors/index';
 import SponsorDetailPage from '@/pages/sponsors/[id]';
 import VolunteersPage from '@/pages/volunteers/index';
@@ -455,6 +456,7 @@ function ClerkProviderWithRoutes() {
             <ProtectedRoute path="/contributions" component={ContributionsPage} redirectToSignIn />
             <ProtectedRoute path="/vendors" component={VendorsPage} />
             <ProtectedRoute path="/vendors/:id" component={VendorDetailPage} />
+            <ProtectedRoute path="/special-agreements" component={SpecialAgreementsPage} />
             <ProtectedRoute path="/sponsors" component={SponsorsPage} />
             <ProtectedRoute path="/sponsors/:id" component={SponsorDetailPage} />
             <ProtectedRoute path="/volunteers" component={VolunteersPage} />

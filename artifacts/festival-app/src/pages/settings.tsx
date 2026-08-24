@@ -278,6 +278,18 @@ export default function SettingsPage() {
                     </div>
                     <p className="text-xs text-muted-foreground">All new vendor, sponsor, and volunteer applications are emailed here.</p>
                   </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Special Agreement Net-Profit Definition</Label>
+                    <Textarea
+                      value={localSettings.specialAgreementNetProfitDefinition ?? ""}
+                      onChange={e => set("specialAgreementNetProfitDefinition", e.target.value)}
+                      placeholder="Define net profit for all Special Agreement Vendor revenue-share agreements."
+                      rows={3}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      This wording appears identically on every Special Agreement Vendor portal and is the basis for their revenue share.
+                    </p>
+                  </div>
 
                   {/* Email status row */}
                   <div className="md:col-span-2">

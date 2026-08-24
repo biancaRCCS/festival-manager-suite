@@ -50,6 +50,7 @@ function formatSettings(s: typeof festivalSettingsTable.$inferSelect) {
     documentDeadline:    s.documentDeadline ?? null,
     paymentWindowDays:   s.paymentWindowDays,
     notificationEmail:   s.notificationEmail ?? null,
+    specialAgreementNetProfitDefinition: s.specialAgreementNetProfitDefinition,
 
     // Form customisation
     vendorFormQuestions:    s.vendorFormQuestions,
@@ -152,6 +153,9 @@ router.patch("/settings", requireStaff, async (req, res): Promise<void> => {
   if ("documentDeadline"    in d) updates.documentDeadline    = d.documentDeadline    ?? null;
   if (d.paymentWindowDays   != null) updates.paymentWindowDays = d.paymentWindowDays;
   if ("notificationEmail"   in d) updates.notificationEmail   = d.notificationEmail   ?? null;
+  if (d.specialAgreementNetProfitDefinition != null) {
+    updates.specialAgreementNetProfitDefinition = d.specialAgreementNetProfitDefinition;
+  }
 
   // Form customisation
   if (d.vendorFormQuestions    != null) updates.vendorFormQuestions    = d.vendorFormQuestions;

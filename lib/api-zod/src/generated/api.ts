@@ -90,6 +90,7 @@ export const SubmitVolunteerApplicationResponse = zod.object({
 export const createContributionCheckoutBodyAmountMin = 5;
 
 
+
 export const CreateContributionCheckoutBody = zod.object({
   "name": zod.string().min(1),
   "email": zod.string(),
@@ -109,7 +110,7 @@ export const GetPortalInfoParams = zod.object({
 })
 
 export const GetPortalInfoResponse = zod.object({
-  "type": zod.enum(['vendor', 'sponsor']),
+  "type": zod.enum(['vendor', 'sponsor', 'special_agreement']),
   "id": zod.number().optional(),
   "name": zod.string(),
   "businessName": zod.string().nullish(),
@@ -139,7 +140,16 @@ export const GetPortalInfoResponse = zod.object({
   "spacesRequested": zod.string().nullish(),
   "sponsorshipAmount": zod.number().nullish(),
   "boothOrNameOnly": zod.string().nullish(),
-  "paymentDeadline": zod.string().nullish()
+  "paymentDeadline": zod.string().nullish(),
+  "specialAgreementOperationType": zod.string().nullish(),
+  "specialAgreementRevenueSharePercentage": zod.number().nullish(),
+  "specialAgreementNetProfitDefinition": zod.string().nullish(),
+  "documentDeadline": zod.string().nullish(),
+  "notificationEmail": zod.string().nullish(),
+  "specialAgreementDayOfContactName": zod.string().nullish(),
+  "specialAgreementDayOfContactPhone": zod.string().nullish(),
+  "specialAgreementBackupContactName": zod.string().nullish(),
+  "specialAgreementBackupContactPhone": zod.string().nullish()
 })
 
 
@@ -153,7 +163,7 @@ export const SubmitSponsorDetailsParams = zod.object({
 export const SubmitSponsorDetailsBody = zod.record(zod.string(), zod.unknown()).describe('Stage-2 sponsorship detail fields submitted via the portal. All fields are optional; the full object is merged into applicationData.')
 
 export const SubmitSponsorDetailsResponse = zod.object({
-  "type": zod.enum(['vendor', 'sponsor']),
+  "type": zod.enum(['vendor', 'sponsor', 'special_agreement']),
   "id": zod.number().optional(),
   "name": zod.string(),
   "businessName": zod.string().nullish(),
@@ -183,7 +193,16 @@ export const SubmitSponsorDetailsResponse = zod.object({
   "spacesRequested": zod.string().nullish(),
   "sponsorshipAmount": zod.number().nullish(),
   "boothOrNameOnly": zod.string().nullish(),
-  "paymentDeadline": zod.string().nullish()
+  "paymentDeadline": zod.string().nullish(),
+  "specialAgreementOperationType": zod.string().nullish(),
+  "specialAgreementRevenueSharePercentage": zod.number().nullish(),
+  "specialAgreementNetProfitDefinition": zod.string().nullish(),
+  "documentDeadline": zod.string().nullish(),
+  "notificationEmail": zod.string().nullish(),
+  "specialAgreementDayOfContactName": zod.string().nullish(),
+  "specialAgreementDayOfContactPhone": zod.string().nullish(),
+  "specialAgreementBackupContactName": zod.string().nullish(),
+  "specialAgreementBackupContactPhone": zod.string().nullish()
 })
 
 
@@ -211,7 +230,7 @@ export const SignPortalAgreementBody = zod.object({
 })
 
 export const SignPortalAgreementResponse = zod.object({
-  "type": zod.enum(['vendor', 'sponsor']),
+  "type": zod.enum(['vendor', 'sponsor', 'special_agreement']),
   "id": zod.number().optional(),
   "name": zod.string(),
   "businessName": zod.string().nullish(),
@@ -241,7 +260,91 @@ export const SignPortalAgreementResponse = zod.object({
   "spacesRequested": zod.string().nullish(),
   "sponsorshipAmount": zod.number().nullish(),
   "boothOrNameOnly": zod.string().nullish(),
-  "paymentDeadline": zod.string().nullish()
+  "paymentDeadline": zod.string().nullish(),
+  "specialAgreementOperationType": zod.string().nullish(),
+  "specialAgreementRevenueSharePercentage": zod.number().nullish(),
+  "specialAgreementNetProfitDefinition": zod.string().nullish(),
+  "documentDeadline": zod.string().nullish(),
+  "notificationEmail": zod.string().nullish(),
+  "specialAgreementDayOfContactName": zod.string().nullish(),
+  "specialAgreementDayOfContactPhone": zod.string().nullish(),
+  "specialAgreementBackupContactName": zod.string().nullish(),
+  "specialAgreementBackupContactPhone": zod.string().nullish()
+})
+
+
+/**
+ * @summary Submit a signed Special Agreement Vendor agreement
+ */
+export const SubmitSpecialAgreementParams = zod.object({
+  "token": zod.coerce.string()
+})
+
+
+
+
+
+
+
+
+export const SubmitSpecialAgreementBody = zod.object({
+  "dayOfContactName": zod.string().min(1),
+  "dayOfContactPhone": zod.string().min(1),
+  "backupContactName": zod.string().min(1),
+  "backupContactPhone": zod.string().min(1),
+  "ackRevenueShare": zod.boolean(),
+  "ackPermitsInsurance": zod.boolean(),
+  "ackEquipment": zod.boolean(),
+  "ackNoRunningWater": zod.boolean(),
+  "ackPower": zod.boolean(),
+  "ackLoadInVehicles": zod.boolean(),
+  "ackCleanUp": zod.boolean(),
+  "ackPropertyLiability": zod.boolean(),
+  "signedName": zod.string().min(1),
+  "signedDate": zod.coerce.date()
+})
+
+export const SubmitSpecialAgreementResponse = zod.object({
+  "type": zod.enum(['vendor', 'sponsor', 'special_agreement']),
+  "id": zod.number().optional(),
+  "name": zod.string(),
+  "businessName": zod.string().nullish(),
+  "orgName": zod.string().nullish(),
+  "status": zod.string(),
+  "agreementSigned": zod.boolean(),
+  "spotNumber": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "festivalYear": zod.string(),
+  "eventDate": zod.string(),
+  "tier": zod.string().nullish(),
+  "vendorType": zod.string().nullish(),
+  "vendorPriceFood": zod.number().nullish(),
+  "vendorPriceCrafts": zod.number().nullish(),
+  "vendorPriceMerchandise": zod.number().nullish(),
+  "vendorPriceCultural": zod.number().nullish(),
+  "vendorPriceOther": zod.number().nullish(),
+  "sponsorPriceBronze": zod.number().nullish(),
+  "sponsorPriceSilver": zod.number().nullish(),
+  "sponsorPriceGold": zod.number().nullish(),
+  "sponsorPricePlatinum": zod.number().nullish(),
+  "sponsorPriceDiamond": zod.number().nullish(),
+  "vendorPriceMajorFood": zod.number().nullish(),
+  "vendorPriceSpecialtyFood": zod.number().nullish(),
+  "vendorPriceRetail": zod.number().nullish(),
+  "vendorPriceNonprofit": zod.number().nullish(),
+  "spacesRequested": zod.string().nullish(),
+  "sponsorshipAmount": zod.number().nullish(),
+  "boothOrNameOnly": zod.string().nullish(),
+  "paymentDeadline": zod.string().nullish(),
+  "specialAgreementOperationType": zod.string().nullish(),
+  "specialAgreementRevenueSharePercentage": zod.number().nullish(),
+  "specialAgreementNetProfitDefinition": zod.string().nullish(),
+  "documentDeadline": zod.string().nullish(),
+  "notificationEmail": zod.string().nullish(),
+  "specialAgreementDayOfContactName": zod.string().nullish(),
+  "specialAgreementDayOfContactPhone": zod.string().nullish(),
+  "specialAgreementBackupContactName": zod.string().nullish(),
+  "specialAgreementBackupContactPhone": zod.string().nullish()
 })
 
 
@@ -338,17 +441,18 @@ export const getRecentActivityQueryLimitDefault = 50;
 export const getRecentActivityQueryLimitMax = 100;
 
 
+
 export const GetRecentActivityQueryParams = zod.object({
   "page": zod.coerce.number().min(1).default(getRecentActivityQueryPageDefault),
   "limit": zod.coerce.number().min(1).max(getRecentActivityQueryLimitMax).default(getRecentActivityQueryLimitDefault),
-  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'category_changed', 'category_adjustment_settled', 'deleted']).optional(),
+  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'category_changed', 'category_adjustment_settled', 'special_agreement_created', 'special_agreement_signed', 'deleted']).optional(),
   "entityType": zod.enum(['vendor', 'sponsor', 'volunteer']).optional()
 })
 
 export const GetRecentActivityResponse = zod.object({
   "items": zod.array(zod.object({
   "id": zod.number(),
-  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'category_changed', 'category_adjustment_settled', 'deleted']),
+  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'category_changed', 'category_adjustment_settled', 'special_agreement_created', 'special_agreement_signed', 'deleted']),
   "message": zod.string(),
   "entityType": zod.enum(['vendor', 'sponsor', 'volunteer']),
   "entityId": zod.number().optional(),
@@ -461,6 +565,7 @@ export const GetSettingsResponse = zod.object({
   "documentDeadline": zod.string().nullish(),
   "paymentWindowDays": zod.number().optional(),
   "notificationEmail": zod.string().nullish(),
+  "specialAgreementNetProfitDefinition": zod.string().optional(),
   "vendorFormQuestions": zod.array(zod.object({
   "id": zod.string(),
   "label": zod.string(),
@@ -528,6 +633,7 @@ export const UpdateSettingsBody = zod.object({
   "documentDeadline": zod.string().nullish(),
   "paymentWindowDays": zod.number().optional(),
   "notificationEmail": zod.string().nullish(),
+  "specialAgreementNetProfitDefinition": zod.string().optional(),
   "vendorFormQuestions": zod.array(zod.object({
   "id": zod.string(),
   "label": zod.string(),
@@ -593,6 +699,7 @@ export const UpdateSettingsResponse = zod.object({
   "documentDeadline": zod.string().nullish(),
   "paymentWindowDays": zod.number().optional(),
   "notificationEmail": zod.string().nullish(),
+  "specialAgreementNetProfitDefinition": zod.string().optional(),
   "vendorFormQuestions": zod.array(zod.object({
   "id": zod.string(),
   "label": zod.string(),
@@ -651,11 +758,119 @@ export const ListVendorsResponseItem = zod.object({
   "settledAmount": zod.number().nullish(),
   "pendingManualAdjustment": zod.number().nullish(),
   "pendingAdjustmentTargetAmount": zod.number().nullish(),
+  "specialAgreementOperationType": zod.string().nullish(),
+  "specialAgreementRevenueSharePercentage": zod.number().nullish(),
+  "specialAgreementInternalNotes": zod.string().nullish(),
+  "specialAgreementDayOfContactName": zod.string().nullish(),
+  "specialAgreementDayOfContactPhone": zod.string().nullish(),
+  "specialAgreementBackupContactName": zod.string().nullish(),
+  "specialAgreementBackupContactPhone": zod.string().nullish(),
+  "specialAgreementSignedDate": zod.string().nullish(),
+  "specialAgreementSignedAt": zod.string().nullish(),
   "approvedAt": zod.string().nullish(),
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
 })
 export const ListVendorsResponse = zod.array(ListVendorsResponseItem)
+
+
+/**
+ * @summary List staff-created Special Agreement Vendors
+ */
+export const ListSpecialAgreementVendorsQueryParams = zod.object({
+  "yearId": zod.coerce.number().optional()
+})
+
+export const ListSpecialAgreementVendorsResponseItem = zod.object({
+  "id": zod.number(),
+  "yearId": zod.number(),
+  "name": zod.string(),
+  "businessName": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string(),
+  "vendorType": zod.string(),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'payment_pending', 'paid', 'final_approved']),
+  "applicationData": zod.record(zod.string(), zod.unknown()),
+  "agreementSigned": zod.boolean().optional(),
+  "agreementSignedName": zod.string().nullish(),
+  "spotNumber": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "reviewNote": zod.string().nullish(),
+  "paidAt": zod.string().nullish(),
+  "settledAmount": zod.number().nullish(),
+  "pendingManualAdjustment": zod.number().nullish(),
+  "pendingAdjustmentTargetAmount": zod.number().nullish(),
+  "specialAgreementOperationType": zod.string().nullish(),
+  "specialAgreementRevenueSharePercentage": zod.number().nullish(),
+  "specialAgreementInternalNotes": zod.string().nullish(),
+  "specialAgreementDayOfContactName": zod.string().nullish(),
+  "specialAgreementDayOfContactPhone": zod.string().nullish(),
+  "specialAgreementBackupContactName": zod.string().nullish(),
+  "specialAgreementBackupContactPhone": zod.string().nullish(),
+  "specialAgreementSignedDate": zod.string().nullish(),
+  "specialAgreementSignedAt": zod.string().nullish(),
+  "approvedAt": zod.string().nullish(),
+  "finalApprovedAt": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const ListSpecialAgreementVendorsResponse = zod.array(ListSpecialAgreementVendorsResponseItem)
+
+
+/**
+ * @summary Create a Special Agreement Vendor and email their agreement link
+ */
+
+
+
+
+export const createSpecialAgreementVendorBodyRevenueSharePercentageMin = 0;
+export const createSpecialAgreementVendorBodyRevenueSharePercentageMax = 100;
+
+
+
+export const CreateSpecialAgreementVendorBody = zod.object({
+  "yearId": zod.number(),
+  "name": zod.string().min(1),
+  "businessName": zod.string().min(1),
+  "email": zod.string(),
+  "phone": zod.string().min(1),
+  "operationType": zod.string().min(1),
+  "revenueSharePercentage": zod.number().min(createSpecialAgreementVendorBodyRevenueSharePercentageMin).max(createSpecialAgreementVendorBodyRevenueSharePercentageMax),
+  "internalNotes": zod.string().nullish()
+})
+
+export const CreateSpecialAgreementVendorResponse = zod.object({
+  "id": zod.number(),
+  "yearId": zod.number(),
+  "name": zod.string(),
+  "businessName": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string(),
+  "vendorType": zod.string(),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'payment_pending', 'paid', 'final_approved']),
+  "applicationData": zod.record(zod.string(), zod.unknown()),
+  "agreementSigned": zod.boolean().optional(),
+  "agreementSignedName": zod.string().nullish(),
+  "spotNumber": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "reviewNote": zod.string().nullish(),
+  "paidAt": zod.string().nullish(),
+  "settledAmount": zod.number().nullish(),
+  "pendingManualAdjustment": zod.number().nullish(),
+  "pendingAdjustmentTargetAmount": zod.number().nullish(),
+  "specialAgreementOperationType": zod.string().nullish(),
+  "specialAgreementRevenueSharePercentage": zod.number().nullish(),
+  "specialAgreementInternalNotes": zod.string().nullish(),
+  "specialAgreementDayOfContactName": zod.string().nullish(),
+  "specialAgreementDayOfContactPhone": zod.string().nullish(),
+  "specialAgreementBackupContactName": zod.string().nullish(),
+  "specialAgreementBackupContactPhone": zod.string().nullish(),
+  "specialAgreementSignedDate": zod.string().nullish(),
+  "specialAgreementSignedAt": zod.string().nullish(),
+  "approvedAt": zod.string().nullish(),
+  "finalApprovedAt": zod.string().nullish(),
+  "createdAt": zod.string()
+})
 
 
 /**
@@ -684,6 +899,15 @@ export const GetVendorResponse = zod.object({
   "settledAmount": zod.number().nullish(),
   "pendingManualAdjustment": zod.number().nullish(),
   "pendingAdjustmentTargetAmount": zod.number().nullish(),
+  "specialAgreementOperationType": zod.string().nullish(),
+  "specialAgreementRevenueSharePercentage": zod.number().nullish(),
+  "specialAgreementInternalNotes": zod.string().nullish(),
+  "specialAgreementDayOfContactName": zod.string().nullish(),
+  "specialAgreementDayOfContactPhone": zod.string().nullish(),
+  "specialAgreementBackupContactName": zod.string().nullish(),
+  "specialAgreementBackupContactPhone": zod.string().nullish(),
+  "specialAgreementSignedDate": zod.string().nullish(),
+  "specialAgreementSignedAt": zod.string().nullish(),
   "approvedAt": zod.string().nullish(),
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
@@ -731,6 +955,15 @@ export const ReviewVendorResponse = zod.object({
   "settledAmount": zod.number().nullish(),
   "pendingManualAdjustment": zod.number().nullish(),
   "pendingAdjustmentTargetAmount": zod.number().nullish(),
+  "specialAgreementOperationType": zod.string().nullish(),
+  "specialAgreementRevenueSharePercentage": zod.number().nullish(),
+  "specialAgreementInternalNotes": zod.string().nullish(),
+  "specialAgreementDayOfContactName": zod.string().nullish(),
+  "specialAgreementDayOfContactPhone": zod.string().nullish(),
+  "specialAgreementBackupContactName": zod.string().nullish(),
+  "specialAgreementBackupContactPhone": zod.string().nullish(),
+  "specialAgreementSignedDate": zod.string().nullish(),
+  "specialAgreementSignedAt": zod.string().nullish(),
   "approvedAt": zod.string().nullish(),
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
@@ -746,6 +979,7 @@ export const UpdateVendorCategoryParams = zod.object({
 
 export const updateVendorCategoryBodyReasonMin = 3;
 export const updateVendorCategoryBodyReasonMax = 2000;
+
 
 
 export const UpdateVendorCategoryBody = zod.object({
@@ -773,6 +1007,15 @@ export const UpdateVendorCategoryResponse = zod.object({
   "settledAmount": zod.number().nullish(),
   "pendingManualAdjustment": zod.number().nullish(),
   "pendingAdjustmentTargetAmount": zod.number().nullish(),
+  "specialAgreementOperationType": zod.string().nullish(),
+  "specialAgreementRevenueSharePercentage": zod.number().nullish(),
+  "specialAgreementInternalNotes": zod.string().nullish(),
+  "specialAgreementDayOfContactName": zod.string().nullish(),
+  "specialAgreementDayOfContactPhone": zod.string().nullish(),
+  "specialAgreementBackupContactName": zod.string().nullish(),
+  "specialAgreementBackupContactPhone": zod.string().nullish(),
+  "specialAgreementSignedDate": zod.string().nullish(),
+  "specialAgreementSignedAt": zod.string().nullish(),
   "approvedAt": zod.string().nullish(),
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
@@ -816,6 +1059,15 @@ export const SettleVendorCategoryAdjustmentResponse = zod.object({
   "settledAmount": zod.number().nullish(),
   "pendingManualAdjustment": zod.number().nullish(),
   "pendingAdjustmentTargetAmount": zod.number().nullish(),
+  "specialAgreementOperationType": zod.string().nullish(),
+  "specialAgreementRevenueSharePercentage": zod.number().nullish(),
+  "specialAgreementInternalNotes": zod.string().nullish(),
+  "specialAgreementDayOfContactName": zod.string().nullish(),
+  "specialAgreementDayOfContactPhone": zod.string().nullish(),
+  "specialAgreementBackupContactName": zod.string().nullish(),
+  "specialAgreementBackupContactPhone": zod.string().nullish(),
+  "specialAgreementSignedDate": zod.string().nullish(),
+  "specialAgreementSignedAt": zod.string().nullish(),
   "approvedAt": zod.string().nullish(),
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
@@ -848,6 +1100,15 @@ export const FinalApproveVendorResponse = zod.object({
   "settledAmount": zod.number().nullish(),
   "pendingManualAdjustment": zod.number().nullish(),
   "pendingAdjustmentTargetAmount": zod.number().nullish(),
+  "specialAgreementOperationType": zod.string().nullish(),
+  "specialAgreementRevenueSharePercentage": zod.number().nullish(),
+  "specialAgreementInternalNotes": zod.string().nullish(),
+  "specialAgreementDayOfContactName": zod.string().nullish(),
+  "specialAgreementDayOfContactPhone": zod.string().nullish(),
+  "specialAgreementBackupContactName": zod.string().nullish(),
+  "specialAgreementBackupContactPhone": zod.string().nullish(),
+  "specialAgreementSignedDate": zod.string().nullish(),
+  "specialAgreementSignedAt": zod.string().nullish(),
   "approvedAt": zod.string().nullish(),
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
@@ -885,10 +1146,20 @@ export const AssignVendorSpotResponse = zod.object({
   "settledAmount": zod.number().nullish(),
   "pendingManualAdjustment": zod.number().nullish(),
   "pendingAdjustmentTargetAmount": zod.number().nullish(),
+  "specialAgreementOperationType": zod.string().nullish(),
+  "specialAgreementRevenueSharePercentage": zod.number().nullish(),
+  "specialAgreementInternalNotes": zod.string().nullish(),
+  "specialAgreementDayOfContactName": zod.string().nullish(),
+  "specialAgreementDayOfContactPhone": zod.string().nullish(),
+  "specialAgreementBackupContactName": zod.string().nullish(),
+  "specialAgreementBackupContactPhone": zod.string().nullish(),
+  "specialAgreementSignedDate": zod.string().nullish(),
+  "specialAgreementSignedAt": zod.string().nullish(),
   "approvedAt": zod.string().nullish(),
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
 })
+
 
 /**
  * @summary Resend applicant confirmation email to a vendor
@@ -896,6 +1167,10 @@ export const AssignVendorSpotResponse = zod.object({
 export const ResendVendorConfirmationParams = zod.object({
   "id": zod.coerce.number()
 })
+
+export const ResendVendorConfirmationResponse = zod.void()
+
+
 /**
  * @summary List sponsors (optionally filtered by year)
  */
@@ -1072,12 +1347,17 @@ export const AssignSponsorSpotResponse = zod.object({
   "createdAt": zod.string()
 })
 
+
 /**
  * @summary Resend applicant confirmation email to a sponsor
  */
 export const ResendSponsorConfirmationParams = zod.object({
   "id": zod.coerce.number()
 })
+
+export const ResendSponsorConfirmationResponse = zod.void()
+
+
 /**
  * @summary List volunteers (optionally filtered by year)
  */
@@ -1161,12 +1441,17 @@ export const ReviewVolunteerResponse = zod.object({
   "createdAt": zod.string()
 })
 
+
 /**
  * @summary Resend applicant confirmation email to a volunteer
  */
 export const ResendVolunteerConfirmationParams = zod.object({
   "id": zod.coerce.number()
 })
+
+export const ResendVolunteerConfirmationResponse = zod.void()
+
+
 /**
  * @summary List staff members
  */
@@ -1240,8 +1525,3 @@ export const ExportVolunteersQueryParams = zod.object({
 export const ExportVolunteersResponse = zod.unknown()
 
 
-export const ResendSponsorConfirmationResponse = zod.void()
-
-export const ResendVendorConfirmationResponse = zod.void()
-
-export const ResendVolunteerConfirmationResponse = zod.void()

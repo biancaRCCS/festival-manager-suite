@@ -92,6 +92,7 @@ export interface FestivalSettings {
   paymentWindowDays?: number;
   /** @nullable */
   notificationEmail?: string | null;
+  specialAgreementNetProfitDefinition?: string;
   vendorFormQuestions: FormQuestion[];
   sponsorFormQuestions: FormQuestion[];
   volunteerFormQuestions: FormQuestion[];
@@ -143,6 +144,7 @@ export interface FestivalSettingsUpdate {
   paymentWindowDays?: number;
   /** @nullable */
   notificationEmail?: string | null;
+  specialAgreementNetProfitDefinition?: string;
   vendorFormQuestions?: FormQuestion[];
   sponsorFormQuestions?: FormQuestion[];
   volunteerFormQuestions?: FormQuestion[];
@@ -197,6 +199,24 @@ export interface Vendor {
   pendingManualAdjustment?: number | null;
   /** @nullable */
   pendingAdjustmentTargetAmount?: number | null;
+  /** @nullable */
+  specialAgreementOperationType?: string | null;
+  /** @nullable */
+  specialAgreementRevenueSharePercentage?: number | null;
+  /** @nullable */
+  specialAgreementInternalNotes?: string | null;
+  /** @nullable */
+  specialAgreementDayOfContactName?: string | null;
+  /** @nullable */
+  specialAgreementDayOfContactPhone?: string | null;
+  /** @nullable */
+  specialAgreementBackupContactName?: string | null;
+  /** @nullable */
+  specialAgreementBackupContactPhone?: string | null;
+  /** @nullable */
+  specialAgreementSignedDate?: string | null;
+  /** @nullable */
+  specialAgreementSignedAt?: string | null;
   /** @nullable */
   approvedAt?: string | null;
   /** @nullable */
@@ -359,6 +379,8 @@ export const ActivityItemType = {
   assigned: 'assigned',
   category_changed: 'category_changed',
   category_adjustment_settled: 'category_adjustment_settled',
+  special_agreement_created: 'special_agreement_created',
+  special_agreement_signed: 'special_agreement_signed',
   deleted: 'deleted',
 } as const;
 
@@ -434,6 +456,7 @@ export type PortalInfoType = typeof PortalInfoType[keyof typeof PortalInfoType];
 export const PortalInfoType = {
   vendor: 'vendor',
   sponsor: 'sponsor',
+  special_agreement: 'special_agreement',
 } as const;
 
 export interface PortalInfo {
@@ -492,6 +515,24 @@ export interface PortalInfo {
   boothOrNameOnly?: string | null;
   /** @nullable */
   paymentDeadline?: string | null;
+  /** @nullable */
+  specialAgreementOperationType?: string | null;
+  /** @nullable */
+  specialAgreementRevenueSharePercentage?: number | null;
+  /** @nullable */
+  specialAgreementNetProfitDefinition?: string | null;
+  /** @nullable */
+  documentDeadline?: string | null;
+  /** @nullable */
+  notificationEmail?: string | null;
+  /** @nullable */
+  specialAgreementDayOfContactName?: string | null;
+  /** @nullable */
+  specialAgreementDayOfContactPhone?: string | null;
+  /** @nullable */
+  specialAgreementBackupContactName?: string | null;
+  /** @nullable */
+  specialAgreementBackupContactPhone?: string | null;
 }
 
 export interface CheckoutSession {
@@ -523,6 +564,48 @@ export interface ContributionListResponse {
 
 export interface AgreementSignature {
   signedName: string;
+}
+
+export interface SpecialAgreementVendorInput {
+  yearId: number;
+  /** @minLength 1 */
+  name: string;
+  /** @minLength 1 */
+  businessName: string;
+  email: string;
+  /** @minLength 1 */
+  phone: string;
+  /** @minLength 1 */
+  operationType: string;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  revenueSharePercentage: number;
+  /** @nullable */
+  internalNotes?: string | null;
+}
+
+export interface SpecialAgreementSignature {
+  /** @minLength 1 */
+  dayOfContactName: string;
+  /** @minLength 1 */
+  dayOfContactPhone: string;
+  /** @minLength 1 */
+  backupContactName: string;
+  /** @minLength 1 */
+  backupContactPhone: string;
+  ackRevenueShare: boolean;
+  ackPermitsInsurance: boolean;
+  ackEquipment: boolean;
+  ackNoRunningWater: boolean;
+  ackPower: boolean;
+  ackLoadInVehicles: boolean;
+  ackCleanUp: boolean;
+  ackPropertyLiability: boolean;
+  /** @minLength 1 */
+  signedName: string;
+  signedDate: string;
 }
 
 export type ReviewDecisionStatus = typeof ReviewDecisionStatus[keyof typeof ReviewDecisionStatus];
@@ -665,6 +748,8 @@ export const GetRecentActivityType = {
   assigned: 'assigned',
   category_changed: 'category_changed',
   category_adjustment_settled: 'category_adjustment_settled',
+  special_agreement_created: 'special_agreement_created',
+  special_agreement_signed: 'special_agreement_signed',
   deleted: 'deleted',
 } as const;
 
@@ -684,6 +769,10 @@ yearId?: number;
 export type ListVendorsParams = {
 yearId?: number;
 status?: string;
+};
+
+export type ListSpecialAgreementVendorsParams = {
+yearId?: number;
 };
 
 export type ListSponsorsParams = {

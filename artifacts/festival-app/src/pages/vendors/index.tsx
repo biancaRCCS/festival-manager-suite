@@ -50,7 +50,7 @@ export default function VendorsPage() {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
             <h1 className="text-3xl font-serif text-primary mb-2 flex items-center gap-2"><Store className="w-7 h-7" /> Vendors</h1>
-            <p className="text-muted-foreground">Manage vendor applications and payments.</p>
+            <p className="text-muted-foreground">Manage vendor applications, special agreements, and payments.</p>
           </div>
           <div className="flex gap-2">
             <button 
@@ -116,6 +116,9 @@ export default function VendorsPage() {
                       <TableCell className="font-medium text-foreground">
                         {vendor.businessName}
                         <div className="text-xs text-muted-foreground font-normal">{vendor.name}</div>
+                         {vendor.vendorType === "special_agreement" && (
+                           <Badge variant="outline" className="mt-1 border-violet-300 bg-violet-50 text-violet-800">Special Agreement</Badge>
+                         )}
                         {(() => {
                           const permit = String(((vendor.applicationData ?? {}) as Record<string, unknown>).sellerPermitNumber ?? "")
                           return permit ? <div className="text-xs text-muted-foreground font-normal">Permit: {permit}</div> : null

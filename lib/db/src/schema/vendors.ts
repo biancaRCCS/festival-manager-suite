@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, boolean, jsonb, numeric, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, boolean, jsonb, numeric, timestamp, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { festivalYearsTable } from "./festivalYears";
@@ -30,6 +30,18 @@ export const vendorsTable = pgTable("vendors", {
   // Incremented whenever a category recalculates a vendor's amount due. A
   // Checkout is attached only if this remains unchanged while Stripe creates it.
   pricingRevision: integer("pricing_revision").notNull().default(0),
+  // Special Agreement Vendors are created by staff, do not pay a booth fee,
+  // and use a signed revenue-share agreement instead of Stripe Checkout.
+  specialAgreementOperationType: text("special_agreement_operation_type"),
+  specialAgreementRevenueSharePercentage: numeric("special_agreement_revenue_share_percentage", { precision: 5, scale: 2 }),
+  specialAgreementInternalNotes: text("special_agreement_internal_notes"),
+  specialAgreementDayOfContactName: text("special_agreement_day_of_contact_name"),
+  specialAgreementDayOfContactPhone: text("special_agreement_day_of_contact_phone"),
+  specialAgreementBackupContactName: text("special_agreement_backup_contact_name"),
+  specialAgreementBackupContactPhone: text("special_agreement_backup_contact_phone"),
+  specialAgreementAcknowledgements: jsonb("special_agreement_acknowledgements").notNull().default({}),
+  specialAgreementSignedDate: date("special_agreement_signed_date", { mode: "string" }),
+  specialAgreementSignedAt: timestamp("special_agreement_signed_at", { withTimezone: true }),
   approvedAt: timestamp("approved_at", { withTimezone: true }),
   finalApprovedAt: timestamp("final_approved_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

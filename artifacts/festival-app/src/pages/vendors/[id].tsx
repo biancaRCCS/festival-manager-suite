@@ -257,7 +257,8 @@ export default function VendorDetailPage() {
 
   const isFood = FOOD_KEYS.has(vendor.vendorType)
   const isNonprofit = vendor.vendorType === "nonprofit"
-  const categoryLabel = VENDOR_TYPE_LABELS[vendor.vendorType] ?? vendor.vendorType
+  const isSpecialAgreement = vendor.vendorType === "special_agreement"
+  const categoryLabel = isSpecialAgreement ? "Special Agreement Vendor" : (VENDOR_TYPE_LABELS[vendor.vendorType] ?? vendor.vendorType)
   const feeForCategory = (type: string) => {
     const settingKey = {
       major_food: "vendorPriceMajorFood",
@@ -327,7 +328,7 @@ export default function VendorDetailPage() {
               </Dialog>
             )}
 
-            <Dialog open={isCategoryOpen} onOpenChange={openCategoryDialog}>
+            {!isSpecialAgreement && <Dialog open={isCategoryOpen} onOpenChange={openCategoryDialog}>
               <DialogTrigger asChild>
                 <Button variant="outline" className="border-primary/20 hover:bg-primary/5 text-primary">
                   <Pencil className="w-4 h-4 mr-2" /> Change Category
@@ -393,9 +394,9 @@ export default function VendorDetailPage() {
                   </Button>
                 </DialogFooter>
               </DialogContent>
-            </Dialog>
+            </Dialog>}
 
-            {vendor.pendingManualAdjustment != null && (
+            {!isSpecialAgreement && vendor.pendingManualAdjustment != null && (
               <Button
                 onClick={handleSettleCategoryAdjustment}
                 variant="outline"
@@ -407,7 +408,7 @@ export default function VendorDetailPage() {
               </Button>
             )}
 
-            {vendor.status === 'paid' && (
+            {!isSpecialAgreement && vendor.status === 'paid' && (
               <Button onClick={handleFinalApprove} variant="default" className="bg-green-600 hover:bg-green-700 text-white">
                 <CheckCircle2 className="w-4 h-4 mr-2" /> Final Approve
               </Button>
@@ -441,7 +442,7 @@ export default function VendorDetailPage() {
               </DialogContent>
             </Dialog>
 
-            <Button
+            {!isSpecialAgreement && <Button
               variant="outline"
               className="border-primary/20 hover:bg-primary/5 text-primary"
               onClick={handleResend}
@@ -449,7 +450,7 @@ export default function VendorDetailPage() {
             >
               <Mail className="w-4 h-4 mr-2" />
               {resendMutation.isPending ? "Sending…" : "Resend Confirmation"}
-            </Button>
+            </Button>}
 
             <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
               <DialogTrigger asChild>
@@ -507,8 +508,40 @@ export default function VendorDetailPage() {
                 <Field label="Facebook / Instagram" value={str("social")} />
               </div>
 
-              {/* 4.2 Category */}
-              <SectionDivider title="4.2 Vendor Category" />
+               {isSpecialAgreement ? (
+                 <>
+                   <SectionDivider title="Special Agreement Terms" />
+                   <div className="rounded-md border border-violet-200 bg-violet-50/60 p-4">
+                     <Badge variant="outline" className="border-violet-300 bg-white text-violet-800 mb-3">Special Agreement</Badge>
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                       <Field label="Operation Type" value={vendor.specialAgreementOperationType} />
+                       <Field label="RCCS Revenue Share" value={vendor.specialAgreementRevenueSharePercentage != null ? `${vendor.specialAgreementRevenueSharePercentage}% of net profit` : null} />
+                       <Field label="Internal Notes" value={vendor.specialAgreementInternalNotes} wide />
+                     </div>
+                   </div>
+                   <SectionDivider title="Agreement Contacts" />
+                   <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                     <Field label="Day-of Contact — Name" value={vendor.specialAgreementDayOfContactName} />
+                     <Field label="Day-of Contact — Mobile" value={vendor.specialAgreementDayOfContactPhone} />
+                     <Field label="Backup Contact — Name" value={vendor.specialAgreementBackupContactName} />
+                     <Field label="Backup Contact — Mobile" value={vendor.specialAgreementBackupContactPhone} />
+                   </div>
+                   <SectionDivider title="Electronic Signature" />
+                   {vendor.agreementSigned ? (
+                     <div className="rounded-md bg-green-50 border border-green-200 p-4">
+                       <p className="font-serif text-xl text-green-900">{vendor.agreementSignedName || "Agreement signed"}</p>
+                       <p className="text-sm text-green-800 mt-1">
+                         Signed {vendor.specialAgreementSignedDate ? new Date(`${vendor.specialAgreementSignedDate}T12:00:00`).toLocaleDateString() : ""}
+                       </p>
+                     </div>
+                   ) : (
+                     <p className="text-muted-foreground">The contact has not yet submitted the Special Agreement.</p>
+                   )}
+                 </>
+               ) : (
+                 <>
+               {/* 4.2 Category */}
+               <SectionDivider title="4.2 Vendor Category" />
               <div className="grid grid-cols-2 gap-x-6 gap-y-4">
                 <Field label="Category" value={categoryLabel} />
               </div>
@@ -616,6 +649,8 @@ export default function VendorDetailPage() {
                   )}
                 </div>
               )}
+               </>
+               )}
 
             </CardContent>
           </Card>
@@ -643,11 +678,24 @@ export default function VendorDetailPage() {
               </CardContent>
             </Card>
 
-            <Card>
+             <Card>
               <CardHeader>
-                <CardTitle className="text-xl">Legal & Payment</CardTitle>
+                 <CardTitle className="text-xl">{isSpecialAgreement ? "Special Agreement" : "Legal & Payment"}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                 {isSpecialAgreement ? (
+                   <>
+                     <div className="rounded-md border border-violet-200 bg-violet-50/60 p-3 text-sm text-violet-950">
+                       <p className="font-semibold">No booth fee or Stripe payment</p>
+                       <p className="mt-1">This vendor participates under a revenue-share agreement. Their normal spot assignment and festival logistics remain available.</p>
+                     </div>
+                     <div className="flex items-center justify-between">
+                       <span className="text-sm font-medium">Agreement</span>
+                       {vendor.agreementSigned ? <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Signed</Badge> : <Badge variant="secondary">Awaiting signature</Badge>}
+                     </div>
+                   </>
+                 ) : (
+                   <>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Amount Due</span>
                   <div className="text-right">
@@ -698,6 +746,8 @@ export default function VendorDetailPage() {
                     <p className="text-sm bg-yellow-50 p-2 text-yellow-900 rounded">{vendor.reviewNote}</p>
                   </div>
                 )}
+                   </>
+                 )}
               </CardContent>
             </Card>
           </div>

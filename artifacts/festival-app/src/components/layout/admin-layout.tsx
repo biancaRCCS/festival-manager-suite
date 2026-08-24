@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter"
 import { useClerk, useUser } from "@clerk/react"
 import { useEffect, useState } from "react"
-import { Calendar, Users, Briefcase, HandHeart, Settings, LogOut, ShieldCheck, Home, ClipboardList, Gift } from "lucide-react"
+import { Calendar, Users, Briefcase, HandHeart, Settings, LogOut, ShieldCheck, Home, ClipboardList, Gift, FileSignature } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
@@ -21,6 +21,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const navItems = [
     { href: "/dashboard",  label: "Dashboard",   icon: Home },
     { href: "/vendors",    label: "Vendors",      icon: Briefcase },
+    { href: "/special-agreements", label: "Special Agreements", icon: FileSignature },
     { href: "/sponsors",   label: "Sponsors",     icon: HandHeart },
     { href: "/volunteers", label: "Volunteers",   icon: Users },
     { href: "/contributions", label: "Contributions", icon: Gift },

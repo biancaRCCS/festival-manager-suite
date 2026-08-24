@@ -12,12 +12,16 @@ import {
   FinalApproveVendorParams,
   AssignVendorSpotParams,
   AssignVendorSpotBody,
+  ListSpecialAgreementVendorsQueryParams,
+  CreateSpecialAgreementVendorBody,
 } from "@workspace/api-zod";
 import { randomBytes } from "crypto";
 import {
   sendApplicantConfirmation,
   sendVendorCategoryAdjustedEmail,
   sendVendorPortalInviteEmail,
+  sendSpecialAgreementPortalInviteEmail,
+  sendSpecialAgreementCreatedNotification,
   VENDOR_LABELS,
 } from "../lib/email";
 import { getUncachableStripeClient } from "../lib/stripeClient";
@@ -44,6 +48,17 @@ function formatVendor(v: typeof vendorsTable.$inferSelect) {
     settledAmount: v.settledAmount === null ? null : Number(v.settledAmount),
     pendingManualAdjustment: v.pendingManualAdjustment === null ? null : Number(v.pendingManualAdjustment),
     pendingAdjustmentTargetAmount: v.pendingAdjustmentTargetAmount === null ? null : Number(v.pendingAdjustmentTargetAmount),
+    specialAgreementOperationType: v.specialAgreementOperationType ?? null,
+    specialAgreementRevenueSharePercentage: v.specialAgreementRevenueSharePercentage === null
+      ? null
+      : Number(v.specialAgreementRevenueSharePercentage),
+    specialAgreementInternalNotes: v.specialAgreementInternalNotes ?? null,
+    specialAgreementDayOfContactName: v.specialAgreementDayOfContactName ?? null,
+    specialAgreementDayOfContactPhone: v.specialAgreementDayOfContactPhone ?? null,
+    specialAgreementBackupContactName: v.specialAgreementBackupContactName ?? null,
+    specialAgreementBackupContactPhone: v.specialAgreementBackupContactPhone ?? null,
+    specialAgreementSignedDate: v.specialAgreementSignedDate ?? null,
+    specialAgreementSignedAt: v.specialAgreementSignedAt ? v.specialAgreementSignedAt.toISOString() : null,
     approvedAt: v.approvedAt ? v.approvedAt.toISOString() : null,
     finalApprovedAt: v.finalApprovedAt ? v.finalApprovedAt.toISOString() : null,
     createdAt: v.createdAt.toISOString(),
@@ -110,6 +125,90 @@ router.get("/vendors", requireStaff, async (req, res): Promise<void> => {
     : await db.select().from(vendorsTable).orderBy(desc(vendorsTable.createdAt));
 
   res.json(rows.map(formatVendor));
+});
+
+router.get("/special-agreements", requireStaff, async (req, res): Promise<void> => {
+  const parsed = ListSpecialAgreementVendorsQueryParams.safeParse(req.query);
+  const yearId = parsed.success ? parsed.data.yearId : undefined;
+  const conditions = [eq(vendorsTable.vendorType, "special_agreement")];
+  if (yearId) conditions.push(eq(vendorsTable.yearId, yearId));
+  const rows = await db.select().from(vendorsTable)
+    .where(and(...conditions))
+    .orderBy(desc(vendorsTable.createdAt));
+  res.json(rows.map(formatVendor));
+});
+
+router.post("/special-agreements", requireStaff, async (req, res): Promise<void> => {
+  const parsed = CreateSpecialAgreementVendorBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const input = parsed.data;
+  const [year] = await db.select().from(festivalYearsTable)
+    .where(eq(festivalYearsTable.id, input.yearId))
+    .limit(1);
+  if (!year) {
+    res.status(404).json({ error: "Festival year not found" });
+    return;
+  }
+
+  const portalToken = randomBytes(24).toString("hex");
+  const [created] = await db.insert(vendorsTable).values({
+    yearId: input.yearId,
+    name: input.name.trim(),
+    businessName: input.businessName.trim(),
+    email: input.email.trim(),
+    phone: input.phone.trim(),
+    vendorType: "special_agreement",
+    status: "approved",
+    applicationData: { specialAgreementVendor: true },
+    agreementSigned: false,
+    portalToken,
+    specialAgreementOperationType: input.operationType.trim(),
+    specialAgreementRevenueSharePercentage: String(input.revenueSharePercentage),
+    specialAgreementInternalNotes: input.internalNotes?.trim() || null,
+    approvedAt: new Date(),
+  }).returning();
+
+  const portalBase = (process.env.APP_BASE_URL?.trim() || process.env.REPLIT_DOMAINS?.split(",")[0]?.trim() || "").replace(/\/+$/, "");
+  const portalUrl = portalBase
+    ? `${/^https?:\/\//.test(portalBase) ? portalBase : `https://${portalBase}`}/portal/${portalToken}`
+    : `/portal/${portalToken}`;
+  const [settings] = await db.select().from(festivalSettingsTable)
+    .where(eq(festivalSettingsTable.yearId, created.yearId))
+    .limit(1);
+
+  await db.insert(activityLogTable).values({
+    type: "special_agreement_created",
+    message: `Special Agreement Vendor created: ${created.name} (${created.businessName})`,
+    entityType: "vendor",
+    entityId: created.id,
+    performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
+  });
+
+  void sendSpecialAgreementPortalInviteEmail({
+    to: created.email,
+    name: created.name,
+    businessName: created.businessName,
+    operationType: created.specialAgreementOperationType ?? "",
+    revenueSharePercentage: Number(created.specialAgreementRevenueSharePercentage),
+    festivalName: year.eventName,
+    portalUrl,
+  });
+  if (settings?.notificationEmail) {
+    void sendSpecialAgreementCreatedNotification({
+      notificationEmail: settings.notificationEmail,
+      applicantName: created.name,
+      businessName: created.businessName,
+      operationType: created.specialAgreementOperationType ?? "",
+      revenueSharePercentage: Number(created.specialAgreementRevenueSharePercentage),
+      adminPath: `/vendors/${created.id}`,
+    });
+  }
+
+  res.status(201).json(formatVendor(created));
 });
 
 router.get("/vendors/:id", requireStaff, async (req, res): Promise<void> => {
@@ -197,6 +296,10 @@ router.patch("/vendors/:id/category", requireStaff, async (req, res): Promise<vo
   const [vendor] = await db.select().from(vendorsTable).where(eq(vendorsTable.id, id));
   if (!vendor) {
     res.status(404).json({ error: "Vendor not found" });
+    return;
+  }
+  if (vendor.vendorType === "special_agreement") {
+    res.status(409).json({ error: "Special Agreement Vendors do not have a fee category to change." });
     return;
   }
 

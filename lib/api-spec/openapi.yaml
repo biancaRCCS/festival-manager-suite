@@ -237,6 +237,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/PortalInfo"
 
+  /portal/{token}/special-agreement:
+    post:
+      operationId: submitSpecialAgreement
+      tags: [portal]
+      summary: Submit a signed Special Agreement Vendor agreement
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpecialAgreementSignature"
+      responses:
+        "200":
+          description: Submitted agreement
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortalInfo"
+
   # ─── DASHBOARD ───────────────────────────────────────────
   /dashboard/summary:
     get:
@@ -313,7 +338,7 @@ paths:
           name: type
           schema:
             type: string
-            enum: [new_application, approved, rejected, paid, final_approved, assigned, category_changed, category_adjustment_settled, deleted]
+            enum: [new_application, approved, rejected, paid, final_approved, assigned, category_changed, category_adjustment_settled, special_agreement_created, special_agreement_signed, deleted]
         - in: query
           name: entityType
           schema:
@@ -459,6 +484,47 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Vendor"
+
+  /special-agreements:
+    get:
+      operationId: listSpecialAgreementVendors
+      tags: [vendors]
+      summary: List staff-created Special Agreement Vendors
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: yearId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Special Agreement Vendors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Vendor"
+    post:
+      operationId: createSpecialAgreementVendor
+      tags: [vendors]
+      summary: Create a Special Agreement Vendor and email their agreement link
+      security:
+        - clerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpecialAgreementVendorInput"
+      responses:
+        "201":
+          description: Created Special Agreement Vendor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vendor"
 
   /vendors/{id}:
     get:
@@ -1172,6 +1238,8 @@ components:
           type: integer
         notificationEmail:
           type: ["string", "null"]
+        specialAgreementNetProfitDefinition:
+          type: string
         # Form customisation
         vendorFormQuestions:
           type: array
@@ -1264,6 +1332,8 @@ components:
           type: integer
         notificationEmail:
           type: ["string", "null"]
+        specialAgreementNetProfitDefinition:
+          type: string
         # Form customisation
         vendorFormQuestions:
           type: array
@@ -1348,6 +1418,24 @@ components:
           type: ["number", "null"]
         pendingAdjustmentTargetAmount:
           type: ["number", "null"]
+        specialAgreementOperationType:
+          type: ["string", "null"]
+        specialAgreementRevenueSharePercentage:
+          type: ["number", "null"]
+        specialAgreementInternalNotes:
+          type: ["string", "null"]
+        specialAgreementDayOfContactName:
+          type: ["string", "null"]
+        specialAgreementDayOfContactPhone:
+          type: ["string", "null"]
+        specialAgreementBackupContactName:
+          type: ["string", "null"]
+        specialAgreementBackupContactPhone:
+          type: ["string", "null"]
+        specialAgreementSignedDate:
+          type: ["string", "null"]
+        specialAgreementSignedAt:
+          type: ["string", "null"]
         approvedAt:
           type: ["string", "null"]
         finalApprovedAt:
@@ -1534,7 +1622,7 @@ components:
           type: integer
         type:
           type: string
-          enum: [new_application, approved, rejected, paid, final_approved, assigned, category_changed, category_adjustment_settled, deleted]
+          enum: [new_application, approved, rejected, paid, final_approved, assigned, category_changed, category_adjustment_settled, special_agreement_created, special_agreement_signed, deleted]
         message:
           type: string
         entityType:
@@ -1634,7 +1722,7 @@ components:
       properties:
         type:
           type: string
-          enum: [vendor, sponsor]
+          enum: [vendor, sponsor, special_agreement]
         id:
           type: integer
         name:
@@ -1695,6 +1783,24 @@ components:
           type: ["string", "null"]
         paymentDeadline:
           type: ["string", "null"]
+        specialAgreementOperationType:
+          type: ["string", "null"]
+        specialAgreementRevenueSharePercentage:
+          type: ["number", "null"]
+        specialAgreementNetProfitDefinition:
+          type: ["string", "null"]
+        documentDeadline:
+          type: ["string", "null"]
+        notificationEmail:
+          type: ["string", "null"]
+        specialAgreementDayOfContactName:
+          type: ["string", "null"]
+        specialAgreementDayOfContactPhone:
+          type: ["string", "null"]
+        specialAgreementBackupContactName:
+          type: ["string", "null"]
+        specialAgreementBackupContactPhone:
+          type: ["string", "null"]
 
     CheckoutSession:
       type: object
@@ -1754,6 +1860,72 @@ components:
       properties:
         signedName:
           type: string
+
+    SpecialAgreementVendorInput:
+      type: object
+      required: [yearId, name, businessName, email, phone, operationType, revenueSharePercentage]
+      properties:
+        yearId:
+          type: integer
+        name:
+          type: string
+          minLength: 1
+        businessName:
+          type: string
+          minLength: 1
+        email:
+          type: string
+        phone:
+          type: string
+          minLength: 1
+        operationType:
+          type: string
+          minLength: 1
+        revenueSharePercentage:
+          type: number
+          minimum: 0
+          maximum: 100
+        internalNotes:
+          type: ["string", "null"]
+
+    SpecialAgreementSignature:
+      type: object
+      required: [dayOfContactName, dayOfContactPhone, backupContactName, backupContactPhone, ackRevenueShare, ackPermitsInsurance, ackEquipment, ackNoRunningWater, ackPower, ackLoadInVehicles, ackCleanUp, ackPropertyLiability, signedName, signedDate]
+      properties:
+        dayOfContactName:
+          type: string
+          minLength: 1
+        dayOfContactPhone:
+          type: string
+          minLength: 1
+        backupContactName:
+          type: string
+          minLength: 1
+        backupContactPhone:
+          type: string
+          minLength: 1
+        ackRevenueShare:
+          type: boolean
+        ackPermitsInsurance:
+          type: boolean
+        ackEquipment:
+          type: boolean
+        ackNoRunningWater:
+          type: boolean
+        ackPower:
+          type: boolean
+        ackLoadInVehicles:
+          type: boolean
+        ackCleanUp:
+          type: boolean
+        ackPropertyLiability:
+          type: boolean
+        signedName:
+          type: string
+          minLength: 1
+        signedDate:
+          type: string
+          format: date
 
     ReviewDecision:
       type: object

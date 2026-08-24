@@ -18,5 +18,7 @@ export const GetRecentActivityType = {
   assigned: 'assigned',
   category_changed: 'category_changed',
   category_adjustment_settled: 'category_adjustment_settled',
+  special_agreement_created: 'special_agreement_created',
+  special_agreement_signed: 'special_agreement_signed',
   deleted: 'deleted',
 } as const;

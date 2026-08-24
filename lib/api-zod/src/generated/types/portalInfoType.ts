@@ -12,4 +12,5 @@ export type PortalInfoType = typeof PortalInfoType[keyof typeof PortalInfoType];
 export const PortalInfoType = {
   vendor: 'vendor',
   sponsor: 'sponsor',
+  special_agreement: 'special_agreement',
 } as const;

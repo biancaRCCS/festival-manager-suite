@@ -276,6 +276,78 @@ export async function sendVendorPortalInviteEmail(params: {
 }
 
 // ---------------------------------------------------------------------------
+// 1aa. Special Agreement Vendor invitations and notifications
+// ---------------------------------------------------------------------------
+export async function sendSpecialAgreementPortalInviteEmail(params: {
+  to: string;
+  name: string;
+  businessName: string;
+  operationType: string;
+  revenueSharePercentage: number;
+  festivalName: string;
+  portalUrl: string;
+}) {
+  const { to, name, businessName, operationType, revenueSharePercentage, festivalName, portalUrl } = params;
+  const subject = `Your Special Agreement for ${festivalName}`;
+  const html = `
+    <div style="${BASE_STYLE}">
+      <h2 style="color: #8b1a1a;">Your Special Agreement is ready</h2>
+      <p>Dear ${escapeHtml(name)},</p>
+      <p>RCCS has prepared a Special Agreement for <strong>${escapeHtml(businessName)}</strong> to participate in <strong>${escapeHtml(festivalName)}</strong>.</p>
+      ${DIVIDER}
+      ${field("Operation type", escapeHtml(operationType))}
+      ${field("RCCS revenue share", `${revenueSharePercentage}% of net profit`)}
+      ${DIVIDER}
+      <p>Please use your private link to review the agreement, provide day-of contacts, acknowledge the event requirements, and sign it electronically.</p>
+      <p><a href="${portalUrl}" style="display: inline-block; background: #8b1a1a; color: white; padding: 12px 24px; text-decoration: none; font-size: 16px;">Review &amp; Sign Agreement</a></p>
+      <p style="color: #6b7280; font-size: 14px;">If the button does not work, copy and paste this link into your browser:<br><a href="${portalUrl}">${portalUrl}</a></p>
+      <p>There is no booth fee or online payment required for this agreement.</p>
+    </div>`;
+  await send(to, subject, html);
+}
+
+export async function sendSpecialAgreementCreatedNotification(params: {
+  notificationEmail: string;
+  applicantName: string;
+  businessName: string;
+  operationType: string;
+  revenueSharePercentage: number;
+  adminPath: string;
+}) {
+  const { notificationEmail, applicantName, businessName, operationType, revenueSharePercentage, adminPath } = params;
+  const baseUrl = getAppBaseUrl();
+  const html = `
+    <div style="${BASE_STYLE}">
+      <h2 style="color: #8b1a1a;">Special Agreement Vendor created</h2>
+      ${field("Contact", escapeHtml(applicantName))}
+      ${field("Business / organization", escapeHtml(businessName))}
+      ${field("Operation type", escapeHtml(operationType))}
+      ${field("RCCS revenue share", `${revenueSharePercentage}% of net profit`)}
+      <p><a href="${baseUrl}${adminPath}">Open this vendor record</a></p>
+    </div>`;
+  await send(notificationEmail, `Special Agreement Vendor created — ${businessName}`, html);
+}
+
+export async function sendSpecialAgreementSignedNotification(params: {
+  notificationEmail: string;
+  applicantName: string;
+  businessName: string;
+  signedName: string;
+  adminPath: string;
+}) {
+  const { notificationEmail, applicantName, businessName, signedName, adminPath } = params;
+  const html = `
+    <div style="${BASE_STYLE}">
+      <h2 style="color: #8b1a1a;">Special Agreement signed</h2>
+      ${field("Contact", escapeHtml(applicantName))}
+      ${field("Business / organization", escapeHtml(businessName))}
+      ${field("Electronic signature", escapeHtml(signedName))}
+      <p><a href="${getAppBaseUrl()}${adminPath}">Review the signed agreement</a></p>
+    </div>`;
+  await send(notificationEmail, `Special Agreement signed — ${businessName}`, html);
+}
+
+// ---------------------------------------------------------------------------
 // 1b. Vendor category correction — applies only before payment
 // ---------------------------------------------------------------------------
 export async function sendVendorCategoryAdjustedEmail(params: {

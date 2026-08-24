@@ -49,6 +49,9 @@ export const festivalSettingsTable = pgTable("festival_settings", {
   documentDeadline:    date("document_deadline",    { mode: "string" }),
   paymentWindowDays:   integer("payment_window_days").notNull().default(7),
   notificationEmail:   text("notification_email"),
+  specialAgreementNetProfitDefinition: text("special_agreement_net_profit_definition").notNull().default(
+    "Net profit means the customer sales collected by RCCS, less documented event-related costs directly attributable to those sales."
+  ),
 
   // ── Form customisation ────────────────────────────────────────────────────
   vendorFormQuestions:    jsonb("vendor_form_questions").notNull().default([]),

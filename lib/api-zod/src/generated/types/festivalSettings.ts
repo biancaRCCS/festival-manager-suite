@@ -47,6 +47,7 @@ export interface FestivalSettings {
   paymentWindowDays?: number;
   /** @nullable */
   notificationEmail?: string | null;
+  specialAgreementNetProfitDefinition?: string;
   vendorFormQuestions: FormQuestion[];
   sponsorFormQuestions: FormQuestion[];
   volunteerFormQuestions: FormQuestion[];

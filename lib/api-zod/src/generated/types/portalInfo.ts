@@ -63,4 +63,22 @@ export interface PortalInfo {
   boothOrNameOnly?: string | null;
   /** @nullable */
   paymentDeadline?: string | null;
+  /** @nullable */
+  specialAgreementOperationType?: string | null;
+  /** @nullable */
+  specialAgreementRevenueSharePercentage?: number | null;
+  /** @nullable */
+  specialAgreementNetProfitDefinition?: string | null;
+  /** @nullable */
+  documentDeadline?: string | null;
+  /** @nullable */
+  notificationEmail?: string | null;
+  /** @nullable */
+  specialAgreementDayOfContactName?: string | null;
+  /** @nullable */
+  specialAgreementDayOfContactPhone?: string | null;
+  /** @nullable */
+  specialAgreementBackupContactName?: string | null;
+  /** @nullable */
+  specialAgreementBackupContactPhone?: string | null;
 }

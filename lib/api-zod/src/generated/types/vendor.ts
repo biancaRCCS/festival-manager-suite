@@ -36,6 +36,24 @@ export interface Vendor {
   /** @nullable */
   pendingAdjustmentTargetAmount?: number | null;
   /** @nullable */
+  specialAgreementOperationType?: string | null;
+  /** @nullable */
+  specialAgreementRevenueSharePercentage?: number | null;
+  /** @nullable */
+  specialAgreementInternalNotes?: string | null;
+  /** @nullable */
+  specialAgreementDayOfContactName?: string | null;
+  /** @nullable */
+  specialAgreementDayOfContactPhone?: string | null;
+  /** @nullable */
+  specialAgreementBackupContactName?: string | null;
+  /** @nullable */
+  specialAgreementBackupContactPhone?: string | null;
+  /** @nullable */
+  specialAgreementSignedDate?: string | null;
+  /** @nullable */
+  specialAgreementSignedAt?: string | null;
+  /** @nullable */
   approvedAt?: string | null;
   /** @nullable */
   finalApprovedAt?: string | null;

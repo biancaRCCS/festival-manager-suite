@@ -2,7 +2,7 @@ import { useState, useRef } from "react"
 import { useParams } from "wouter"
 import {
   useGetPortalInfo, useSignPortalAgreement, useCreatePortalCheckout,
-  useSubmitSponsorDetails, getGetPortalInfoQueryKey,
+  useSubmitSponsorDetails, useSubmitSpecialAgreement, getGetPortalInfoQueryKey, type PortalInfo,
 } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -65,6 +65,153 @@ function YesNoRadio({ id, value, onChange }: { id: string; value: string; onChan
         </div>
       ))}
     </RadioGroup>
+  )
+}
+
+const SPECIAL_AGREEMENT_ACKS = [
+  ["ackRevenueShare", "I agree that RCCS will receive the stated percentage of net profit from this operation."],
+  ["ackPermitsInsurance", "I am responsible for obtaining and maintaining all permits, licenses, certificates, and insurance required for my operation."],
+  ["ackEquipment", "I am responsible for providing and safely operating all equipment, supplies, and staffing needed for my operation."],
+  ["ackNoRunningWater", "I understand that running water is not provided at the event site."],
+  ["ackPower", "I understand that standard electrical power is available only as arranged with RCCS and I will communicate my requirements in advance."],
+  ["ackLoadInVehicles", "I will follow RCCS load-in instructions and will not keep vehicles in the event area during festival hours."],
+  ["ackCleanUp", "I will keep my assigned area clean and remove all equipment, materials, and waste after the event."],
+  ["ackPropertyLiability", "I accept responsibility for my property, equipment, staff, and operations and release RCCS from liability except where prohibited by law."],
+] as const
+
+function SpecialAgreementPortal({ portal, token }: { portal: PortalInfo; token: string }) {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+  const submitMutation = useSubmitSpecialAgreement()
+  const [contacts, setContacts] = useState({
+    dayOfContactName: portal.specialAgreementDayOfContactName ?? "",
+    dayOfContactPhone: portal.specialAgreementDayOfContactPhone ?? "",
+    backupContactName: portal.specialAgreementBackupContactName ?? "",
+    backupContactPhone: portal.specialAgreementBackupContactPhone ?? "",
+    signedName: "",
+  })
+  const [acks, setAcks] = useState<Record<(typeof SPECIAL_AGREEMENT_ACKS)[number][0], boolean>>({
+    ackRevenueShare: false,
+    ackPermitsInsurance: false,
+    ackEquipment: false,
+    ackNoRunningWater: false,
+    ackPower: false,
+    ackLoadInVehicles: false,
+    ackCleanUp: false,
+    ackPropertyLiability: false,
+  })
+  const todayIso = new Date().toISOString().slice(0, 10)
+
+  const submit = () => {
+    if (Object.values(contacts).some((value) => !value.trim())) {
+      toast({ title: "Please complete all contact and signature fields.", variant: "destructive" })
+      return
+    }
+    if (Object.values(acks).some((value) => !value)) {
+      toast({ title: "Please acknowledge every agreement requirement.", variant: "destructive" })
+      return
+    }
+    submitMutation.mutate({ token, data: { ...contacts, ...acks, signedDate: todayIso } }, {
+      onSuccess: (updated) => {
+        queryClient.setQueryData(getGetPortalInfoQueryKey(token), updated)
+        toast({ title: "Special Agreement submitted", description: "RCCS has been notified of your signed agreement." })
+      },
+      onError: () => toast({ title: "We could not submit your agreement. Please try again.", variant: "destructive" }),
+    })
+  }
+
+  const eventDate = portal.eventDate
+    ? new Date(`${portal.eventDate}T12:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })
+    : "To be announced"
+
+  return (
+    <div className="min-h-screen bg-noise bg-background font-sans pb-16">
+      <header className="bg-card border-b px-6 py-5 shadow-sm">
+        <div className="max-w-3xl mx-auto flex items-center gap-3">
+          <img src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/festival-dancers.png`} alt="Romanian Festival" className="h-10 w-auto" />
+          <div>
+            <p className="font-serif font-bold text-xl text-primary">Romanian Festival</p>
+            <p className="text-sm text-muted-foreground">Special Agreement Vendor Portal</p>
+          </div>
+        </div>
+      </header>
+      <main className="max-w-3xl mx-auto p-4 md:p-8 space-y-6">
+        <div className="text-center py-4">
+          <Badge className="mb-3 bg-violet-700 hover:bg-violet-700">Special Agreement</Badge>
+          <h1 className="text-3xl font-serif">{portal.businessName || portal.name}</h1>
+          <p className="text-muted-foreground mt-2">Please review and electronically sign your festival participation agreement.</p>
+        </div>
+
+        {portal.agreementSigned ? (
+          <Card className="border-t-4 border-t-green-500">
+            <CardContent className="p-8 text-center">
+              <CheckCircle2 className="w-12 h-12 text-green-600 mx-auto mb-4" />
+              <h2 className="text-2xl font-serif text-green-900">Agreement Submitted</h2>
+              <p className="text-green-800 mt-2">Thank you. RCCS has received your signed Special Agreement. There is no booth fee or online payment required.</p>
+              <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3 text-left text-sm">
+                <div className="rounded border bg-muted/30 p-3"><p className="text-muted-foreground">Festival date</p><p className="font-medium">{eventDate}</p></div>
+                <div className="rounded border bg-muted/30 p-3"><p className="text-muted-foreground">Assigned spot</p><p className="font-medium">{portal.spotNumber || "To be assigned"}</p></div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <Card className="border-t-4 border-t-primary">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><FileSignature className="w-5 h-5 text-primary" /> Agreement Summary</CardTitle>
+                <CardDescription>Your participation is governed by this special revenue-share agreement, not a standard booth fee.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid sm:grid-cols-2 gap-4 text-sm">
+                <div className="rounded-md bg-muted/40 p-4"><p className="text-xs uppercase tracking-wide text-muted-foreground">Operation type</p><p className="font-medium mt-1">{portal.specialAgreementOperationType}</p></div>
+                <div className="rounded-md bg-muted/40 p-4"><p className="text-xs uppercase tracking-wide text-muted-foreground">RCCS revenue share</p><p className="font-medium mt-1">{portal.specialAgreementRevenueSharePercentage}% of net profit</p></div>
+                <div className="sm:col-span-2 rounded-md border border-primary/20 bg-primary/5 p-4">
+                  <p className="font-medium text-primary">Net-profit definition</p>
+                  <p className="mt-1 leading-relaxed">{portal.specialAgreementNetProfitDefinition || "The net-profit definition will be confirmed by RCCS."}</p>
+                </div>
+                <div className="sm:col-span-2 text-muted-foreground leading-relaxed">
+                  <p><strong className="text-foreground">Event:</strong> {portal.festivalYear} · {eventDate}</p>
+                  {portal.documentDeadline && <p><strong className="text-foreground">Documents due:</strong> {new Date(`${portal.documentDeadline}T12:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle>Day-of Contacts</CardTitle><CardDescription>RCCS will use these numbers for festival-day coordination.</CardDescription></CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  ["dayOfContactName", "Day-of contact name"], ["dayOfContactPhone", "Day-of contact mobile"],
+                  ["backupContactName", "Backup contact name"], ["backupContactPhone", "Backup contact mobile"],
+                ].map(([key, label]) => (
+                  <div className="space-y-2" key={key}>
+                    <Label htmlFor={key}>{label}<RequiredStar /></Label>
+                    <Input id={key} value={contacts[key as keyof typeof contacts]} onChange={(e) => setContacts((current) => ({ ...current, [key]: e.target.value }))} />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle>Participation Requirements</CardTitle><CardDescription>Every item must be accepted before you can sign.</CardDescription></CardHeader>
+              <CardContent className="divide-y divide-border">
+                {SPECIAL_AGREEMENT_ACKS.map(([key, label]) => <AckRow key={key} id={key} checked={acks[key]} onChange={(checked) => setAcks((current) => ({ ...current, [key]: checked }))}>{label}</AckRow>)}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle>Electronic Signature</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div className="max-w-md space-y-2"><Label htmlFor="special-signature">Type your full name<RequiredStar /></Label><Input id="special-signature" className="font-serif text-lg" value={contacts.signedName} onChange={(e) => setContacts((current) => ({ ...current, signedName: e.target.value }))} placeholder="Full name as signature" /></div>
+                <p className="text-sm text-muted-foreground">Date: <strong>{new Date(`${todayIso}T12:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</strong></p>
+                <p className="text-sm text-muted-foreground">By signing, you confirm that you have authority to enter this agreement and accept the requirements above.</p>
+                <Button className="w-full h-12 text-base" onClick={submit} disabled={submitMutation.isPending}>
+                  {submitMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Submitting…</> : "Submit Signed Agreement"}
+                </Button>
+              </CardContent>
+            </Card>
+          </>
+        )}
+      </main>
+    </div>
   )
 }
 
@@ -212,6 +359,10 @@ export default function PortalPage() {
         </Card>
       </div>
     )
+  }
+
+  if (portal.type === "special_agreement") {
+    return <SpecialAgreementPortal portal={portal} token={token || ""} />
   }
 
   // ── Status helpers ───────────────────────────────────────────────────────

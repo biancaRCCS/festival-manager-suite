@@ -28,6 +28,7 @@ import {
   X,
   Download,
   User,
+  FileSignature,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -39,6 +40,8 @@ const TYPE_LABELS: Record<string, string> = {
   assigned:        "Assigned",
   category_changed: "Category Changed",
   category_adjustment_settled: "Category Adjustment Handled",
+  special_agreement_created: "Special Agreement Created",
+  special_agreement_signed: "Special Agreement Signed",
   deleted:         "Deleted",
   new_application: "New Application",
 }
@@ -58,6 +61,8 @@ function typeIcon(type: string) {
     case "assigned":        return <Briefcase    className="w-4 h-4 text-violet-500" />
     case "category_changed": return <ClipboardList className="w-4 h-4 text-amber-600" />
     case "category_adjustment_settled": return <DollarSign className="w-4 h-4 text-amber-700" />
+    case "special_agreement_created": return <FileSignature className="w-4 h-4 text-violet-600" />
+    case "special_agreement_signed": return <CheckCircle className="w-4 h-4 text-violet-600" />
     case "deleted":         return <Trash2       className="w-4 h-4 text-gray-400" />
     case "new_application": return <UserPlus     className="w-4 h-4 text-amber-500" />
     default:                return <ClipboardList className="w-4 h-4 text-muted-foreground" />

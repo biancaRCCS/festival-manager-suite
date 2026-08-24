@@ -1,9 +1,9 @@
 import { Router, type IRouter } from "express";
 import { db, vendorsTable, sponsorsTable, festivalYearsTable, festivalSettingsTable, activityLogTable } from "@workspace/db";
-import { and, eq } from "drizzle-orm";
-import { SignPortalAgreementBody } from "@workspace/api-zod";
+import { and, eq, ne } from "drizzle-orm";
+import { SignPortalAgreementBody, SubmitSpecialAgreementBody } from "@workspace/api-zod";
 import { logger } from "../lib/logger";
-import { sendSponsorDetailsSubmittedNotification } from "../lib/email";
+import { sendSponsorDetailsSubmittedNotification, sendSpecialAgreementSignedNotification } from "../lib/email";
 
 const router: IRouter = Router();
 
@@ -45,6 +45,39 @@ function buildSponsorPortalInfo(
   };
 }
 
+function buildSpecialAgreementPortalInfo(
+  vendor: typeof vendorsTable.$inferSelect,
+  year: { eventName: string; eventDate: string } | undefined,
+  settings: typeof festivalSettingsTable.$inferSelect | undefined,
+) {
+  return {
+    type: "special_agreement" as const,
+    id: vendor.id,
+    name: vendor.name,
+    businessName: vendor.businessName,
+    orgName: null,
+    status: vendor.status,
+    agreementSigned: vendor.agreementSigned,
+    spotNumber: vendor.spotNumber ?? null,
+    location: vendor.location ?? null,
+    festivalYear: year?.eventName ?? "",
+    eventDate: year?.eventDate ?? "",
+    tier: null,
+    vendorType: vendor.vendorType,
+    spacesRequested: null,
+    sponsorshipAmount: null,
+    boothOrNameOnly: null,
+    paymentDeadline: null,
+    specialAgreementOperationType: vendor.specialAgreementOperationType ?? null,
+    specialAgreementRevenueSharePercentage: vendor.specialAgreementRevenueSharePercentage === null
+      ? null
+      : Number(vendor.specialAgreementRevenueSharePercentage),
+    specialAgreementNetProfitDefinition: settings?.specialAgreementNetProfitDefinition ?? null,
+    documentDeadline: settings?.documentDeadline ?? null,
+    notificationEmail: settings?.notificationEmail ?? null,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // GET /portal/:token
 // ---------------------------------------------------------------------------
@@ -56,6 +89,10 @@ router.get("/portal/:token", async (req, res): Promise<void> => {
     const vendor = vendors[0];
     const years = await db.select().from(festivalYearsTable).where(eq(festivalYearsTable.id, vendor.yearId)).limit(1);
     const settingsRows = await db.select().from(festivalSettingsTable).where(eq(festivalSettingsTable.yearId, vendor.yearId)).limit(1);
+    if (vendor.vendorType === "special_agreement") {
+      res.json(buildSpecialAgreementPortalInfo(vendor, years[0], settingsRows[0]));
+      return;
+    }
     const appData = (vendor.applicationData ?? {}) as Record<string, unknown>;
     const spacesRequested = typeof appData.spacesRequested === "string" ? appData.spacesRequested : null;
     res.json({
@@ -98,6 +135,77 @@ router.get("/portal/:token", async (req, res): Promise<void> => {
   }
 
   res.status(404).json({ error: "Portal not found" });
+});
+
+// ---------------------------------------------------------------------------
+// POST /portal/:token/special-agreement
+// ---------------------------------------------------------------------------
+router.post("/portal/:token/special-agreement", async (req, res): Promise<void> => {
+  const parsed = SubmitSpecialAgreementBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const acknowledgements = {
+    ackRevenueShare: parsed.data.ackRevenueShare,
+    ackPermitsInsurance: parsed.data.ackPermitsInsurance,
+    ackEquipment: parsed.data.ackEquipment,
+    ackNoRunningWater: parsed.data.ackNoRunningWater,
+    ackPower: parsed.data.ackPower,
+    ackLoadInVehicles: parsed.data.ackLoadInVehicles,
+    ackCleanUp: parsed.data.ackCleanUp,
+    ackPropertyLiability: parsed.data.ackPropertyLiability,
+  };
+  if (Object.values(acknowledgements).some((value) => !value)) {
+    res.status(400).json({ error: "Every Special Agreement acknowledgement must be accepted before signing." });
+    return;
+  }
+
+  const [vendor] = await db.select().from(vendorsTable)
+    .where(eq(vendorsTable.portalToken, req.params.token))
+    .limit(1);
+  if (!vendor || vendor.vendorType !== "special_agreement") {
+    res.status(404).json({ error: "Special Agreement not found" });
+    return;
+  }
+  if (vendor.agreementSigned) {
+    res.status(409).json({ error: "This agreement has already been submitted." });
+    return;
+  }
+
+  const [updated] = await db.update(vendorsTable)
+    .set({
+      agreementSigned: true,
+      agreementSignedName: parsed.data.signedName.trim(),
+      specialAgreementDayOfContactName: parsed.data.dayOfContactName.trim(),
+      specialAgreementDayOfContactPhone: parsed.data.dayOfContactPhone.trim(),
+      specialAgreementBackupContactName: parsed.data.backupContactName.trim(),
+      specialAgreementBackupContactPhone: parsed.data.backupContactPhone.trim(),
+      specialAgreementAcknowledgements: acknowledgements,
+      specialAgreementSignedDate: parsed.data.signedDate.toISOString().slice(0, 10),
+      specialAgreementSignedAt: new Date(),
+    })
+    .where(eq(vendorsTable.id, vendor.id))
+    .returning();
+
+  const [year] = await db.select().from(festivalYearsTable).where(eq(festivalYearsTable.id, updated.yearId)).limit(1);
+  const [settings] = await db.select().from(festivalSettingsTable).where(eq(festivalSettingsTable.yearId, updated.yearId)).limit(1);
+  await db.insert(activityLogTable).values({
+    type: "special_agreement_signed",
+    message: `Special Agreement signed by ${updated.agreementSignedName} for ${updated.name} (${updated.businessName})`,
+    entityType: "vendor",
+    entityId: updated.id,
+  });
+  if (settings?.notificationEmail) {
+    void sendSpecialAgreementSignedNotification({
+      notificationEmail: settings.notificationEmail,
+      applicantName: updated.name,
+      businessName: updated.businessName,
+      signedName: updated.agreementSignedName ?? updated.name,
+      adminPath: `/vendors/${updated.id}`,
+    });
+  }
+  res.json(buildSpecialAgreementPortalInfo(updated, year, settings));
 });
 
 // ---------------------------------------------------------------------------
@@ -179,7 +287,11 @@ router.post("/portal/:token/sign-agreement", async (req, res): Promise<void> => 
   // --- Vendors ---
   const updatedVendors = await db.update(vendorsTable)
     .set({ agreementSigned: true, agreementSignedName: parsed.data.signedName })
-    .where(and(eq(vendorsTable.portalToken, token), eq(vendorsTable.agreementSigned, false)))
+    .where(and(
+      eq(vendorsTable.portalToken, token),
+      eq(vendorsTable.agreementSigned, false),
+      ne(vendorsTable.vendorType, "special_agreement"),
+    ))
     .returning();
 
   if (updatedVendors.length > 0) {
@@ -267,6 +379,11 @@ router.post("/portal/:token/checkout", async (req, res): Promise<void> => {
 
   const vendors = await db.select().from(vendorsTable).where(eq(vendorsTable.portalToken, token)).limit(1);
   const sponsors = await db.select().from(sponsorsTable).where(eq(sponsorsTable.portalToken, token)).limit(1);
+
+  if (vendors[0]?.vendorType === "special_agreement") {
+    res.status(409).json({ error: "Special Agreement Vendors do not have a booth fee or online payment." });
+    return;
+  }
 
   const entity = vendors[0] ?? sponsors[0];
   const entityType = vendors.length > 0 ? "vendor" : "sponsor";
