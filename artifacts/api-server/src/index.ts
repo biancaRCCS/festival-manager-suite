@@ -19,19 +19,23 @@ async function initStripe() {
 
   const stripeSync = await getStripeSync();
 
-  const webhookBaseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
-  logger.info({ webhookBaseUrl }, "Configuring managed Stripe webhook…");
-  const webhook = await stripeSync.findOrCreateManagedWebhook(
-    `${webhookBaseUrl}/api/stripe/webhook`
-  );
-  logger.info({ url: webhook?.url }, "Stripe webhook configured.");
+  if (process.env.NODE_ENV === "production") {
+    const webhookBaseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
+    logger.info({ webhookBaseUrl }, "Configuring managed Stripe webhook…");
+    const webhook = await stripeSync.findOrCreateManagedWebhook(
+      `${webhookBaseUrl}/api/stripe/webhook`
+    );
+    logger.info({ url: webhook?.url }, "Stripe webhook configured.");
 
-  // Stripe only includes the signing secret in the creation response (never on retrieval).
-  // Persist it immediately so every subsequent server restart can verify webhook signatures.
-  if (webhook?.secret) {
-    logger.info("Persisting managed webhook signing secret to system_config…");
-    await persistWebhookSecret(webhook.secret);
-    logger.info("Webhook signing secret persisted.");
+    // Stripe only includes the signing secret in the creation response (never on retrieval).
+    // Persist it immediately so every subsequent production restart can verify webhook signatures.
+    if (webhook?.secret) {
+      logger.info("Persisting managed webhook signing secret to system_config…");
+      await persistWebhookSecret(webhook.secret);
+      logger.info("Webhook signing secret persisted.");
+    }
+  } else {
+    logger.info("Skipping managed Stripe webhook configuration outside production.");
   }
 
   // Backfill runs in background — don't await so the server starts immediately
