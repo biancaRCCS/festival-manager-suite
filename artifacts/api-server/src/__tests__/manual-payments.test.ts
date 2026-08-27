@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import { db, activityLogTable, contributionsTable, festivalYearsTable, sponsorsTable, vendorsTable } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
+import { handleCheckoutComplete } from "../routes/stripe";
 
 const { manualEmailSpy } = vi.hoisted(() => ({ manualEmailSpy: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("../lib/auth", () => ({
@@ -46,6 +47,7 @@ describe("manual payments", () => {
   it("records vendor payments, validates input, audits staff, and defaults email off", async () => {
     const row = await vendor();
     expect((await request(app).post(`/api/vendors/${row.id}/manual-payment`).send({ ...payment, amount: 1.001 })).status).toBe(400);
+    expect((await request(app).post(`/api/vendors/${row.id}/manual-payment`).send({ ...payment, amount: 100_000_000 })).status).toBe(400);
     const res = await request(app).post(`/api/vendors/${row.id}/manual-payment`).send(payment);
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ status: "paid", paymentSource: "manual", paymentMethod: "Check", manualPaymentAmount: 125.25, manualPaymentReference: "CHECK-42" });
@@ -54,6 +56,19 @@ describe("manual payments", () => {
     expect(log).toMatchObject({ type: "manual_payment_recorded", performedBy: "Manual Payment Staff" });
     expect(log!.message).toContain("Manual Check payment of $125.25");
     expect((await request(app).post(`/api/vendors/${row.id}/manual-payment`).send(payment)).status).toBe(409);
+  });
+
+  it("does not let unpaid vendors or sponsors bypass workflow status and permits only one concurrent record", async () => {
+    const pendingVendor = await vendor({ status: "pending" });
+    expect((await request(app).post(`/api/vendors/${pendingVendor.id}/manual-payment`).send(payment)).status).toBe(409);
+    const rejectedSponsor = await sponsor({ status: "rejected" });
+    expect((await request(app).post(`/api/sponsors/${rejectedSponsor.id}/manual-payment`).send(payment)).status).toBe(409);
+    const payable = await vendor();
+    const results = await Promise.all([
+      request(app).post(`/api/vendors/${payable.id}/manual-payment`).send(payment),
+      request(app).post(`/api/vendors/${payable.id}/manual-payment`).send(payment),
+    ]);
+    expect(results.map((result) => result.status).sort()).toEqual([200, 409]);
   });
 
   it("rejects special-agreement vendors and requires confirmation for Stripe overlap, then restores Stripe payment", async () => {
@@ -99,5 +114,100 @@ describe("manual payments", () => {
     expect(removed.body.status).toBe("removed");
     expect((await request(app).get("/api/contributions").query({ yearId })).body.total).toBe(0);
     expect((await request(app).delete(`/api/contributions/${created.body.id}/manual-payment`)).status).toBe(409);
+  });
+
+  it("keeps a late Stripe settlement after a manual payment is removed", async () => {
+    const row = await vendor();
+    await request(app).post(`/api/vendors/${row.id}/manual-payment`).send(payment);
+    await handleCheckoutComplete({ id: row.stripeSessionId ?? "cs_late_manual_vendor", amount_total: 33300, payment_status: "paid", metadata: { entityType: "vendor", entityId: String(row.id) } } as any);
+    // The manual route is allowed to race an existing checkout; attach the
+    // test session first so fulfillment has the same conditional key.
+    await db.update(vendorsTable).set({ stripeSessionId: "cs_late_manual_vendor" }).where(eq(vendorsTable.id, row.id));
+    await handleCheckoutComplete({ id: "cs_late_manual_vendor", amount_total: 33300, payment_status: "paid", metadata: { entityType: "vendor", entityId: String(row.id) } } as any);
+    const removed = await request(app).delete(`/api/vendors/${row.id}/manual-payment`);
+    expect(removed.body).toMatchObject({ status: "paid", paymentSource: "stripe", settledAmount: 333 });
+    expect(removed.body.paidAt).toBeTruthy();
+  });
+
+  it("reports actual manual and Stripe-plus-manual amounts in financials", async () => {
+    const manualVendor = await vendor({ status: "paid", paidAt: new Date(), manualPaymentAmount: "111.00", manualPaymentRecordedAt: new Date() });
+    const combinedVendor = await vendor({ status: "paid", paidAt: new Date(), stripeSessionId: "cs_revenue", stripeSettledAmount: "222.00", manualPaymentAmount: "33.00", manualPaymentRecordedAt: new Date() });
+    const manualSponsor = await sponsor({ status: "paid", paidAt: new Date(), manualPaymentAmount: "444.00", manualPaymentRecordedAt: new Date() });
+    const result = await request(app).get("/api/dashboard/financials").query({ yearId });
+    expect(result.status).toBe(200);
+    expect(result.body.vendorRevenue).toBeGreaterThanOrEqual(366);
+    expect(result.body.sponsorRevenue).toBeGreaterThanOrEqual(444);
+    expect(result.body.recentPayments).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: `${manualVendor.name} — ${manualVendor.businessName}`, amount: 111 }),
+      expect.objectContaining({ name: `${combinedVendor.name} — ${combinedVendor.businessName}`, amount: 255 }),
+      expect.objectContaining({ name: `${manualSponsor.name} — ${manualSponsor.orgName}`, amount: 444 }),
+    ]));
+  });
+
+  it("recognizes and restores legacy vendor Stripe evidence without the new Stripe settlement columns", async () => {
+    const legacyPaidAt = new Date("2025-04-15T12:30:00.000Z");
+    const row = await vendor({
+      status: "final_approved",
+      stripeSessionId: "cs_legacy_vendor",
+      paidAt: legacyPaidAt,
+      settledAmount: "512.34",
+      stripePaidAt: null,
+      stripeSettledAmount: null,
+    });
+    const before = await request(app).get(`/api/vendors/${row.id}`);
+    expect(before.body).toMatchObject({
+      hasStripePayment: true,
+      paymentSource: "stripe",
+      stripePaymentAmount: 512.34,
+      stripePaidAt: legacyPaidAt.toISOString(),
+    });
+    expect((await request(app).post(`/api/vendors/${row.id}/manual-payment`).send(payment)).status).toBe(409);
+    const recorded = await request(app).post(`/api/vendors/${row.id}/manual-payment`).send({ ...payment, confirmStripeOverlap: true });
+    expect(recorded.status).toBe(200);
+    expect(recorded.body).toMatchObject({ status: "final_approved", paymentSource: "manual", hasStripePayment: true });
+    const removed = await request(app).delete(`/api/vendors/${row.id}/manual-payment`);
+    expect(removed.status).toBe(200);
+    expect(removed.body).toMatchObject({
+      status: "final_approved",
+      paymentSource: "stripe",
+      hasStripePayment: true,
+      settledAmount: 512.34,
+      stripePaymentAmount: 512.34,
+      paidAt: legacyPaidAt.toISOString(),
+      stripePaidAt: legacyPaidAt.toISOString(),
+    });
+  });
+
+  it("recognizes and restores legacy sponsor Stripe evidence without the new Stripe settlement columns", async () => {
+    const legacyPaidAt = new Date("2025-04-20T09:00:00.000Z");
+    const row = await sponsor({
+      status: "details_approved",
+      stripeSessionId: "cs_legacy_sponsor",
+      paidAt: legacyPaidAt,
+      sponsorshipAmount: "987.65",
+      stripePaidAt: null,
+      stripeSettledAmount: null,
+    });
+    const before = await request(app).get(`/api/sponsors/${row.id}`);
+    expect(before.body).toMatchObject({
+      hasStripePayment: true,
+      paymentSource: "stripe",
+      stripePaymentAmount: 987.65,
+      stripePaidAt: legacyPaidAt.toISOString(),
+    });
+    expect((await request(app).post(`/api/sponsors/${row.id}/manual-payment`).send(payment)).status).toBe(409);
+    const recorded = await request(app).post(`/api/sponsors/${row.id}/manual-payment`).send({ ...payment, confirmStripeOverlap: true });
+    expect(recorded.status).toBe(200);
+    expect(recorded.body).toMatchObject({ status: "details_approved", paymentSource: "manual", hasStripePayment: true });
+    const removed = await request(app).delete(`/api/sponsors/${row.id}/manual-payment`);
+    expect(removed.status).toBe(200);
+    expect(removed.body).toMatchObject({
+      status: "details_approved",
+      paymentSource: "stripe",
+      hasStripePayment: true,
+      stripePaymentAmount: 987.65,
+      paidAt: legacyPaidAt.toISOString(),
+      stripePaidAt: legacyPaidAt.toISOString(),
+    });
   });
 });

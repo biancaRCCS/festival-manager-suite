@@ -10,7 +10,7 @@ const router: IRouter = Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const paymentLabels: Record<string, string> = { cash: "Cash", check: "Check", bank_transfer: "Bank transfer", other: "Other" };
 function validDate(value: Date) { const text = value.toISOString().slice(0, 10), date = new Date(`${text}T00:00:00.000Z`), tomorrow = new Date(); tomorrow.setUTCHours(0,0,0,0); tomorrow.setUTCDate(tomorrow.getUTCDate()+1); return date > tomorrow ? null : text; }
-function validAmount(value: number) { return Number.isFinite(value) && value > 0 && value <= 9_999_999_999.99 && Math.abs(value * 100 - Math.round(value * 100)) < 0.0000001; }
+function validAmount(value: number) { return Number.isFinite(value) && value > 0 && value <= 99_999_999.99 && Math.abs(value * 100 - Math.round(value * 100)) < 0.0000001; }
 
 router.post("/public/contributions/checkout", async (req, res): Promise<void> => {
   const parsed = CreateContributionCheckoutBody.safeParse(req.body);

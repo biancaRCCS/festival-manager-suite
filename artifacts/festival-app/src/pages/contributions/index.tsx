@@ -1,13 +1,19 @@
 import { useEffect, useMemo, useState } from "react"
-import { useGetCurrentYear, useListContributions, useListFestivalYears } from "@workspace/api-client-react"
+import { useGetCurrentYear, useListContributions, useListFestivalYears, useCreateManualContribution, useRemoveManualContribution } from "@workspace/api-client-react"
+import type { ManualContributionInput } from "@workspace/api-client-react"
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Search, Heart } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Search, Heart, Plus, Trash2 } from "lucide-react"
 import { format } from "date-fns"
+import { useQueryClient } from "@tanstack/react-query"
+import { useToast } from "@/hooks/use-toast"
+import { CreateManualContributionDialog } from "@/components/create-manual-contribution-dialog"
 
 function ContributionStatusBadge({ status }: { status: string }) {
   switch (status) {
@@ -17,6 +23,8 @@ function ContributionStatusBadge({ status }: { status: string }) {
       return <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">Processing</Badge>
     case "failed":
       return <Badge variant="destructive">Failed</Badge>
+    case "removed":
+      return <Badge variant="secondary" className="bg-slate-100 text-slate-500">Removed</Badge>
     default:
       return <Badge variant="outline">{status}</Badge>
   }
@@ -25,9 +33,17 @@ function ContributionStatusBadge({ status }: { status: string }) {
 export default function ContributionsPage() {
   const [search, setSearch] = useState("")
   const [selectedYearId, setSelectedYearId] = useState<number | undefined>()
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [removeId, setRemoveId] = useState<number | null>(null)
+
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
 
   const { data: currentYear } = useGetCurrentYear()
   const { data: festivalYears, isLoading: yearsLoading } = useListFestivalYears()
+
+  const createMutation = useCreateManualContribution()
+  const removeMutation = useRemoveManualContribution()
 
   useEffect(() => {
     if (selectedYearId === undefined && currentYear?.id) {
@@ -53,6 +69,37 @@ export default function ContributionsPage() {
   const totalAmount = response?.total ?? 0
   const isLoading = yearsLoading || contributionsLoading
 
+  const handleCreate = (data: ManualContributionInput) => {
+    createMutation.mutate(
+      { data },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["contributions", selectedYearId] })
+          queryClient.invalidateQueries({ queryKey: ["paginatedActivity"] })
+          setIsCreateOpen(false)
+          toast({ title: "Manual contribution recorded" })
+        },
+        onError: () => toast({ title: "Failed to record contribution", variant: "destructive" }),
+      }
+    )
+  }
+
+  const handleRemove = () => {
+    if (!removeId) return
+    removeMutation.mutate(
+      { id: removeId },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["contributions", selectedYearId] })
+          queryClient.invalidateQueries({ queryKey: ["paginatedActivity"] })
+          setRemoveId(null)
+          toast({ title: "Manual contribution removed" })
+        },
+        onError: () => toast({ title: "Failed to remove contribution", variant: "destructive" }),
+      }
+    )
+  }
+
   const filtered = items.filter(c => {
     const q = search.toLowerCase()
     if (!q) return true
@@ -77,8 +124,38 @@ export default function ContributionsPage() {
                 ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
+            <Button onClick={() => setIsCreateOpen(true)} className="ml-4 h-full py-0 px-4">
+              <Plus className="w-4 h-4 mr-2" />
+              Record Manual
+            </Button>
           </div>
         </div>
+
+        <CreateManualContributionDialog
+          open={isCreateOpen}
+          onOpenChange={setIsCreateOpen}
+          years={festivalYears}
+          defaultYearId={selectedYearId}
+          isPending={createMutation.isPending}
+          onSubmit={handleCreate}
+        />
+
+        <Dialog open={removeId !== null} onOpenChange={(open) => !open && setRemoveId(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Remove Manual Contribution</DialogTitle>
+              <DialogDescription>
+                This marks the manual contribution as removed, keeps it in the audit history, and excludes it from totals.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setRemoveId(null)}>Cancel</Button>
+              <Button variant="destructive" onClick={handleRemove} disabled={removeMutation.isPending}>
+                {removeMutation.isPending ? "Removing..." : "Remove Contribution"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <Card>
           <CardContent className="p-0">
@@ -134,9 +211,10 @@ export default function ContributionsPage() {
                   <TableRow>
                     <TableHead>Date</TableHead>
                     <TableHead>Contributor</TableHead>
-                    <TableHead>Email</TableHead>
+                    <TableHead>Method</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-right w-[80px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -147,9 +225,10 @@ export default function ContributionsPage() {
                       </TableCell>
                       <TableCell className="font-medium text-foreground">
                         {contribution.name}
+                        <div className="text-xs text-muted-foreground font-normal">{contribution.email}</div>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {contribution.email}
+                      <TableCell className="text-sm text-foreground">
+                        {contribution.paymentSource === 'stripe' ? 'Online (Stripe)' : contribution.paymentSource === 'manual' ? (contribution.paymentMethod ? contribution.paymentMethod.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 'Manual') : '—'}
                       </TableCell>
                       <TableCell>
                         <ContributionStatusBadge status={contribution.status} />
@@ -159,6 +238,13 @@ export default function ContributionsPage() {
                       </TableCell>
                       <TableCell className="text-right font-medium text-foreground">
                         ${contribution.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {contribution.paymentSource === 'manual' && contribution.status !== 'removed' && (
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => setRemoveId(contribution.id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

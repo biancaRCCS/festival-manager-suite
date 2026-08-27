@@ -36,6 +36,11 @@ export interface Sponsor {
   paymentSource?: SponsorPaymentSource;
   /** @nullable */
   paymentMethod?: string | null;
+  hasStripePayment?: boolean;
+  /** @nullable */
+  stripePaymentAmount?: number | null;
+  /** @nullable */
+  stripePaidAt?: string | null;
   /** @nullable */
   manualPaymentAmount?: number | null;
   /** @nullable */
@@ -46,6 +51,8 @@ export interface Sponsor {
   manualPaymentRecordedAt?: string | null;
   /** @nullable */
   manualPaymentRecordedBy?: string | null;
+  /** @nullable */
+  manualPaymentPreviousStatus?: string | null;
   /** @nullable */
   paymentFailedAt?: string | null;
   /** @nullable */

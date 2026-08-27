@@ -230,7 +230,13 @@ export default function SponsorsPage() {
                         </TableCell>
                         <TableCell>
                           <div className="text-sm text-foreground">
-                            {sponsor.paymentSource === 'stripe' ? 'Stripe' : sponsor.paymentSource === 'manual' ? (sponsor.paymentMethod ? sponsor.paymentMethod.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 'Manual') : '—'}
+                            {sponsor.hasStripePayment && sponsor.manualPaymentRecordedAt
+                              ? `Stripe + ${sponsor.paymentMethod ?? "Manual"}`
+                              : sponsor.hasStripePayment
+                                ? "Stripe"
+                                : sponsor.manualPaymentRecordedAt
+                                  ? sponsor.paymentMethod ?? "Manual"
+                                  : "—"}
                           </div>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">

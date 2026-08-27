@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, sponsorsTable, festivalYearsTable, festivalSettingsTable, activityLogTable } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, isNull, isNotNull } from "drizzle-orm";
 import { requireStaff } from "../lib/auth";
 import {
   GetSponsorParams,
@@ -38,9 +38,10 @@ function validReceivedDate(value: Date): string | null {
   tomorrow.setUTCHours(0, 0, 0, 0); tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
   return date > tomorrow ? null : text;
 }
-function validManualAmount(value: number) { return Number.isFinite(value) && value > 0 && value <= 9_999_999_999.99 && Math.abs(value * 100 - Math.round(value * 100)) < 0.0000001; }
+function validManualAmount(value: number) { return Number.isFinite(value) && value > 0 && value <= 99_999_999.99 && Math.abs(value * 100 - Math.round(value * 100)) < 0.0000001; }
 
 function formatSponsor(s: typeof sponsorsTable.$inferSelect) {
+  const hasStripePayment = Boolean(s.stripePaidAt || (s.stripeSessionId && s.paidAt));
   return {
     id: s.id,
     yearId: s.yearId,
@@ -58,13 +59,19 @@ function formatSponsor(s: typeof sponsorsTable.$inferSelect) {
     location: s.location ?? null,
     reviewNote: s.reviewNote ?? null,
     paidAt: s.paidAt ? s.paidAt.toISOString() : null,
-    paymentSource: s.manualPaymentRecordedAt ? "manual" : (s.stripePaidAt || (s.stripeSessionId && s.paidAt) ? "stripe" : null),
-    paymentMethod: s.manualPaymentRecordedAt ? (paymentLabels[s.manualPaymentMethod ?? ""] ?? null) : (s.stripePaidAt || (s.stripeSessionId && s.paidAt) ? "Stripe" : null),
+    paymentSource: s.manualPaymentRecordedAt ? "manual" : (hasStripePayment ? "stripe" : null),
+    paymentMethod: s.manualPaymentRecordedAt ? (paymentLabels[s.manualPaymentMethod ?? ""] ?? null) : (hasStripePayment ? "Stripe" : null),
+    hasStripePayment,
+    stripePaymentAmount: s.stripeSettledAmount === null
+      ? (s.stripeSessionId && s.paidAt && s.sponsorshipAmount !== null ? Number(s.sponsorshipAmount) : null)
+      : Number(s.stripeSettledAmount),
+    stripePaidAt: s.stripePaidAt?.toISOString() ?? (s.stripeSessionId && s.paidAt ? s.paidAt.toISOString() : null),
     manualPaymentAmount: s.manualPaymentAmount === null ? null : Number(s.manualPaymentAmount),
     manualPaymentReceivedDate: s.manualPaymentReceivedDate ?? null,
     manualPaymentReference: s.manualPaymentReference ?? null,
     manualPaymentRecordedAt: s.manualPaymentRecordedAt?.toISOString() ?? null,
     manualPaymentRecordedBy: s.manualPaymentRecordedBy ?? null,
+    manualPaymentPreviousStatus: s.manualPaymentPreviousStatus ?? null,
     paymentFailedAt: s.paymentFailedAt ? s.paymentFailedAt.toISOString() : null,
     paymentFailureReason: s.paymentFailureReason ?? null,
     approvedAt: s.approvedAt ? s.approvedAt.toISOString() : null,
@@ -114,9 +121,35 @@ router.post("/sponsors/:id/manual-payment", requireStaff, async (req, res): Prom
   if (sponsor.manualPaymentRecordedAt) { res.status(409).json({ error: "Remove the active manual payment before recording another." }); return; }
   const hasStripe = Boolean(sponsor.stripePaidAt || (sponsor.stripeSessionId && sponsor.paidAt));
   if (hasStripe && !body.data.confirmStripeOverlap) { res.status(409).json({ error: "This sponsor already has a Stripe payment. Confirm the overlap to record a manual payment." }); return; }
+  if (!hasStripe && !["pending_payment", "payment_processing"].includes(sponsor.status)) { res.status(409).json({ error: "Manual payment can only be recorded while this sponsor is payable." }); return; }
   const actor = (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null, reference = body.data.reference?.trim() || null;
-  const [updated] = await db.update(sponsorsTable).set({ status: "paid", paidAt: hasStripe ? sponsor.paidAt : new Date(`${receivedDate}T00:00:00.000Z`), manualPaymentMethod: body.data.method, manualPaymentAmount: body.data.amount.toFixed(2), manualPaymentReceivedDate: receivedDate, manualPaymentReference: reference, manualPaymentRecordedAt: new Date(), manualPaymentRecordedBy: actor }).where(eq(sponsorsTable.id, sponsor.id)).returning();
-  await db.insert(activityLogTable).values({ type: "manual_payment_recorded", message: `Manual ${paymentLabels[body.data.method]} payment of $${body.data.amount.toFixed(2)} recorded for sponsor ${updated.name}${reference ? ` (reference: ${reference})` : ""} by ${actor ?? "staff"}`, entityType: "sponsor", entityId: updated.id, performedBy: actor });
+  const updated = await db.transaction(async (tx) => {
+    const [saved] = await tx.update(sponsorsTable).set({
+      status: hasStripe ? sponsor.status : "paid",
+      paidAt: hasStripe ? sponsor.paidAt : new Date(`${receivedDate}T00:00:00.000Z`),
+      manualPaymentMethod: body.data.method,
+      manualPaymentAmount: body.data.amount.toFixed(2),
+      manualPaymentReceivedDate: receivedDate,
+      manualPaymentReference: reference,
+      manualPaymentRecordedAt: new Date(),
+      manualPaymentRecordedBy: actor,
+      manualPaymentPreviousStatus: sponsor.status,
+    }).where(and(
+      eq(sponsorsTable.id, sponsor.id),
+      eq(sponsorsTable.status, sponsor.status),
+      isNull(sponsorsTable.manualPaymentRecordedAt),
+    )).returning();
+    if (!saved) return null;
+    await tx.insert(activityLogTable).values({
+      type: "manual_payment_recorded",
+      message: `Manual ${paymentLabels[body.data.method]} payment of $${body.data.amount.toFixed(2)} recorded for sponsor ${saved.name}${reference ? ` (reference: ${reference})` : ""} by ${actor ?? "staff"}`,
+      entityType: "sponsor",
+      entityId: saved.id,
+      performedBy: actor,
+    });
+    return saved;
+  });
+  if (!updated) { res.status(409).json({ error: "This sponsor changed while recording payment. Refresh and try again." }); return; }
   if (body.data.sendConfirmationEmail) void sendManualPaymentConfirmationEmail({ to: updated.email, name: updated.name, entityType: "sponsor", amount: body.data.amount, method: body.data.method, reference, receivedDate });
   res.json(formatSponsor(updated));
 });
@@ -126,9 +159,39 @@ router.delete("/sponsors/:id/manual-payment", requireStaff, async (req, res): Pr
   const [sponsor] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, params.data.id)).limit(1);
   if (!sponsor) { res.status(404).json({ error: "Sponsor not found" }); return; }
   if (!sponsor.manualPaymentRecordedAt) { res.status(409).json({ error: "There is no active manual payment to remove." }); return; }
-  const hasStripe = Boolean(sponsor.stripePaidAt || (sponsor.stripeSessionId && sponsor.paidAt)), actor = (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null;
-  const [updated] = await db.update(sponsorsTable).set({ status: hasStripe ? "paid" : "pending_payment", paidAt: hasStripe ? (sponsor.stripePaidAt ?? sponsor.paidAt) : null, manualPaymentMethod: null, manualPaymentAmount: null, manualPaymentReceivedDate: null, manualPaymentReference: null, manualPaymentRecordedAt: null, manualPaymentRecordedBy: null }).where(eq(sponsorsTable.id, sponsor.id)).returning();
-  await db.insert(activityLogTable).values({ type: "manual_payment_removed", message: `Manual ${paymentLabels[sponsor.manualPaymentMethod ?? ""] ?? "payment"} of $${Number(sponsor.manualPaymentAmount).toFixed(2)} removed for sponsor ${updated.name}${sponsor.manualPaymentReference ? ` (reference: ${sponsor.manualPaymentReference})` : ""} by ${actor ?? "staff"}`, entityType: "sponsor", entityId: updated.id, performedBy: actor });
+  const actor = (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null;
+  const stripeSettled = Boolean(sponsor.stripePaidAt || (sponsor.stripeSessionId && sponsor.paidAt));
+  const stripePaidAt = sponsor.stripePaidAt ?? (sponsor.stripeSessionId ? sponsor.paidAt : null);
+  const restoredStatus = stripeSettled && ["pending_payment", "payment_processing"].includes(sponsor.manualPaymentPreviousStatus ?? "")
+    ? "paid"
+    : sponsor.manualPaymentPreviousStatus ?? (stripeSettled ? "paid" : "pending_payment");
+  const updated = await db.transaction(async (tx) => {
+    const [saved] = await tx.update(sponsorsTable).set({
+      status: restoredStatus,
+      paidAt: stripeSettled ? stripePaidAt : null,
+      manualPaymentMethod: null,
+      manualPaymentAmount: null,
+      manualPaymentReceivedDate: null,
+      manualPaymentReference: null,
+      manualPaymentRecordedAt: null,
+      manualPaymentRecordedBy: null,
+      manualPaymentPreviousStatus: null,
+    }).where(and(
+      eq(sponsorsTable.id, sponsor.id),
+      eq(sponsorsTable.status, sponsor.status),
+      isNotNull(sponsorsTable.manualPaymentRecordedAt),
+    )).returning();
+    if (!saved) return null;
+    await tx.insert(activityLogTable).values({
+      type: "manual_payment_removed",
+      message: `Manual ${paymentLabels[sponsor.manualPaymentMethod ?? ""] ?? "payment"} of $${Number(sponsor.manualPaymentAmount).toFixed(2)} removed for sponsor ${saved.name}${sponsor.manualPaymentReference ? ` (reference: ${sponsor.manualPaymentReference})` : ""} by ${actor ?? "staff"}`,
+      entityType: "sponsor",
+      entityId: saved.id,
+      performedBy: actor,
+    });
+    return saved;
+  });
+  if (!updated) { res.status(409).json({ error: "This sponsor payment changed while removing it. Refresh and try again." }); return; }
   res.json(formatSponsor(updated));
 });
 

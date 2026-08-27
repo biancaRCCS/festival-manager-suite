@@ -73,6 +73,34 @@ function sponsorAmount(sp: typeof sponsorsTable.$inferSelect, tierMap: Record<st
   return tierMap[sp.tier ?? "bronze"] ?? 750;
 }
 
+function vendorReceivedAmount(
+  vendor: typeof vendorsTable.$inferSelect,
+  priceMap: Record<string, number>,
+): number {
+  const manual = Number(vendor.manualPaymentAmount ?? 0);
+  const stripe = vendor.stripeSettledAmount != null
+    ? Number(vendor.stripeSettledAmount)
+    : vendor.stripeSessionId && vendor.paidAt
+      ? Number(vendor.settledAmount ?? priceMap[vendor.vendorType] ?? 300)
+      : 0;
+  if (manual > 0 || stripe > 0) return manual + stripe;
+  return Number(vendor.settledAmount ?? priceMap[vendor.vendorType] ?? 300);
+}
+
+function sponsorReceivedAmount(
+  sponsor: typeof sponsorsTable.$inferSelect,
+  tierMap: Record<string, number>,
+): number {
+  const manual = Number(sponsor.manualPaymentAmount ?? 0);
+  const stripe = sponsor.stripeSettledAmount != null
+    ? Number(sponsor.stripeSettledAmount)
+    : sponsor.stripeSessionId && sponsor.paidAt
+      ? sponsorAmount(sponsor, tierMap)
+      : 0;
+  if (manual > 0 || stripe > 0) return manual + stripe;
+  return sponsorAmount(sponsor, tierMap);
+}
+
 router.get("/dashboard/summary", requireStaff, async (req, res): Promise<void> => {
   const years = await db.select().from(festivalYearsTable).where(eq(festivalYearsTable.isActive, true)).limit(1);
   if (years.length === 0) {
@@ -90,8 +118,8 @@ router.get("/dashboard/summary", requireStaff, async (req, res): Promise<void> =
 
   const paidVendors  = vendors.filter(v => v.status === "paid" || v.status === "final_approved");
   const paidSponsors = sponsors.filter(sp => sp.paidAt != null);
-  const vendorRevenue  = paidVendors.reduce((sum, v) => sum + (vendorPriceMap[v.vendorType] ?? 300), 0);
-  const sponsorRevenue = paidSponsors.reduce((sum, sp) => sum + sponsorAmount(sp, sponsorPriceMap), 0);
+  const vendorRevenue  = paidVendors.reduce((sum, v) => sum + vendorReceivedAmount(v, vendorPriceMap), 0);
+  const sponsorRevenue = paidSponsors.reduce((sum, sp) => sum + sponsorReceivedAmount(sp, sponsorPriceMap), 0);
   const totalRevenue = vendorRevenue + sponsorRevenue;
 
   const vendorStats    = statFor(vendors);
@@ -160,20 +188,20 @@ router.get("/dashboard/financials", requireStaff, async (req, res): Promise<void
     and(eq(sponsorsTable.yearId, yearId), isNotNull(sponsorsTable.paidAt))
   );
 
-  const vendorRevenue  = vendors.reduce((sum, v) => sum + (vendorPriceMap[v.vendorType] ?? 300), 0);
-  const sponsorRevenue = sponsors.reduce((sum, sp) => sum + sponsorAmount(sp, sponsorPriceMap), 0);
+  const vendorRevenue  = vendors.reduce((sum, v) => sum + vendorReceivedAmount(v, vendorPriceMap), 0);
+  const sponsorRevenue = sponsors.reduce((sum, sp) => sum + sponsorReceivedAmount(sp, sponsorPriceMap), 0);
 
   const recentPayments = [
     ...vendors.filter(v => v.paidAt).map(v => ({
       type: "vendor" as const,
       name: `${v.name} — ${v.businessName}`,
-      amount: vendorPriceMap[v.vendorType] ?? 300,
+      amount: vendorReceivedAmount(v, vendorPriceMap),
       paidAt: v.paidAt!.toISOString(),
     })),
     ...sponsors.filter(s => s.paidAt).map(s => ({
       type: "sponsor" as const,
       name: `${s.name} — ${s.orgName}`,
-      amount: sponsorAmount(s, sponsorPriceMap),
+      amount: sponsorReceivedAmount(s, sponsorPriceMap),
       paidAt: s.paidAt!.toISOString(),
     })),
   ].sort((a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime()).slice(0, 10);

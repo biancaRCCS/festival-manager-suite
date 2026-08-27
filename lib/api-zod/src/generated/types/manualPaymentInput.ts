@@ -9,7 +9,10 @@ import type { ManualPaymentInputMethod } from './manualPaymentInputMethod';
 
 export interface ManualPaymentInput {
   method: ManualPaymentInputMethod;
-  /** @exclusiveMinimum 0 */
+  /**
+     * @maximum 99999999.99
+     * @exclusiveMinimum 0
+     */
   amount: number;
   receivedDate: Date;
   /**

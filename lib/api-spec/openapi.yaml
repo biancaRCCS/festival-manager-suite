@@ -1719,6 +1719,12 @@ components:
           enum: [stripe, manual, null]
         paymentMethod:
           type: ["string", "null"]
+        hasStripePayment:
+          type: boolean
+        stripePaymentAmount:
+          type: ["number", "null"]
+        stripePaidAt:
+          type: ["string", "null"]
         manualPaymentAmount:
           type: ["number", "null"]
         manualPaymentReceivedDate:
@@ -1728,6 +1734,8 @@ components:
         manualPaymentRecordedAt:
           type: ["string", "null"]
         manualPaymentRecordedBy:
+          type: ["string", "null"]
+        manualPaymentPreviousStatus:
           type: ["string", "null"]
         paymentFailedAt:
           type: ["string", "null"]
@@ -1831,6 +1839,12 @@ components:
           enum: [stripe, manual, null]
         paymentMethod:
           type: ["string", "null"]
+        hasStripePayment:
+          type: boolean
+        stripePaymentAmount:
+          type: ["number", "null"]
+        stripePaidAt:
+          type: ["string", "null"]
         manualPaymentAmount:
           type: ["number", "null"]
         manualPaymentReceivedDate:
@@ -1840,6 +1854,8 @@ components:
         manualPaymentRecordedAt:
           type: ["string", "null"]
         manualPaymentRecordedBy:
+          type: ["string", "null"]
+        manualPaymentPreviousStatus:
           type: ["string", "null"]
         paymentFailedAt:
           type: ["string", "null"]
@@ -2273,6 +2289,7 @@ components:
         amount:
           type: number
           exclusiveMinimum: 0
+          maximum: 99999999.99
         receivedDate:
           type: string
           format: date

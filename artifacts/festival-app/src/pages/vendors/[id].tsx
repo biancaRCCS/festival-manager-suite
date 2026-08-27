@@ -332,6 +332,8 @@ export default function VendorDetailPage() {
       {
         onSuccess: (updated) => {
           queryClient.setQueryData(getGetVendorQueryKey(id), updated)
+          queryClient.invalidateQueries({ queryKey: ["vendors"] })
+          queryClient.invalidateQueries({ queryKey: ["paginatedActivity"] })
           setIsManualPaymentOpen(false)
           toast({ title: "Manual payment recorded successfully" })
         },
@@ -346,6 +348,8 @@ export default function VendorDetailPage() {
       {
         onSuccess: (updated) => {
           queryClient.setQueryData(getGetVendorQueryKey(id), updated)
+          queryClient.invalidateQueries({ queryKey: ["vendors"] })
+          queryClient.invalidateQueries({ queryKey: ["paginatedActivity"] })
           setIsRemovePaymentOpen(false)
           toast({ title: "Manual payment removed" })
         },
@@ -400,6 +404,11 @@ export default function VendorDetailPage() {
   const isFood = FOOD_KEYS.has(vendor.vendorType)
   const isNonprofit = vendor.vendorType === "nonprofit"
   const isSpecialAgreement = vendor.vendorType === "special_agreement"
+  const hasStripePayment = vendor.hasStripePayment
+  const hasManualPayment = vendor.manualPaymentRecordedAt != null
+  const canRecordManualPayment = !isSpecialAgreement && !hasManualPayment && (
+    hasStripePayment || ["approved", "payment_pending", "payment_processing"].includes(vendor.status)
+  )
   const categoryLabel = isSpecialAgreement ? "Special Agreement Vendor" : (VENDOR_TYPE_LABELS[vendor.vendorType] ?? vendor.vendorType)
   const feeForCategory = (type: string) => {
     const settingKey = {
@@ -579,24 +588,42 @@ export default function VendorDetailPage() {
 
             {!isSpecialAgreement && (
               <>
-                <Button 
-                  variant="outline" 
-                  className="border-primary/20 hover:bg-primary/5 text-primary"
-                  onClick={() => setIsManualPaymentOpen(true)}
-                >
-                  <DollarSign className="w-4 h-4 mr-2" />
-                  Record Manual Payment
-                </Button>
+                {canRecordManualPayment && (
+                  <Button
+                    variant="outline"
+                    className="border-primary/20 hover:bg-primary/5 text-primary"
+                    onClick={() => setIsManualPaymentOpen(true)}
+                  >
+                    <DollarSign className="w-4 h-4 mr-2" />
+                    Record Manual Payment
+                  </Button>
+                )}
                 <ManualPaymentDialog
                   open={isManualPaymentOpen}
                   onOpenChange={setIsManualPaymentOpen}
                   title="Record Manual Payment"
                   description="Record a cash, check, or bank transfer for this vendor."
-                  defaultAmount={vendor.paymentSource === 'stripe' ? (vendor.manualPaymentAmount ?? currentAmount) : (vendor.manualPaymentAmount || currentAmount)}
-                  hasStripePayment={vendor.paymentSource === 'stripe'}
+                  defaultAmount={currentAmount}
+                  hasStripePayment={hasStripePayment}
                   isPending={recordPaymentMutation.isPending}
                   onSubmit={handleRecordPayment}
                 />
+                <Dialog open={isRemovePaymentOpen} onOpenChange={setIsRemovePaymentOpen}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Remove Manual Payment</DialogTitle>
+                      <DialogDescription>
+                        This removes the active manual payment and restores the vendor's prior workflow state. Any Stripe payment remains recorded.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setIsRemovePaymentOpen(false)}>Cancel</Button>
+                      <Button variant="destructive" onClick={handleRemovePayment} disabled={removePaymentMutation.isPending}>
+                        {removePaymentMutation.isPending ? "Removing..." : "Remove Payment"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </>
             )}
 
@@ -694,6 +721,40 @@ export default function VendorDetailPage() {
                   <p className="font-semibold">Bank payment failed — {new Date(vendor.paymentFailedAt).toLocaleString()}</p>
                   <p className="mt-1">{vendor.paymentFailureReason ?? "The bank payment did not settle."} The vendor was reverted to Approved so a new payment link can be sent.</p>
                 </div>
+              )}
+
+              {!isSpecialAgreement && (hasStripePayment || hasManualPayment) && (
+                <>
+                  <SectionDivider title="Payment Record" />
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                    <Field label="Payment Source" value={hasStripePayment && hasManualPayment ? "Stripe + manual" : hasStripePayment ? "Online (Stripe)" : "Manual"} />
+                    {hasStripePayment && (
+                      <>
+                        <Field label="Stripe Amount" value={formatCurrency(vendor.stripePaymentAmount)} />
+                        <Field label="Stripe Paid" value={vendor.stripePaidAt ? new Date(vendor.stripePaidAt).toLocaleDateString() : undefined} />
+                      </>
+                    )}
+                    {hasManualPayment && (
+                      <>
+                        <Field label="Method" value={vendor.paymentMethod?.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())} />
+                        <Field label="Amount Paid" value={formatCurrency(vendor.manualPaymentAmount)} />
+                        <Field label="Date Received" value={vendor.manualPaymentReceivedDate ? new Date(`${vendor.manualPaymentReceivedDate}T12:00:00`).toLocaleDateString() : undefined} />
+                        <Field label="Reference" value={vendor.manualPaymentReference} />
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-0.5">Actions</p>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="mt-1 h-7 text-xs"
+                            onClick={() => setIsRemovePaymentOpen(true)}
+                          >
+                            Remove Manual Payment
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </>
               )}
 
               {/* 4.1 Basic Information */}

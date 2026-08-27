@@ -132,7 +132,13 @@ export default function VendorsPage() {
                       </TableCell>
                       <TableCell>
                         <div className="text-sm text-foreground">
-                          {vendor.paymentSource === 'stripe' ? 'Stripe' : vendor.paymentSource === 'manual' ? (vendor.paymentMethod ? vendor.paymentMethod.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 'Manual') : '—'}
+                          {vendor.hasStripePayment && vendor.manualPaymentRecordedAt
+                            ? `Stripe + ${vendor.paymentMethod ?? "Manual"}`
+                            : vendor.hasStripePayment
+                              ? "Stripe"
+                              : vendor.manualPaymentRecordedAt
+                                ? vendor.paymentMethod ?? "Manual"
+                                : "—"}
                         </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">

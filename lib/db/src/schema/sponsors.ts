@@ -35,6 +35,7 @@ export const sponsorsTable = pgTable("sponsors", {
   manualPaymentReference: text("manual_payment_reference"),
   manualPaymentRecordedAt: timestamp("manual_payment_recorded_at", { withTimezone: true }),
   manualPaymentRecordedBy: text("manual_payment_recorded_by"),
+  manualPaymentPreviousStatus: text("manual_payment_previous_status"),
   approvedAt: timestamp("approved_at", { withTimezone: true }),
   detailsSubmittedAt: timestamp("details_submitted_at", { withTimezone: true }),
   finalApprovedAt: timestamp("final_approved_at", { withTimezone: true }), // repurposed: set when status → details_approved

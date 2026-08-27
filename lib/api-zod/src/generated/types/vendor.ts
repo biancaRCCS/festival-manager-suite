@@ -35,6 +35,11 @@ export interface Vendor {
   paymentSource?: VendorPaymentSource;
   /** @nullable */
   paymentMethod?: string | null;
+  hasStripePayment?: boolean;
+  /** @nullable */
+  stripePaymentAmount?: number | null;
+  /** @nullable */
+  stripePaidAt?: string | null;
   /** @nullable */
   manualPaymentAmount?: number | null;
   /** @nullable */
@@ -45,6 +50,8 @@ export interface Vendor {
   manualPaymentRecordedAt?: string | null;
   /** @nullable */
   manualPaymentRecordedBy?: string | null;
+  /** @nullable */
+  manualPaymentPreviousStatus?: string | null;
   /** @nullable */
   paymentFailedAt?: string | null;
   /** @nullable */

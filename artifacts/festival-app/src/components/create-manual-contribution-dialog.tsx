@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { format } from "date-fns"
-import { AlertCircle, CalendarIcon } from "lucide-react"
+import { CalendarIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -14,9 +14,12 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { cn } from "@/lib/utils"
-import type { ManualPaymentInput, ManualPaymentInputMethod } from "@workspace/api-client-react"
+import type { ManualContributionInput, ManualPaymentInputMethod, FestivalYear } from "@workspace/api-client-react"
 
 const schema = z.object({
+  yearId: z.coerce.number().positive("Year is required"),
+  name: z.string().min(1, "Name is required").max(200),
+  email: z.string().email("Valid email is required"),
   method: z.enum(["cash", "check", "bank_transfer", "other"] as const),
   amount: z.coerce.number()
     .positive("Amount must be greater than 0")
@@ -26,43 +29,38 @@ const schema = z.object({
     required_error: "A date is required.",
   }),
   reference: z.string().max(500).optional(),
-  confirmStripeOverlap: z.boolean().default(false),
   sendConfirmationEmail: z.boolean().default(false),
 })
 
 type FormValues = z.infer<typeof schema>
 
-interface ManualPaymentDialogProps {
+interface CreateManualContributionDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  title: string
-  description?: string
-  defaultAmount?: number
-  hasStripePayment?: boolean
+  years?: FestivalYear[]
+  defaultYearId?: number
   isPending: boolean
-  onSubmit: (data: ManualPaymentInput) => void
+  onSubmit: (data: ManualContributionInput) => void
 }
 
-export function ManualPaymentDialog({
+export function CreateManualContributionDialog({
   open,
   onOpenChange,
-  title,
-  description,
-  defaultAmount,
-  hasStripePayment,
+  years = [],
+  defaultYearId,
   isPending,
   onSubmit,
-}: ManualPaymentDialogProps) {
-  const [stripeWarningAcknowledged, setStripeWarningAcknowledged] = useState(!hasStripePayment)
-
+}: CreateManualContributionDialogProps) {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
+      yearId: defaultYearId || 0,
+      name: "",
+      email: "",
       method: "check",
-      amount: defaultAmount ?? 0,
+      amount: 0,
       receivedDate: new Date(),
       reference: "",
-      confirmStripeOverlap: false,
       sendConfirmationEmail: false,
     },
   })
@@ -71,72 +69,94 @@ export function ManualPaymentDialog({
   useEffect(() => {
     if (open) {
       form.reset({
+        yearId: defaultYearId || (years.length > 0 ? years[0].id : 0),
+        name: "",
+        email: "",
         method: "check",
-        amount: defaultAmount ?? 0,
+        amount: 0,
         receivedDate: new Date(),
         reference: "",
-        confirmStripeOverlap: false,
         sendConfirmationEmail: false,
       })
-      setStripeWarningAcknowledged(!hasStripePayment)
     }
-  }, [open, defaultAmount, hasStripePayment, form])
+  }, [open, defaultYearId, years, form])
 
   const handleSubmit = (values: FormValues) => {
     onSubmit({
+      yearId: values.yearId,
+      name: values.name,
+      email: values.email,
       method: values.method as ManualPaymentInputMethod,
       amount: values.amount,
       receivedDate: format(values.receivedDate, "yyyy-MM-dd"),
       reference: values.reference || null,
-      confirmStripeOverlap: values.confirmStripeOverlap,
       sendConfirmationEmail: values.sendConfirmationEmail,
     })
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[450px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          {description && <DialogDescription>{description}</DialogDescription>}
+          <DialogTitle>Record Manual Contribution</DialogTitle>
+          <DialogDescription>Record an offline donation (cash, check, or transfer).</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 pt-2">
             
-            {hasStripePayment && (
-              <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
-                  <div>
-                    <p className="font-semibold">Stripe Payment Already Exists</p>
-                    <p className="mt-1">This record already has an online payment via Stripe. The manual payment will be recorded in addition to the Stripe payment.</p>
-                  </div>
-                </div>
-                <FormField
-                  control={form.control}
-                  name="confirmStripeOverlap"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 mt-3 p-2 bg-amber-100/50 rounded-sm border border-amber-200">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={(checked) => {
-                            field.onChange(checked)
-                            setStripeWarningAcknowledged(checked === true)
-                          }}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel className="text-amber-900 cursor-pointer">
-                          I confirm I want to record this overlapping manual payment
-                        </FormLabel>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              </div>
-            )}
+            <FormField
+              control={form.control}
+              name="yearId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Festival Year</FormLabel>
+                  <Select onValueChange={(val) => field.onChange(Number(val))} value={field.value ? String(field.value) : undefined}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select year" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {years.map(y => (
+                        <SelectItem key={y.id} value={String(y.id)}>{y.year} {y.isActive ? '(Active)' : ''}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="John Doe" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="john@example.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
@@ -252,7 +272,7 @@ export function ManualPaymentDialog({
                       Send payment confirmation email
                     </FormLabel>
                     <FormDescription>
-                      The applicant will receive an email receipt.
+                      The contributor will receive an email receipt.
                     </FormDescription>
                   </div>
                 </FormItem>
@@ -265,9 +285,9 @@ export function ManualPaymentDialog({
               </Button>
               <Button
                 type="submit"
-                disabled={isPending || !stripeWarningAcknowledged}
+                disabled={isPending}
               >
-                {isPending ? "Saving..." : "Record Payment"}
+                {isPending ? "Saving..." : "Record Contribution"}
               </Button>
             </DialogFooter>
           </form>

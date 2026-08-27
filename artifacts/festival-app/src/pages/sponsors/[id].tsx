@@ -1,6 +1,6 @@
 import { useState, useRef } from "react"
 import { useLocation, useParams } from "wouter"
-import { useGetSponsor, useReviewSponsor, useFinalApproveSponsor, useAssignSponsorSpot, getGetSponsorQueryKey, useDeleteSponsor, useResendSponsorConfirmation, useResendSponsorPaymentLink, useUpdateSponsorDetails } from "@workspace/api-client-react"
+import { useGetSponsor, useReviewSponsor, useFinalApproveSponsor, useAssignSponsorSpot, getGetSponsorQueryKey, useDeleteSponsor, useResendSponsorConfirmation, useResendSponsorPaymentLink, useUpdateSponsorDetails, useRecordSponsorManualPayment, useRemoveSponsorManualPayment } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,9 +9,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { ArrowLeft, CheckCircle2, MapPin, Clock, Trash2, Check, Circle, Mail, Pencil } from "lucide-react"
+import { ArrowLeft, CheckCircle2, MapPin, Clock, Trash2, Check, Circle, Mail, Pencil, DollarSign } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { ApplicantDetailsEditorDialog, type ApplicantDetailsField } from "@/components/applicant-details-editor-dialog"
+import { ManualPaymentDialog } from "@/components/manual-payment-dialog"
+import type { ManualPaymentInput } from "@workspace/api-client-react"
 
 // ---------------------------------------------------------------------------
 // Display helpers
@@ -197,6 +199,8 @@ export default function SponsorDetailPage() {
   const resendMutation       = useResendSponsorConfirmation()
   const resendPaymentLinkMutation = useResendSponsorPaymentLink()
   const detailsMutation      = useUpdateSponsorDetails({ mutation: { mutationKey: ["updateSponsorDetails", id] } })
+  const recordPaymentMutation = useRecordSponsorManualPayment({ mutation: { mutationKey: ["recordSponsorManualPayment", id] } })
+  const removePaymentMutation = useRemoveSponsorManualPayment({ mutation: { mutationKey: ["removeSponsorManualPayment", id] } })
 
   const [reviewNote, setReviewNote]             = useState("")
   const [spotNumber, setSpotNumber]             = useState("")
@@ -206,6 +210,8 @@ export default function SponsorDetailPage() {
   const [isSpotOpen, setIsSpotOpen]             = useState(false)
   const [isDeleteOpen, setIsDeleteOpen]         = useState(false)
   const [isDetailsOpen, setIsDetailsOpen]       = useState(false)
+  const [isManualPaymentOpen, setIsManualPaymentOpen] = useState(false)
+  const [isRemovePaymentOpen, setIsRemovePaymentOpen] = useState(false)
 
   const reviewMutateFnRef = useRef(reviewMutation.mutate)
   reviewMutateFnRef.current = reviewMutation.mutate
@@ -308,6 +314,38 @@ export default function SponsorDetailPage() {
         },
         onError: () => toast({ title: "Failed to update sponsor details", variant: "destructive" }),
       },
+    )
+  }
+
+  const handleRecordPayment = (data: ManualPaymentInput) => {
+    recordPaymentMutation.mutate(
+      { id, data },
+      {
+        onSuccess: (updated) => {
+          queryClient.setQueryData(getGetSponsorQueryKey(id), updated)
+          queryClient.invalidateQueries({ queryKey: ["sponsors"] })
+          queryClient.invalidateQueries({ queryKey: ["paginatedActivity"] })
+          setIsManualPaymentOpen(false)
+          toast({ title: "Manual payment recorded successfully" })
+        },
+        onError: () => toast({ title: "Failed to record manual payment", variant: "destructive" }),
+      }
+    )
+  }
+
+  const handleRemovePayment = () => {
+    removePaymentMutation.mutate(
+      { id },
+      {
+        onSuccess: (updated) => {
+          queryClient.setQueryData(getGetSponsorQueryKey(id), updated)
+          queryClient.invalidateQueries({ queryKey: ["sponsors"] })
+          queryClient.invalidateQueries({ queryKey: ["paginatedActivity"] })
+          setIsRemovePaymentOpen(false)
+          toast({ title: "Manual payment removed" })
+        },
+        onError: () => toast({ title: "Failed to remove manual payment", variant: "destructive" }),
+      }
     )
   }
 
@@ -450,6 +488,45 @@ export default function SponsorDetailPage() {
               </Dialog>
             )}
 
+            {!sponsor.manualPaymentRecordedAt && (
+              sponsor.hasStripePayment || ["pending_payment", "payment_processing"].includes(sponsor.status)
+            ) && (
+              <Button
+                variant="outline"
+                className="border-secondary/30 hover:bg-secondary/10 text-secondary-foreground"
+                onClick={() => setIsManualPaymentOpen(true)}
+              >
+                <DollarSign className="w-4 h-4 mr-2" />
+                Record Manual Payment
+              </Button>
+            )}
+            <ManualPaymentDialog
+              open={isManualPaymentOpen}
+              onOpenChange={setIsManualPaymentOpen}
+              title="Record Manual Payment"
+              description="Record a cash, check, or bank transfer for this sponsor."
+              defaultAmount={sponsor.sponsorshipAmount ?? undefined}
+              hasStripePayment={sponsor.hasStripePayment}
+              isPending={recordPaymentMutation.isPending}
+              onSubmit={handleRecordPayment}
+            />
+            <Dialog open={isRemovePaymentOpen} onOpenChange={setIsRemovePaymentOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Remove Manual Payment</DialogTitle>
+                  <DialogDescription>
+                    This removes the active manual payment and restores the sponsor's prior workflow state. Any Stripe payment remains recorded.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsRemovePaymentOpen(false)}>Cancel</Button>
+                  <Button variant="destructive" onClick={handleRemovePayment} disabled={removePaymentMutation.isPending}>
+                    {removePaymentMutation.isPending ? "Removing..." : "Remove Payment"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
             <Dialog open={isSpotOpen} onOpenChange={setIsSpotOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" className="border-secondary/30 hover:bg-secondary/10 text-secondary-foreground">
@@ -553,6 +630,40 @@ export default function SponsorDetailPage() {
                   <p className="font-semibold">Bank payment failed — {new Date(sponsor.paymentFailedAt).toLocaleString()}</p>
                   <p className="mt-1">{sponsor.paymentFailureReason ?? "The bank payment did not settle."} The sponsor was reverted to Awaiting Payment so the payment link can be resent.</p>
                 </div>
+              )}
+
+              {(sponsor.hasStripePayment || sponsor.manualPaymentRecordedAt) && (
+                <>
+                  <SectionDivider title="Payment Record" />
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                    <Field label="Payment Source" value={sponsor.hasStripePayment && sponsor.manualPaymentRecordedAt ? "Stripe + manual" : sponsor.hasStripePayment ? "Online (Stripe)" : "Manual"} />
+                    {sponsor.hasStripePayment && (
+                      <>
+                        <Field label="Stripe Amount" value={sponsor.stripePaymentAmount != null ? `$${Number(sponsor.stripePaymentAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : undefined} />
+                        <Field label="Stripe Paid" value={sponsor.stripePaidAt ? new Date(sponsor.stripePaidAt).toLocaleDateString() : sponsor.paidAt ? new Date(sponsor.paidAt).toLocaleDateString() : undefined} />
+                      </>
+                    )}
+                    {sponsor.manualPaymentRecordedAt && (
+                      <>
+                        <Field label="Method" value={sponsor.paymentMethod?.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())} />
+                        <Field label="Amount Paid" value={sponsor.manualPaymentAmount != null ? `$${Number(sponsor.manualPaymentAmount).toLocaleString()}` : undefined} />
+                        <Field label="Date Received" value={sponsor.manualPaymentReceivedDate ? new Date(`${sponsor.manualPaymentReceivedDate}T12:00:00`).toLocaleDateString() : undefined} />
+                        <Field label="Reference" value={sponsor.manualPaymentReference} />
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-0.5">Actions</p>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="mt-1 h-7 text-xs"
+                            onClick={() => setIsRemovePaymentOpen(true)}
+                          >
+                            Remove Manual Payment
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </>
               )}
 
               {/* ── Contact Information ── */}

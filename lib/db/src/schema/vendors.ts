@@ -39,6 +39,7 @@ export const vendorsTable = pgTable("vendors", {
   manualPaymentReference: text("manual_payment_reference"),
   manualPaymentRecordedAt: timestamp("manual_payment_recorded_at", { withTimezone: true }),
   manualPaymentRecordedBy: text("manual_payment_recorded_by"),
+  manualPaymentPreviousStatus: text("manual_payment_previous_status"),
   pendingManualAdjustment: numeric("pending_manual_adjustment", { precision: 10, scale: 2 }),
   pendingAdjustmentTargetAmount: numeric("pending_adjustment_target_amount", { precision: 10, scale: 2 }),
   // Incremented whenever a category recalculates a vendor's amount due. A
