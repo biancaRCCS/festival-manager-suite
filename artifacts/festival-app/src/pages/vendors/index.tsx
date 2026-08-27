@@ -106,6 +106,7 @@ export default function VendorsPage() {
                   <TableRow>
                     <TableHead>Business Name</TableHead>
                     <TableHead>Contact</TableHead>
+                    <TableHead>Payment</TableHead>
                     <TableHead>Applied On</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -128,6 +129,11 @@ export default function VendorsPage() {
                       <TableCell>
                         <div className="text-sm">{vendor.email}</div>
                         <div className="text-xs text-muted-foreground">{vendor.phone}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-foreground">
+                          {vendor.paymentSource === 'stripe' ? 'Stripe' : vendor.paymentSource === 'manual' ? (vendor.paymentMethod ? vendor.paymentMethod.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 'Manual') : '—'}
+                        </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {new Date(vendor.createdAt).toLocaleDateString()}

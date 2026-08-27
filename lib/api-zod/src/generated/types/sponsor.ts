@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { SponsorApplicationData } from './sponsorApplicationData';
+import type { SponsorPaymentSource } from './sponsorPaymentSource';
 import type { SponsorStatus } from './sponsorStatus';
 
 export interface Sponsor {
@@ -31,6 +32,20 @@ export interface Sponsor {
   reviewNote?: string | null;
   /** @nullable */
   paidAt?: string | null;
+  /** @nullable */
+  paymentSource?: SponsorPaymentSource;
+  /** @nullable */
+  paymentMethod?: string | null;
+  /** @nullable */
+  manualPaymentAmount?: number | null;
+  /** @nullable */
+  manualPaymentReceivedDate?: string | null;
+  /** @nullable */
+  manualPaymentReference?: string | null;
+  /** @nullable */
+  manualPaymentRecordedAt?: string | null;
+  /** @nullable */
+  manualPaymentRecordedBy?: string | null;
   /** @nullable */
   paymentFailedAt?: string | null;
   /** @nullable */

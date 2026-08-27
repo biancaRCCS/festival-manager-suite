@@ -13,4 +13,5 @@ export const GetRecentActivityEntityType = {
   vendor: 'vendor',
   sponsor: 'sponsor',
   volunteer: 'volunteer',
+  contribution: 'contribution',
 } as const;

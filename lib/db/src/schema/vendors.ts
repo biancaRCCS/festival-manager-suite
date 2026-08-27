@@ -20,6 +20,10 @@ export const vendorsTable = pgTable("vendors", {
   reviewNote: text("review_note"),
   portalToken: text("portal_token"),
   stripeSessionId: text("stripe_session_id"),
+  // Stripe settlement data is deliberately separate from staff-recorded
+  // offline payments. This makes an erroneous manual entry reversible.
+  stripePaidAt: timestamp("stripe_paid_at", { withTimezone: true }),
+  stripeSettledAmount: numeric("stripe_settled_amount", { precision: 10, scale: 2 }),
   paidAt: timestamp("paid_at", { withTimezone: true }),
   // Set when an async payment method (e.g. ACH bank transfer) fails to settle
   // after checkout completed. Cleared again on the next successful payment.
@@ -29,6 +33,12 @@ export const vendorsTable = pgTable("vendors", {
   // establishes the initial value; staff update it only after resolving a
   // recorded manual category adjustment.
   settledAmount: numeric("settled_amount", { precision: 10, scale: 2 }),
+  manualPaymentMethod: text("manual_payment_method"),
+  manualPaymentAmount: numeric("manual_payment_amount", { precision: 10, scale: 2 }),
+  manualPaymentReceivedDate: date("manual_payment_received_date", { mode: "string" }),
+  manualPaymentReference: text("manual_payment_reference"),
+  manualPaymentRecordedAt: timestamp("manual_payment_recorded_at", { withTimezone: true }),
+  manualPaymentRecordedBy: text("manual_payment_recorded_by"),
   pendingManualAdjustment: numeric("pending_manual_adjustment", { precision: 10, scale: 2 }),
   pendingAdjustmentTargetAmount: numeric("pending_adjustment_target_amount", { precision: 10, scale: 2 }),
   // Incremented whenever a category recalculates a vendor's amount due. A

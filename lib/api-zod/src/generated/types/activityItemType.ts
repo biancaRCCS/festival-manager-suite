@@ -21,5 +21,7 @@ export const ActivityItemType = {
   details_updated: 'details_updated',
   special_agreement_created: 'special_agreement_created',
   special_agreement_signed: 'special_agreement_signed',
+  manual_payment_recorded: 'manual_payment_recorded',
+  manual_payment_removed: 'manual_payment_removed',
   deleted: 'deleted',
 } as const;

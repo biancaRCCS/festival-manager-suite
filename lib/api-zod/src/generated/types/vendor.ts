@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { VendorApplicationData } from './vendorApplicationData';
+import type { VendorPaymentSource } from './vendorPaymentSource';
 import type { VendorSpecialAgreementSettlementStatus } from './vendorSpecialAgreementSettlementStatus';
 import type { VendorStatus } from './vendorStatus';
 
@@ -30,6 +31,20 @@ export interface Vendor {
   reviewNote?: string | null;
   /** @nullable */
   paidAt?: string | null;
+  /** @nullable */
+  paymentSource?: VendorPaymentSource;
+  /** @nullable */
+  paymentMethod?: string | null;
+  /** @nullable */
+  manualPaymentAmount?: number | null;
+  /** @nullable */
+  manualPaymentReceivedDate?: string | null;
+  /** @nullable */
+  manualPaymentReference?: string | null;
+  /** @nullable */
+  manualPaymentRecordedAt?: string | null;
+  /** @nullable */
+  manualPaymentRecordedBy?: string | null;
   /** @nullable */
   paymentFailedAt?: string | null;
   /** @nullable */

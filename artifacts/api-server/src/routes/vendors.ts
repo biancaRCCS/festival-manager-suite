@@ -22,6 +22,9 @@ import {
   UpdateSpecialAgreementSettlementParams,
   UpdateSpecialAgreementSettlementBody,
   UpdateSpecialAgreementSettlementResponse,
+  RecordVendorManualPaymentParams,
+  RecordVendorManualPaymentBody,
+  RemoveVendorManualPaymentParams,
 } from "@workspace/api-zod";
 import { randomBytes } from "crypto";
 import {
@@ -30,6 +33,7 @@ import {
   sendVendorPortalInviteEmail,
   sendSpecialAgreementPortalInviteEmail,
   sendSpecialAgreementCreatedNotification,
+  sendManualPaymentConfirmationEmail,
   VENDOR_LABELS,
 } from "../lib/email";
 import { getUncachableStripeClient } from "../lib/stripeClient";
@@ -65,6 +69,13 @@ function formatVendor(v: typeof vendorsTable.$inferSelect) {
     location: v.location ?? null,
     reviewNote: v.reviewNote ?? null,
     paidAt: v.paidAt ? v.paidAt.toISOString() : null,
+    paymentSource: v.manualPaymentRecordedAt ? "manual" : (v.stripePaidAt || (v.stripeSessionId && v.paidAt) ? "stripe" : null),
+    paymentMethod: v.manualPaymentRecordedAt ? ({ cash: "Cash", check: "Check", bank_transfer: "Bank transfer", other: "Other" }[v.manualPaymentMethod ?? ""] ?? null) : (v.stripePaidAt || (v.stripeSessionId && v.paidAt) ? "Stripe" : null),
+    manualPaymentAmount: v.manualPaymentAmount === null ? null : Number(v.manualPaymentAmount),
+    manualPaymentReceivedDate: v.manualPaymentReceivedDate ?? null,
+    manualPaymentReference: v.manualPaymentReference ?? null,
+    manualPaymentRecordedAt: v.manualPaymentRecordedAt?.toISOString() ?? null,
+    manualPaymentRecordedBy: v.manualPaymentRecordedBy ?? null,
     paymentFailedAt: v.paymentFailedAt ? v.paymentFailedAt.toISOString() : null,
     paymentFailureReason: v.paymentFailureReason ?? null,
     settledAmount: v.settledAmount === null ? null : Number(v.settledAmount),
@@ -124,6 +135,13 @@ function isWholeCents(value: number | null): boolean {
 
 function asCents(value: number): number {
   return Math.round(value * 100);
+}
+
+function manualPaymentDate(value: Date): string | null {
+  const text = value.toISOString().slice(0, 10);
+  const received = new Date(`${text}T00:00:00.000Z`);
+  const tomorrow = new Date(); tomorrow.setUTCHours(0, 0, 0, 0); tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  return received > tomorrow ? null : text;
 }
 
 const VENDOR_BOOTH_DIMENSIONS = {
@@ -552,6 +570,52 @@ router.patch("/vendors/:id/review", requireStaff, async (req, res): Promise<void
     });
   }
 
+  res.json(formatVendor(updated));
+});
+
+router.post("/vendors/:id/manual-payment", requireStaff, async (req, res): Promise<void> => {
+  const params = RecordVendorManualPaymentParams.safeParse(req.params);
+  const body = RecordVendorManualPaymentBody.safeParse(req.body);
+  if (!params.success || !body.success || !isWholeCents(body.success ? body.data.amount : null) || (body.success && body.data.amount <= 0)) {
+    res.status(400).json({ error: "Enter a positive amount in whole cents and a valid manual payment." }); return;
+  }
+  const receivedDate = manualPaymentDate(body.data.receivedDate);
+  if (!receivedDate) { res.status(400).json({ error: "Received date cannot be unreasonably in the future." }); return; }
+  const [vendor] = await db.select().from(vendorsTable).where(eq(vendorsTable.id, params.data.id)).limit(1);
+  if (!vendor) { res.status(404).json({ error: "Vendor not found" }); return; }
+  if (vendor.vendorType === "special_agreement") { res.status(409).json({ error: "Manual booth payments do not apply to Special Agreement Vendors." }); return; }
+  if (vendor.manualPaymentRecordedAt) { res.status(409).json({ error: "Remove the active manual payment before recording another." }); return; }
+  const hasStripe = Boolean(vendor.stripePaidAt || (vendor.stripeSessionId && vendor.paidAt));
+  if (hasStripe && !body.data.confirmStripeOverlap) { res.status(409).json({ error: "This vendor already has a Stripe payment. Confirm the overlap to record a manual payment." }); return; }
+  const actor = (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null;
+  const reference = body.data.reference?.trim() || null;
+  const paidAt = new Date(`${receivedDate}T00:00:00.000Z`);
+  const [updated] = await db.update(vendorsTable).set({
+    status: "paid", paidAt: hasStripe ? vendor.paidAt : paidAt, settledAmount: hasStripe ? vendor.settledAmount : body.data.amount.toFixed(2),
+    manualPaymentMethod: body.data.method, manualPaymentAmount: body.data.amount.toFixed(2), manualPaymentReceivedDate: receivedDate,
+    manualPaymentReference: reference, manualPaymentRecordedAt: new Date(), manualPaymentRecordedBy: actor,
+  }).where(eq(vendorsTable.id, vendor.id)).returning();
+  const method = ({ cash: "Cash", check: "Check", bank_transfer: "Bank transfer", other: "Other" } as const)[body.data.method];
+  await db.insert(activityLogTable).values({ type: "manual_payment_recorded", message: `Manual ${method} payment of $${body.data.amount.toFixed(2)} recorded for vendor ${updated.name}${reference ? ` (reference: ${reference})` : ""} by ${actor ?? "staff"}`, entityType: "vendor", entityId: updated.id, performedBy: actor });
+  if (body.data.sendConfirmationEmail) void sendManualPaymentConfirmationEmail({ to: updated.email, name: updated.name, entityType: "vendor", amount: body.data.amount, method: body.data.method, reference, receivedDate });
+  res.json(formatVendor(updated));
+});
+
+router.delete("/vendors/:id/manual-payment", requireStaff, async (req, res): Promise<void> => {
+  const params = RemoveVendorManualPaymentParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: "Invalid ID" }); return; }
+  const [vendor] = await db.select().from(vendorsTable).where(eq(vendorsTable.id, params.data.id)).limit(1);
+  if (!vendor) { res.status(404).json({ error: "Vendor not found" }); return; }
+  if (!vendor.manualPaymentRecordedAt) { res.status(409).json({ error: "There is no active manual payment to remove." }); return; }
+  const hasStripe = Boolean(vendor.stripePaidAt || (vendor.stripeSessionId && vendor.paidAt));
+  const actor = (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null;
+  const [updated] = await db.update(vendorsTable).set({
+    status: hasStripe ? "paid" : "approved", paidAt: hasStripe ? (vendor.stripePaidAt ?? vendor.paidAt) : null,
+    settledAmount: hasStripe ? (vendor.stripeSettledAmount ?? vendor.settledAmount) : null,
+    manualPaymentMethod: null, manualPaymentAmount: null, manualPaymentReceivedDate: null, manualPaymentReference: null, manualPaymentRecordedAt: null, manualPaymentRecordedBy: null,
+  }).where(eq(vendorsTable.id, vendor.id)).returning();
+  const method = ({ cash: "Cash", check: "Check", bank_transfer: "Bank transfer", other: "Other" } as const)[vendor.manualPaymentMethod as "cash"];
+  await db.insert(activityLogTable).values({ type: "manual_payment_removed", message: `Manual ${method ?? "payment"} of $${Number(vendor.manualPaymentAmount).toFixed(2)} removed for vendor ${updated.name}${vendor.manualPaymentReference ? ` (reference: ${vendor.manualPaymentReference})` : ""} by ${actor ?? "staff"}`, entityType: "vendor", entityId: updated.id, performedBy: actor });
   res.json(formatVendor(updated));
 });
 

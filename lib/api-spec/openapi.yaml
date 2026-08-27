@@ -319,6 +319,44 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ContributionListResponse"
+    post:
+      operationId: createManualContribution
+      tags: [contributions]
+      summary: Record a staff-created manual contribution
+      security:
+        - clerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManualContributionInput"
+      responses:
+        "201":
+          description: Recorded contribution
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contribution"
+        "400": { description: Invalid manual payment }
+  /contributions/{id}/manual-payment:
+    delete:
+      operationId: removeManualContribution
+      tags: [contributions]
+      summary: Void a staff-created manual contribution
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Voided contribution
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contribution"
+        "404": { description: Not found }
+        "409": { description: Contribution is not an active manual contribution }
 
   /dashboard/activity:
     get:
@@ -345,12 +383,12 @@ paths:
           name: type
           schema:
             type: string
-            enum: [new_application, approved, rejected, paid, final_approved, assigned, category_changed, category_adjustment_settled, details_updated, special_agreement_created, special_agreement_signed, special_agreement_settlement_updated, deleted]
+            enum: [new_application, approved, rejected, paid, final_approved, assigned, category_changed, category_adjustment_settled, details_updated, special_agreement_created, special_agreement_signed, special_agreement_settlement_updated, manual_payment_recorded, manual_payment_removed, deleted]
         - in: query
           name: entityType
           schema:
             type: string
-            enum: [vendor, sponsor, volunteer]
+            enum: [vendor, sponsor, volunteer, contribution]
       responses:
         "200":
           description: Paginated activity feed
@@ -655,6 +693,42 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Vendor"
+  /vendors/{id}/manual-payment:
+    post:
+      operationId: recordVendorManualPayment
+      tags: [vendors]
+      summary: Record an offline vendor payment
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManualPaymentInput"
+      responses:
+        "200":
+          description: Paid vendor
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Vendor" }
+        "409": { description: Confirmation or removal of existing manual payment required }
+    delete:
+      operationId: removeVendorManualPayment
+      tags: [vendors]
+      summary: Remove an offline vendor payment
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Updated vendor
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Vendor" }
 
   /vendors/{id}/category:
     patch:
@@ -903,6 +977,41 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Sponsor"
+  /sponsors/{id}/manual-payment:
+    post:
+      operationId: recordSponsorManualPayment
+      tags: [sponsors]
+      summary: Record an offline sponsor payment
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ManualPaymentInput" }
+      responses:
+        "200":
+          description: Paid sponsor
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Sponsor" }
+        "409": { description: Confirmation or removal of existing manual payment required }
+    delete:
+      operationId: removeSponsorManualPayment
+      tags: [sponsors]
+      summary: Remove an offline sponsor payment
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Updated sponsor
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Sponsor" }
 
   /sponsors/{id}/details:
     patch:
@@ -1295,6 +1404,14 @@ components:
     clerkAuth:
       type: http
       scheme: bearer
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
 
   schemas:
     HealthStatus:
@@ -1597,6 +1714,21 @@ components:
           type: ["string", "null"]
         paidAt:
           type: ["string", "null"]
+        paymentSource:
+          type: ["string", "null"]
+          enum: [stripe, manual, null]
+        paymentMethod:
+          type: ["string", "null"]
+        manualPaymentAmount:
+          type: ["number", "null"]
+        manualPaymentReceivedDate:
+          type: ["string", "null"]
+        manualPaymentReference:
+          type: ["string", "null"]
+        manualPaymentRecordedAt:
+          type: ["string", "null"]
+        manualPaymentRecordedBy:
+          type: ["string", "null"]
         paymentFailedAt:
           type: ["string", "null"]
         paymentFailureReason:
@@ -1693,6 +1825,21 @@ components:
         reviewNote:
           type: ["string", "null"]
         paidAt:
+          type: ["string", "null"]
+        paymentSource:
+          type: ["string", "null"]
+          enum: [stripe, manual, null]
+        paymentMethod:
+          type: ["string", "null"]
+        manualPaymentAmount:
+          type: ["number", "null"]
+        manualPaymentReceivedDate:
+          type: ["string", "null"]
+        manualPaymentReference:
+          type: ["string", "null"]
+        manualPaymentRecordedAt:
+          type: ["string", "null"]
+        manualPaymentRecordedBy:
           type: ["string", "null"]
         paymentFailedAt:
           type: ["string", "null"]
@@ -1839,12 +1986,12 @@ components:
           type: integer
         type:
           type: string
-          enum: [new_application, approved, rejected, paid, final_approved, assigned, category_changed, category_adjustment_settled, details_updated, special_agreement_created, special_agreement_signed, deleted]
+          enum: [new_application, approved, rejected, paid, final_approved, assigned, category_changed, category_adjustment_settled, details_updated, special_agreement_created, special_agreement_signed, manual_payment_recorded, manual_payment_removed, deleted]
         message:
           type: string
         entityType:
           type: string
-          enum: [vendor, sponsor, volunteer]
+          enum: [vendor, sponsor, volunteer, contribution]
         entityId:
           type: integer
         performedBy:
@@ -2072,10 +2219,27 @@ components:
         amount:
           type: number
         stripeSessionId:
-          type: string
+          type: ["string", "null"]
         status:
           type: string
-          enum: [processing, paid, failed]
+          enum: [processing, paid, failed, removed]
+        paymentSource:
+          type: ["string", "null"]
+          enum: [stripe, manual, null]
+        paymentMethod:
+          type: ["string", "null"]
+        manualPaymentReference:
+          type: ["string", "null"]
+        manualPaymentReceivedDate:
+          type: ["string", "null"]
+        manualPaymentRecordedAt:
+          type: ["string", "null"]
+        manualPaymentRecordedBy:
+          type: ["string", "null"]
+        removedAt:
+          type: ["string", "null"]
+        removedBy:
+          type: ["string", "null"]
         paidAt:
           type: ["string", "null"]
           format: date-time
@@ -2098,6 +2262,39 @@ components:
             $ref: "#/components/schemas/Contribution"
         total:
           type: number
+
+    ManualPaymentInput:
+      type: object
+      required: [method, amount, receivedDate]
+      properties:
+        method:
+          type: string
+          enum: [cash, check, bank_transfer, other]
+        amount:
+          type: number
+          exclusiveMinimum: 0
+        receivedDate:
+          type: string
+          format: date
+        reference:
+          type: ["string", "null"]
+          maxLength: 500
+        confirmStripeOverlap:
+          type: boolean
+          default: false
+        sendConfirmationEmail:
+          type: boolean
+          default: false
+
+    ManualContributionInput:
+      allOf:
+        - $ref: "#/components/schemas/ManualPaymentInput"
+        - type: object
+          required: [name, email, yearId]
+          properties:
+            name: { type: string, minLength: 1, maxLength: 200 }
+            email: { type: string }
+            yearId: { type: integer, minimum: 1 }
 
     AgreementSignature:
       type: object

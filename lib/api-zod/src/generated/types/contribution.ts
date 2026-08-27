@@ -5,6 +5,7 @@
  * Romanian Festival Management API
  * OpenAPI spec version: 0.1.0
  */
+import type { ContributionPaymentSource } from './contributionPaymentSource';
 import type { ContributionStatus } from './contributionStatus';
 
 export interface Contribution {
@@ -12,8 +13,25 @@ export interface Contribution {
   name: string;
   email: string;
   amount: number;
-  stripeSessionId: string;
+  /** @nullable */
+  stripeSessionId: string | null;
   status: ContributionStatus;
+  /** @nullable */
+  paymentSource?: ContributionPaymentSource;
+  /** @nullable */
+  paymentMethod?: string | null;
+  /** @nullable */
+  manualPaymentReference?: string | null;
+  /** @nullable */
+  manualPaymentReceivedDate?: string | null;
+  /** @nullable */
+  manualPaymentRecordedAt?: string | null;
+  /** @nullable */
+  manualPaymentRecordedBy?: string | null;
+  /** @nullable */
+  removedAt?: string | null;
+  /** @nullable */
+  removedBy?: string | null;
   /** @nullable */
   paidAt?: Date | null;
   /** @nullable */

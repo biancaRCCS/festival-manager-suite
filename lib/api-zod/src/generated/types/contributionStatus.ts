@@ -13,4 +13,5 @@ export const ContributionStatus = {
   processing: 'processing',
   paid: 'paid',
   failed: 'failed',
+  removed: 'removed',
 } as const;

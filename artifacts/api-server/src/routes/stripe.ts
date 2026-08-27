@@ -418,6 +418,13 @@ export async function handleCheckoutComplete(session: Stripe.Checkout.Session): 
       }
       return;
     }
+    // Retain Stripe settlement evidence even when staff has subsequently
+    // recorded an offline payment; the state transition below intentionally
+    // refuses to overwrite an active manual payment.
+    await db.update(vendorsTable).set({
+      stripePaidAt: new Date(),
+      stripeSettledAmount: (session.amount_total / 100).toFixed(2),
+    }).where(and(eq(vendorsTable.id, id), eq(vendorsTable.stripeSessionId, session.id)));
 
     const [updated] = await db
       .update(vendorsTable)
@@ -474,6 +481,10 @@ export async function handleCheckoutComplete(session: Stripe.Checkout.Session): 
       }
       return;
     }
+    await db.update(sponsorsTable).set({
+      stripePaidAt: new Date(),
+      stripeSettledAmount: (session.amount_total / 100).toFixed(2),
+    }).where(and(eq(sponsorsTable.id, id), eq(sponsorsTable.stripeSessionId, session.id)));
 
     const [updated] = await db
       .update(sponsorsTable)

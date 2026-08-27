@@ -444,14 +444,103 @@ export const ListContributionsResponse = zod.object({
   "name": zod.string(),
   "email": zod.string(),
   "amount": zod.number(),
-  "stripeSessionId": zod.string(),
-  "status": zod.enum(['processing', 'paid', 'failed']),
+  "stripeSessionId": zod.string().nullable(),
+  "status": zod.enum(['processing', 'paid', 'failed', 'removed']),
+  "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "manualPaymentReference": zod.string().nullish(),
+  "manualPaymentReceivedDate": zod.string().nullish(),
+  "manualPaymentRecordedAt": zod.string().nullish(),
+  "manualPaymentRecordedBy": zod.string().nullish(),
+  "removedAt": zod.string().nullish(),
+  "removedBy": zod.string().nullish(),
   "paidAt": zod.coerce.date().nullish(),
   "paymentFailedAt": zod.coerce.date().nullish(),
   "paymentFailureReason": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })),
   "total": zod.number()
+})
+
+
+/**
+ * @summary Record a staff-created manual contribution
+ */
+export const createManualContributionBodyOneAmountExclusiveMin = 0;
+
+export const createManualContributionBodyOneReferenceMax = 500;
+
+export const createManualContributionBodyOneConfirmStripeOverlapDefault = false;
+export const createManualContributionBodyOneSendConfirmationEmailDefault = false;
+export const createManualContributionBodyTwoNameMax = 200;
+
+
+
+
+export const CreateManualContributionBody = zod.object({
+  "method": zod.enum(['cash', 'check', 'bank_transfer', 'other']),
+  "amount": zod.number().gt(createManualContributionBodyOneAmountExclusiveMin),
+  "receivedDate": zod.coerce.date(),
+  "reference": zod.string().max(createManualContributionBodyOneReferenceMax).nullish(),
+  "confirmStripeOverlap": zod.boolean().default(createManualContributionBodyOneConfirmStripeOverlapDefault),
+  "sendConfirmationEmail": zod.boolean().default(createManualContributionBodyOneSendConfirmationEmailDefault)
+}).and(zod.object({
+  "name": zod.string().min(1).max(createManualContributionBodyTwoNameMax),
+  "email": zod.string(),
+  "yearId": zod.number().min(1)
+}))
+
+export const CreateManualContributionResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "amount": zod.number(),
+  "stripeSessionId": zod.string().nullable(),
+  "status": zod.enum(['processing', 'paid', 'failed', 'removed']),
+  "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "manualPaymentReference": zod.string().nullish(),
+  "manualPaymentReceivedDate": zod.string().nullish(),
+  "manualPaymentRecordedAt": zod.string().nullish(),
+  "manualPaymentRecordedBy": zod.string().nullish(),
+  "removedAt": zod.string().nullish(),
+  "removedBy": zod.string().nullish(),
+  "paidAt": zod.coerce.date().nullish(),
+  "paymentFailedAt": zod.coerce.date().nullish(),
+  "paymentFailureReason": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Void a staff-created manual contribution
+ */
+
+
+
+export const RemoveManualContributionParams = zod.object({
+  "id": zod.coerce.number().min(1)
+})
+
+export const RemoveManualContributionResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "amount": zod.number(),
+  "stripeSessionId": zod.string().nullable(),
+  "status": zod.enum(['processing', 'paid', 'failed', 'removed']),
+  "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "manualPaymentReference": zod.string().nullish(),
+  "manualPaymentReceivedDate": zod.string().nullish(),
+  "manualPaymentRecordedAt": zod.string().nullish(),
+  "manualPaymentRecordedBy": zod.string().nullish(),
+  "removedAt": zod.string().nullish(),
+  "removedBy": zod.string().nullish(),
+  "paidAt": zod.coerce.date().nullish(),
+  "paymentFailedAt": zod.coerce.date().nullish(),
+  "paymentFailureReason": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
 })
 
 
@@ -468,16 +557,16 @@ export const getRecentActivityQueryLimitMax = 100;
 export const GetRecentActivityQueryParams = zod.object({
   "page": zod.coerce.number().min(1).default(getRecentActivityQueryPageDefault),
   "limit": zod.coerce.number().min(1).max(getRecentActivityQueryLimitMax).default(getRecentActivityQueryLimitDefault),
-  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'category_changed', 'category_adjustment_settled', 'details_updated', 'special_agreement_created', 'special_agreement_signed', 'special_agreement_settlement_updated', 'deleted']).optional(),
-  "entityType": zod.enum(['vendor', 'sponsor', 'volunteer']).optional()
+  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'category_changed', 'category_adjustment_settled', 'details_updated', 'special_agreement_created', 'special_agreement_signed', 'special_agreement_settlement_updated', 'manual_payment_recorded', 'manual_payment_removed', 'deleted']).optional(),
+  "entityType": zod.enum(['vendor', 'sponsor', 'volunteer', 'contribution']).optional()
 })
 
 export const GetRecentActivityResponse = zod.object({
   "items": zod.array(zod.object({
   "id": zod.number(),
-  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'category_changed', 'category_adjustment_settled', 'details_updated', 'special_agreement_created', 'special_agreement_signed', 'deleted']),
+  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'category_changed', 'category_adjustment_settled', 'details_updated', 'special_agreement_created', 'special_agreement_signed', 'manual_payment_recorded', 'manual_payment_removed', 'deleted']),
   "message": zod.string(),
-  "entityType": zod.enum(['vendor', 'sponsor', 'volunteer']),
+  "entityType": zod.enum(['vendor', 'sponsor', 'volunteer', 'contribution']),
   "entityId": zod.number().optional(),
   "performedBy": zod.string().nullish(),
   "createdAt": zod.string(),
@@ -788,6 +877,13 @@ export const ListVendorsResponseItem = zod.object({
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
   "paidAt": zod.string().nullish(),
+  "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "manualPaymentAmount": zod.number().nullish(),
+  "manualPaymentReceivedDate": zod.string().nullish(),
+  "manualPaymentReference": zod.string().nullish(),
+  "manualPaymentRecordedAt": zod.string().nullish(),
+  "manualPaymentRecordedBy": zod.string().nullish(),
   "paymentFailedAt": zod.string().nullish(),
   "paymentFailureReason": zod.string().nullish(),
   "settledAmount": zod.number().nullish(),
@@ -847,6 +943,13 @@ export const ListSpecialAgreementVendorsResponseItem = zod.object({
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
   "paidAt": zod.string().nullish(),
+  "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "manualPaymentAmount": zod.number().nullish(),
+  "manualPaymentReceivedDate": zod.string().nullish(),
+  "manualPaymentReference": zod.string().nullish(),
+  "manualPaymentRecordedAt": zod.string().nullish(),
+  "manualPaymentRecordedBy": zod.string().nullish(),
   "paymentFailedAt": zod.string().nullish(),
   "paymentFailureReason": zod.string().nullish(),
   "settledAmount": zod.number().nullish(),
@@ -922,6 +1025,13 @@ export const CreateSpecialAgreementVendorResponse = zod.object({
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
   "paidAt": zod.string().nullish(),
+  "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "manualPaymentAmount": zod.number().nullish(),
+  "manualPaymentReceivedDate": zod.string().nullish(),
+  "manualPaymentReference": zod.string().nullish(),
+  "manualPaymentRecordedAt": zod.string().nullish(),
+  "manualPaymentRecordedBy": zod.string().nullish(),
   "paymentFailedAt": zod.string().nullish(),
   "paymentFailureReason": zod.string().nullish(),
   "settledAmount": zod.number().nullish(),
@@ -1016,6 +1126,13 @@ export const GetVendorResponse = zod.object({
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
   "paidAt": zod.string().nullish(),
+  "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "manualPaymentAmount": zod.number().nullish(),
+  "manualPaymentReceivedDate": zod.string().nullish(),
+  "manualPaymentReference": zod.string().nullish(),
+  "manualPaymentRecordedAt": zod.string().nullish(),
+  "manualPaymentRecordedBy": zod.string().nullish(),
   "paymentFailedAt": zod.string().nullish(),
   "paymentFailureReason": zod.string().nullish(),
   "settledAmount": zod.number().nullish(),
@@ -1108,6 +1225,13 @@ export const UpdateSpecialAgreementSettlementResponse = zod.object({
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
   "paidAt": zod.string().nullish(),
+  "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "manualPaymentAmount": zod.number().nullish(),
+  "manualPaymentReceivedDate": zod.string().nullish(),
+  "manualPaymentReference": zod.string().nullish(),
+  "manualPaymentRecordedAt": zod.string().nullish(),
+  "manualPaymentRecordedBy": zod.string().nullish(),
   "paymentFailedAt": zod.string().nullish(),
   "paymentFailureReason": zod.string().nullish(),
   "settledAmount": zod.number().nullish(),
@@ -1171,6 +1295,13 @@ export const ReviewVendorResponse = zod.object({
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
   "paidAt": zod.string().nullish(),
+  "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "manualPaymentAmount": zod.number().nullish(),
+  "manualPaymentReceivedDate": zod.string().nullish(),
+  "manualPaymentReference": zod.string().nullish(),
+  "manualPaymentRecordedAt": zod.string().nullish(),
+  "manualPaymentRecordedBy": zod.string().nullish(),
   "paymentFailedAt": zod.string().nullish(),
   "paymentFailureReason": zod.string().nullish(),
   "settledAmount": zod.number().nullish(),
@@ -1196,6 +1327,158 @@ export const ReviewVendorResponse = zod.object({
   "specialAgreementSettlementStatus": zod.enum(['awaiting_figures', 'calculated', 'paid']).optional(),
   "specialAgreementSettlementNotes": zod.string().nullish(),
   "specialAgreementSettlementVersion": zod.number().min(reviewVendorResponseSpecialAgreementSettlementVersionMin).optional(),
+  "approvedAt": zod.string().nullish(),
+  "finalApprovedAt": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Record an offline vendor payment
+ */
+
+
+
+export const RecordVendorManualPaymentParams = zod.object({
+  "id": zod.coerce.number().min(1)
+})
+
+export const recordVendorManualPaymentBodyAmountExclusiveMin = 0;
+
+export const recordVendorManualPaymentBodyReferenceMax = 500;
+
+export const recordVendorManualPaymentBodyConfirmStripeOverlapDefault = false;
+export const recordVendorManualPaymentBodySendConfirmationEmailDefault = false;
+
+export const RecordVendorManualPaymentBody = zod.object({
+  "method": zod.enum(['cash', 'check', 'bank_transfer', 'other']),
+  "amount": zod.number().gt(recordVendorManualPaymentBodyAmountExclusiveMin),
+  "receivedDate": zod.coerce.date(),
+  "reference": zod.string().max(recordVendorManualPaymentBodyReferenceMax).nullish(),
+  "confirmStripeOverlap": zod.boolean().default(recordVendorManualPaymentBodyConfirmStripeOverlapDefault),
+  "sendConfirmationEmail": zod.boolean().default(recordVendorManualPaymentBodySendConfirmationEmailDefault)
+})
+
+export const recordVendorManualPaymentResponseSpecialAgreementSettlementVersionMin = 0;
+
+
+
+export const RecordVendorManualPaymentResponse = zod.object({
+  "id": zod.number(),
+  "yearId": zod.number(),
+  "name": zod.string(),
+  "businessName": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string(),
+  "vendorType": zod.string(),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'payment_pending', 'payment_processing', 'paid', 'final_approved']),
+  "applicationData": zod.record(zod.string(), zod.unknown()),
+  "agreementSigned": zod.boolean().optional(),
+  "agreementSignedName": zod.string().nullish(),
+  "spotNumber": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "reviewNote": zod.string().nullish(),
+  "paidAt": zod.string().nullish(),
+  "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "manualPaymentAmount": zod.number().nullish(),
+  "manualPaymentReceivedDate": zod.string().nullish(),
+  "manualPaymentReference": zod.string().nullish(),
+  "manualPaymentRecordedAt": zod.string().nullish(),
+  "manualPaymentRecordedBy": zod.string().nullish(),
+  "paymentFailedAt": zod.string().nullish(),
+  "paymentFailureReason": zod.string().nullish(),
+  "settledAmount": zod.number().nullish(),
+  "pendingManualAdjustment": zod.number().nullish(),
+  "pendingAdjustmentTargetAmount": zod.number().nullish(),
+  "specialAgreementOperationType": zod.string().nullish(),
+  "specialAgreementRevenueSharePercentage": zod.number().nullish(),
+  "specialAgreementInternalNotes": zod.string().nullish(),
+  "specialAgreementDayOfContactName": zod.string().nullish(),
+  "specialAgreementDayOfContactPhone": zod.string().nullish(),
+  "specialAgreementBackupContactName": zod.string().nullish(),
+  "specialAgreementBackupContactPhone": zod.string().nullish(),
+  "specialAgreementSignedDate": zod.string().nullish(),
+  "specialAgreementSignedAt": zod.string().nullish(),
+  "specialAgreementGrossSales": zod.number().nullish(),
+  "specialAgreementDeductions": zod.number().nullish(),
+  "specialAgreementDeductionsNotes": zod.string().nullish(),
+  "specialAgreementNetProfit": zod.number().nullish(),
+  "specialAgreementAmountOwed": zod.number().nullish(),
+  "specialAgreementAmountPaid": zod.number().nullish(),
+  "specialAgreementPaidDate": zod.string().nullish(),
+  "specialAgreementOutstandingBalance": zod.number().nullish(),
+  "specialAgreementSettlementStatus": zod.enum(['awaiting_figures', 'calculated', 'paid']).optional(),
+  "specialAgreementSettlementNotes": zod.string().nullish(),
+  "specialAgreementSettlementVersion": zod.number().min(recordVendorManualPaymentResponseSpecialAgreementSettlementVersionMin).optional(),
+  "approvedAt": zod.string().nullish(),
+  "finalApprovedAt": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Remove an offline vendor payment
+ */
+
+
+
+export const RemoveVendorManualPaymentParams = zod.object({
+  "id": zod.coerce.number().min(1)
+})
+
+export const removeVendorManualPaymentResponseSpecialAgreementSettlementVersionMin = 0;
+
+
+
+export const RemoveVendorManualPaymentResponse = zod.object({
+  "id": zod.number(),
+  "yearId": zod.number(),
+  "name": zod.string(),
+  "businessName": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string(),
+  "vendorType": zod.string(),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'payment_pending', 'payment_processing', 'paid', 'final_approved']),
+  "applicationData": zod.record(zod.string(), zod.unknown()),
+  "agreementSigned": zod.boolean().optional(),
+  "agreementSignedName": zod.string().nullish(),
+  "spotNumber": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "reviewNote": zod.string().nullish(),
+  "paidAt": zod.string().nullish(),
+  "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "manualPaymentAmount": zod.number().nullish(),
+  "manualPaymentReceivedDate": zod.string().nullish(),
+  "manualPaymentReference": zod.string().nullish(),
+  "manualPaymentRecordedAt": zod.string().nullish(),
+  "manualPaymentRecordedBy": zod.string().nullish(),
+  "paymentFailedAt": zod.string().nullish(),
+  "paymentFailureReason": zod.string().nullish(),
+  "settledAmount": zod.number().nullish(),
+  "pendingManualAdjustment": zod.number().nullish(),
+  "pendingAdjustmentTargetAmount": zod.number().nullish(),
+  "specialAgreementOperationType": zod.string().nullish(),
+  "specialAgreementRevenueSharePercentage": zod.number().nullish(),
+  "specialAgreementInternalNotes": zod.string().nullish(),
+  "specialAgreementDayOfContactName": zod.string().nullish(),
+  "specialAgreementDayOfContactPhone": zod.string().nullish(),
+  "specialAgreementBackupContactName": zod.string().nullish(),
+  "specialAgreementBackupContactPhone": zod.string().nullish(),
+  "specialAgreementSignedDate": zod.string().nullish(),
+  "specialAgreementSignedAt": zod.string().nullish(),
+  "specialAgreementGrossSales": zod.number().nullish(),
+  "specialAgreementDeductions": zod.number().nullish(),
+  "specialAgreementDeductionsNotes": zod.string().nullish(),
+  "specialAgreementNetProfit": zod.number().nullish(),
+  "specialAgreementAmountOwed": zod.number().nullish(),
+  "specialAgreementAmountPaid": zod.number().nullish(),
+  "specialAgreementPaidDate": zod.string().nullish(),
+  "specialAgreementOutstandingBalance": zod.number().nullish(),
+  "specialAgreementSettlementStatus": zod.enum(['awaiting_figures', 'calculated', 'paid']).optional(),
+  "specialAgreementSettlementNotes": zod.string().nullish(),
+  "specialAgreementSettlementVersion": zod.number().min(removeVendorManualPaymentResponseSpecialAgreementSettlementVersionMin).optional(),
   "approvedAt": zod.string().nullish(),
   "finalApprovedAt": zod.string().nullish(),
   "createdAt": zod.string()
@@ -1240,6 +1523,13 @@ export const UpdateVendorCategoryResponse = zod.object({
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
   "paidAt": zod.string().nullish(),
+  "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "manualPaymentAmount": zod.number().nullish(),
+  "manualPaymentReceivedDate": zod.string().nullish(),
+  "manualPaymentReference": zod.string().nullish(),
+  "manualPaymentRecordedAt": zod.string().nullish(),
+  "manualPaymentRecordedBy": zod.string().nullish(),
   "paymentFailedAt": zod.string().nullish(),
   "paymentFailureReason": zod.string().nullish(),
   "settledAmount": zod.number().nullish(),
@@ -1338,6 +1628,13 @@ export const UpdateVendorDetailsResponse = zod.object({
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
   "paidAt": zod.string().nullish(),
+  "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "manualPaymentAmount": zod.number().nullish(),
+  "manualPaymentReceivedDate": zod.string().nullish(),
+  "manualPaymentReference": zod.string().nullish(),
+  "manualPaymentRecordedAt": zod.string().nullish(),
+  "manualPaymentRecordedBy": zod.string().nullish(),
   "paymentFailedAt": zod.string().nullish(),
   "paymentFailureReason": zod.string().nullish(),
   "settledAmount": zod.number().nullish(),
@@ -1396,6 +1693,13 @@ export const SettleVendorCategoryAdjustmentResponse = zod.object({
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
   "paidAt": zod.string().nullish(),
+  "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "manualPaymentAmount": zod.number().nullish(),
+  "manualPaymentReceivedDate": zod.string().nullish(),
+  "manualPaymentReference": zod.string().nullish(),
+  "manualPaymentRecordedAt": zod.string().nullish(),
+  "manualPaymentRecordedBy": zod.string().nullish(),
   "paymentFailedAt": zod.string().nullish(),
   "paymentFailureReason": zod.string().nullish(),
   "settledAmount": zod.number().nullish(),
@@ -1454,6 +1758,13 @@ export const FinalApproveVendorResponse = zod.object({
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
   "paidAt": zod.string().nullish(),
+  "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "manualPaymentAmount": zod.number().nullish(),
+  "manualPaymentReceivedDate": zod.string().nullish(),
+  "manualPaymentReference": zod.string().nullish(),
+  "manualPaymentRecordedAt": zod.string().nullish(),
+  "manualPaymentRecordedBy": zod.string().nullish(),
   "paymentFailedAt": zod.string().nullish(),
   "paymentFailureReason": zod.string().nullish(),
   "settledAmount": zod.number().nullish(),
@@ -1517,6 +1828,13 @@ export const AssignVendorSpotResponse = zod.object({
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
   "paidAt": zod.string().nullish(),
+  "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "manualPaymentAmount": zod.number().nullish(),
+  "manualPaymentReceivedDate": zod.string().nullish(),
+  "manualPaymentReference": zod.string().nullish(),
+  "manualPaymentRecordedAt": zod.string().nullish(),
+  "manualPaymentRecordedBy": zod.string().nullish(),
   "paymentFailedAt": zod.string().nullish(),
   "paymentFailureReason": zod.string().nullish(),
   "settledAmount": zod.number().nullish(),
@@ -1583,6 +1901,13 @@ export const ListSponsorsResponseItem = zod.object({
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
   "paidAt": zod.string().nullish(),
+  "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "manualPaymentAmount": zod.number().nullish(),
+  "manualPaymentReceivedDate": zod.string().nullish(),
+  "manualPaymentReference": zod.string().nullish(),
+  "manualPaymentRecordedAt": zod.string().nullish(),
+  "manualPaymentRecordedBy": zod.string().nullish(),
   "paymentFailedAt": zod.string().nullish(),
   "paymentFailureReason": zod.string().nullish(),
   "approvedAt": zod.string().nullish(),
@@ -1617,6 +1942,13 @@ export const GetSponsorResponse = zod.object({
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
   "paidAt": zod.string().nullish(),
+  "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "manualPaymentAmount": zod.number().nullish(),
+  "manualPaymentReceivedDate": zod.string().nullish(),
+  "manualPaymentReference": zod.string().nullish(),
+  "manualPaymentRecordedAt": zod.string().nullish(),
+  "manualPaymentRecordedBy": zod.string().nullish(),
   "paymentFailedAt": zod.string().nullish(),
   "paymentFailureReason": zod.string().nullish(),
   "approvedAt": zod.string().nullish(),
@@ -1665,6 +1997,115 @@ export const ReviewSponsorResponse = zod.object({
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
   "paidAt": zod.string().nullish(),
+  "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "manualPaymentAmount": zod.number().nullish(),
+  "manualPaymentReceivedDate": zod.string().nullish(),
+  "manualPaymentReference": zod.string().nullish(),
+  "manualPaymentRecordedAt": zod.string().nullish(),
+  "manualPaymentRecordedBy": zod.string().nullish(),
+  "paymentFailedAt": zod.string().nullish(),
+  "paymentFailureReason": zod.string().nullish(),
+  "approvedAt": zod.string().nullish(),
+  "detailsSubmittedAt": zod.string().nullish(),
+  "finalApprovedAt": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Record an offline sponsor payment
+ */
+
+
+
+export const RecordSponsorManualPaymentParams = zod.object({
+  "id": zod.coerce.number().min(1)
+})
+
+export const recordSponsorManualPaymentBodyAmountExclusiveMin = 0;
+
+export const recordSponsorManualPaymentBodyReferenceMax = 500;
+
+export const recordSponsorManualPaymentBodyConfirmStripeOverlapDefault = false;
+export const recordSponsorManualPaymentBodySendConfirmationEmailDefault = false;
+
+export const RecordSponsorManualPaymentBody = zod.object({
+  "method": zod.enum(['cash', 'check', 'bank_transfer', 'other']),
+  "amount": zod.number().gt(recordSponsorManualPaymentBodyAmountExclusiveMin),
+  "receivedDate": zod.coerce.date(),
+  "reference": zod.string().max(recordSponsorManualPaymentBodyReferenceMax).nullish(),
+  "confirmStripeOverlap": zod.boolean().default(recordSponsorManualPaymentBodyConfirmStripeOverlapDefault),
+  "sendConfirmationEmail": zod.boolean().default(recordSponsorManualPaymentBodySendConfirmationEmailDefault)
+})
+
+export const RecordSponsorManualPaymentResponse = zod.object({
+  "id": zod.number(),
+  "yearId": zod.number(),
+  "name": zod.string(),
+  "orgName": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string(),
+  "tier": zod.string(),
+  "status": zod.enum(['pending_payment', 'payment_processing', 'paid', 'approved', 'rejected', 'details_submitted', 'details_approved']),
+  "applicationData": zod.record(zod.string(), zod.unknown()),
+  "agreementSigned": zod.boolean().optional(),
+  "agreementSignedName": zod.string().nullish(),
+  "sponsorshipAmount": zod.number().nullish(),
+  "spotNumber": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "reviewNote": zod.string().nullish(),
+  "paidAt": zod.string().nullish(),
+  "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "manualPaymentAmount": zod.number().nullish(),
+  "manualPaymentReceivedDate": zod.string().nullish(),
+  "manualPaymentReference": zod.string().nullish(),
+  "manualPaymentRecordedAt": zod.string().nullish(),
+  "manualPaymentRecordedBy": zod.string().nullish(),
+  "paymentFailedAt": zod.string().nullish(),
+  "paymentFailureReason": zod.string().nullish(),
+  "approvedAt": zod.string().nullish(),
+  "detailsSubmittedAt": zod.string().nullish(),
+  "finalApprovedAt": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Remove an offline sponsor payment
+ */
+
+
+
+export const RemoveSponsorManualPaymentParams = zod.object({
+  "id": zod.coerce.number().min(1)
+})
+
+export const RemoveSponsorManualPaymentResponse = zod.object({
+  "id": zod.number(),
+  "yearId": zod.number(),
+  "name": zod.string(),
+  "orgName": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string(),
+  "tier": zod.string(),
+  "status": zod.enum(['pending_payment', 'payment_processing', 'paid', 'approved', 'rejected', 'details_submitted', 'details_approved']),
+  "applicationData": zod.record(zod.string(), zod.unknown()),
+  "agreementSigned": zod.boolean().optional(),
+  "agreementSignedName": zod.string().nullish(),
+  "sponsorshipAmount": zod.number().nullish(),
+  "spotNumber": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "reviewNote": zod.string().nullish(),
+  "paidAt": zod.string().nullish(),
+  "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "manualPaymentAmount": zod.number().nullish(),
+  "manualPaymentReceivedDate": zod.string().nullish(),
+  "manualPaymentReference": zod.string().nullish(),
+  "manualPaymentRecordedAt": zod.string().nullish(),
+  "manualPaymentRecordedBy": zod.string().nullish(),
   "paymentFailedAt": zod.string().nullish(),
   "paymentFailureReason": zod.string().nullish(),
   "approvedAt": zod.string().nullish(),
@@ -1721,6 +2162,13 @@ export const UpdateSponsorDetailsResponse = zod.object({
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
   "paidAt": zod.string().nullish(),
+  "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "manualPaymentAmount": zod.number().nullish(),
+  "manualPaymentReceivedDate": zod.string().nullish(),
+  "manualPaymentReference": zod.string().nullish(),
+  "manualPaymentRecordedAt": zod.string().nullish(),
+  "manualPaymentRecordedBy": zod.string().nullish(),
   "paymentFailedAt": zod.string().nullish(),
   "paymentFailureReason": zod.string().nullish(),
   "approvedAt": zod.string().nullish(),
@@ -1754,6 +2202,13 @@ export const FinalApproveSponsorResponse = zod.object({
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
   "paidAt": zod.string().nullish(),
+  "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "manualPaymentAmount": zod.number().nullish(),
+  "manualPaymentReceivedDate": zod.string().nullish(),
+  "manualPaymentReference": zod.string().nullish(),
+  "manualPaymentRecordedAt": zod.string().nullish(),
+  "manualPaymentRecordedBy": zod.string().nullish(),
   "paymentFailedAt": zod.string().nullish(),
   "paymentFailureReason": zod.string().nullish(),
   "approvedAt": zod.string().nullish(),
@@ -1792,6 +2247,13 @@ export const AssignSponsorSpotResponse = zod.object({
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
   "paidAt": zod.string().nullish(),
+  "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "manualPaymentAmount": zod.number().nullish(),
+  "manualPaymentReceivedDate": zod.string().nullish(),
+  "manualPaymentReference": zod.string().nullish(),
+  "manualPaymentRecordedAt": zod.string().nullish(),
+  "manualPaymentRecordedBy": zod.string().nullish(),
   "paymentFailedAt": zod.string().nullish(),
   "paymentFailureReason": zod.string().nullish(),
   "approvedAt": zod.string().nullish(),

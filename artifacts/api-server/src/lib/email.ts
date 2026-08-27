@@ -188,6 +188,22 @@ const TIER_LABELS: Record<string, string> = {
 
 export { VENDOR_LABELS, TIER_LABELS };
 
+/** Confirmation used only when a staff member explicitly opts in while
+ * recording an offline payment. */
+export async function sendManualPaymentConfirmationEmail(params: {
+  to: string; name: string; entityType: "vendor" | "sponsor" | "contribution";
+  amount: number; method: string; reference?: string | null; receivedDate: string;
+}) {
+  const labels: Record<string, string> = { cash: "Cash", check: "Check", bank_transfer: "Bank transfer", other: "Other" };
+  const kind = params.entityType === "contribution" ? "contribution" : `${params.entityType} payment`;
+  const amount = params.amount.toLocaleString("en-US", { style: "currency", currency: "USD" });
+  const html = `<div style="${BASE_STYLE}"><h2 style="color:#8b1a1a;">Payment Received</h2>
+    <p>Dear ${escapeHtml(params.name)},</p><p>We have recorded your ${kind}. Thank you for your support.</p>${DIVIDER}
+    ${field("Amount", amount)}${field("Payment method", labels[params.method] ?? params.method)}
+    ${field("Received date", params.receivedDate)}${params.reference ? field("Reference", escapeHtml(params.reference)) : ""}</div>`;
+  await send(params.to, `Payment Received — Romanian Festival`, html);
+}
+
 // ---------------------------------------------------------------------------
 // 0a. Email status — never exposes the full API key
 // ---------------------------------------------------------------------------

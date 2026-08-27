@@ -22,5 +22,7 @@ export const GetRecentActivityType = {
   special_agreement_created: 'special_agreement_created',
   special_agreement_signed: 'special_agreement_signed',
   special_agreement_settlement_updated: 'special_agreement_settlement_updated',
+  manual_payment_recorded: 'manual_payment_recorded',
+  manual_payment_removed: 'manual_payment_removed',
   deleted: 'deleted',
 } as const;

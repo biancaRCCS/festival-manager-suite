@@ -23,6 +23,7 @@ import type {
   AgreementSignature,
   ApplicationConfirmation,
   CheckoutSession,
+  Contribution,
   ContributionCheckoutInput,
   ContributionListResponse,
   DashboardSummary,
@@ -45,6 +46,8 @@ import type {
   ListSponsorsParams,
   ListVendorsParams,
   ListVolunteersParams,
+  ManualContributionInput,
+  ManualPaymentInput,
   PaginatedActivityResponse,
   PortalInfo,
   ReviewDecision,
@@ -1144,6 +1147,148 @@ export function useListContributions<TData = Awaited<ReturnType<typeof listContr
 
 
 
+export const getCreateManualContributionUrl = () => {
+
+
+
+
+  return `/api/contributions`
+}
+
+/**
+ * @summary Record a staff-created manual contribution
+ */
+export const createManualContribution = async (manualContributionInput: ManualContributionInput, options?: RequestInit): Promise<Contribution> => {
+
+  return customFetch<Contribution>(getCreateManualContributionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(manualContributionInput)
+  }
+);}
+
+
+
+
+
+export const getCreateManualContributionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createManualContribution>>, TError,{data: BodyType<ManualContributionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createManualContribution>>, TError,{data: BodyType<ManualContributionInput>}, TContext> => {
+
+const mutationKey = ['createManualContribution'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createManualContribution>>, {data: BodyType<ManualContributionInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createManualContribution(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateManualContributionMutationResult = NonNullable<Awaited<ReturnType<typeof createManualContribution>>>
+    export type CreateManualContributionMutationBody = BodyType<ManualContributionInput>
+    export type CreateManualContributionMutationError = ErrorType<void>
+
+    /**
+ * @summary Record a staff-created manual contribution
+ */
+export const useCreateManualContribution = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createManualContribution>>, TError,{data: BodyType<ManualContributionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createManualContribution>>,
+        TError,
+        {data: BodyType<ManualContributionInput>},
+        TContext
+      > => {
+      return useMutation(getCreateManualContributionMutationOptions(options));
+    }
+
+export const getRemoveManualContributionUrl = (id: number,) => {
+
+
+
+
+  return `/api/contributions/${id}/manual-payment`
+}
+
+/**
+ * @summary Void a staff-created manual contribution
+ */
+export const removeManualContribution = async (id: number, options?: RequestInit): Promise<Contribution> => {
+
+  return customFetch<Contribution>(getRemoveManualContributionUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRemoveManualContributionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeManualContribution>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeManualContribution>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['removeManualContribution'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeManualContribution>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  removeManualContribution(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveManualContributionMutationResult = NonNullable<Awaited<ReturnType<typeof removeManualContribution>>>
+
+    export type RemoveManualContributionMutationError = ErrorType<void>
+
+    /**
+ * @summary Void a staff-created manual contribution
+ */
+export const useRemoveManualContribution = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeManualContribution>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof removeManualContribution>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRemoveManualContributionMutationOptions(options));
+    }
+
 export const getGetRecentActivityUrl = (params?: GetRecentActivityParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -2218,6 +2363,149 @@ export const useReviewVendor = <TError = ErrorType<unknown>,
       return useMutation(getReviewVendorMutationOptions(options));
     }
 
+export const getRecordVendorManualPaymentUrl = (id: number,) => {
+
+
+
+
+  return `/api/vendors/${id}/manual-payment`
+}
+
+/**
+ * @summary Record an offline vendor payment
+ */
+export const recordVendorManualPayment = async (id: number,
+    manualPaymentInput: ManualPaymentInput, options?: RequestInit): Promise<Vendor> => {
+
+  return customFetch<Vendor>(getRecordVendorManualPaymentUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(manualPaymentInput)
+  }
+);}
+
+
+
+
+
+export const getRecordVendorManualPaymentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordVendorManualPayment>>, TError,{id: number;data: BodyType<ManualPaymentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof recordVendorManualPayment>>, TError,{id: number;data: BodyType<ManualPaymentInput>}, TContext> => {
+
+const mutationKey = ['recordVendorManualPayment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recordVendorManualPayment>>, {id: number;data: BodyType<ManualPaymentInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  recordVendorManualPayment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RecordVendorManualPaymentMutationResult = NonNullable<Awaited<ReturnType<typeof recordVendorManualPayment>>>
+    export type RecordVendorManualPaymentMutationBody = BodyType<ManualPaymentInput>
+    export type RecordVendorManualPaymentMutationError = ErrorType<void>
+
+    /**
+ * @summary Record an offline vendor payment
+ */
+export const useRecordVendorManualPayment = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordVendorManualPayment>>, TError,{id: number;data: BodyType<ManualPaymentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof recordVendorManualPayment>>,
+        TError,
+        {id: number;data: BodyType<ManualPaymentInput>},
+        TContext
+      > => {
+      return useMutation(getRecordVendorManualPaymentMutationOptions(options));
+    }
+
+export const getRemoveVendorManualPaymentUrl = (id: number,) => {
+
+
+
+
+  return `/api/vendors/${id}/manual-payment`
+}
+
+/**
+ * @summary Remove an offline vendor payment
+ */
+export const removeVendorManualPayment = async (id: number, options?: RequestInit): Promise<Vendor> => {
+
+  return customFetch<Vendor>(getRemoveVendorManualPaymentUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRemoveVendorManualPaymentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeVendorManualPayment>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeVendorManualPayment>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['removeVendorManualPayment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeVendorManualPayment>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  removeVendorManualPayment(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveVendorManualPaymentMutationResult = NonNullable<Awaited<ReturnType<typeof removeVendorManualPayment>>>
+
+    export type RemoveVendorManualPaymentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Remove an offline vendor payment
+ */
+export const useRemoveVendorManualPayment = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeVendorManualPayment>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof removeVendorManualPayment>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRemoveVendorManualPaymentMutationOptions(options));
+    }
+
 export const getUpdateVendorCategoryUrl = (id: number,) => {
 
 
@@ -2949,6 +3237,149 @@ export const useReviewSponsor = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getReviewSponsorMutationOptions(options));
+    }
+
+export const getRecordSponsorManualPaymentUrl = (id: number,) => {
+
+
+
+
+  return `/api/sponsors/${id}/manual-payment`
+}
+
+/**
+ * @summary Record an offline sponsor payment
+ */
+export const recordSponsorManualPayment = async (id: number,
+    manualPaymentInput: ManualPaymentInput, options?: RequestInit): Promise<Sponsor> => {
+
+  return customFetch<Sponsor>(getRecordSponsorManualPaymentUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(manualPaymentInput)
+  }
+);}
+
+
+
+
+
+export const getRecordSponsorManualPaymentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordSponsorManualPayment>>, TError,{id: number;data: BodyType<ManualPaymentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof recordSponsorManualPayment>>, TError,{id: number;data: BodyType<ManualPaymentInput>}, TContext> => {
+
+const mutationKey = ['recordSponsorManualPayment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recordSponsorManualPayment>>, {id: number;data: BodyType<ManualPaymentInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  recordSponsorManualPayment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RecordSponsorManualPaymentMutationResult = NonNullable<Awaited<ReturnType<typeof recordSponsorManualPayment>>>
+    export type RecordSponsorManualPaymentMutationBody = BodyType<ManualPaymentInput>
+    export type RecordSponsorManualPaymentMutationError = ErrorType<void>
+
+    /**
+ * @summary Record an offline sponsor payment
+ */
+export const useRecordSponsorManualPayment = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordSponsorManualPayment>>, TError,{id: number;data: BodyType<ManualPaymentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof recordSponsorManualPayment>>,
+        TError,
+        {id: number;data: BodyType<ManualPaymentInput>},
+        TContext
+      > => {
+      return useMutation(getRecordSponsorManualPaymentMutationOptions(options));
+    }
+
+export const getRemoveSponsorManualPaymentUrl = (id: number,) => {
+
+
+
+
+  return `/api/sponsors/${id}/manual-payment`
+}
+
+/**
+ * @summary Remove an offline sponsor payment
+ */
+export const removeSponsorManualPayment = async (id: number, options?: RequestInit): Promise<Sponsor> => {
+
+  return customFetch<Sponsor>(getRemoveSponsorManualPaymentUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRemoveSponsorManualPaymentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeSponsorManualPayment>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeSponsorManualPayment>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['removeSponsorManualPayment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeSponsorManualPayment>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  removeSponsorManualPayment(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveSponsorManualPaymentMutationResult = NonNullable<Awaited<ReturnType<typeof removeSponsorManualPayment>>>
+
+    export type RemoveSponsorManualPaymentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Remove an offline sponsor payment
+ */
+export const useRemoveSponsorManualPayment = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeSponsorManualPayment>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof removeSponsorManualPayment>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRemoveSponsorManualPaymentMutationOptions(options));
     }
 
 export const getUpdateSponsorDetailsUrl = (id: number,) => {

@@ -186,6 +186,7 @@ export default function SponsorsPage() {
                     <TableHead>Organization</TableHead>
                     <TableHead>Tier / Amount</TableHead>
                     <TableHead>Contact</TableHead>
+                    <TableHead>Payment</TableHead>
                     <TableHead>Applied</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -226,6 +227,11 @@ export default function SponsorsPage() {
                         <TableCell>
                           <div className="text-sm">{sponsor.email}</div>
                           <div className="text-xs text-muted-foreground">{sponsor.phone}</div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm text-foreground">
+                            {sponsor.paymentSource === 'stripe' ? 'Stripe' : sponsor.paymentSource === 'manual' ? (sponsor.paymentMethod ? sponsor.paymentMethod.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 'Manual') : '—'}
+                          </div>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {new Date(sponsor.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}

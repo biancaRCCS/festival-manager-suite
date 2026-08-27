@@ -46,6 +46,8 @@ const TYPE_LABELS: Record<string, string> = {
   details_updated: "Details Updated",
   special_agreement_created: "Special Agreement Created",
   special_agreement_signed: "Special Agreement Signed",
+  manual_payment_recorded: "Manual Payment Recorded",
+  manual_payment_removed: "Manual Payment Removed",
   deleted:         "Deleted",
   new_application: "New Application",
 }
@@ -70,6 +72,8 @@ function typeIcon(type: string) {
     case "details_updated": return <PencilLine className="w-4 h-4 text-sky-600" />
     case "special_agreement_created": return <FileSignature className="w-4 h-4 text-violet-600" />
     case "special_agreement_signed": return <CheckCircle className="w-4 h-4 text-violet-600" />
+    case "manual_payment_recorded": return <DollarSign className="w-4 h-4 text-emerald-600" />
+    case "manual_payment_removed": return <XCircle className="w-4 h-4 text-destructive" />
     case "deleted":         return <Trash2       className="w-4 h-4 text-gray-400" />
     case "new_application": return <UserPlus     className="w-4 h-4 text-amber-500" />
     default:                return <ClipboardList className="w-4 h-4 text-muted-foreground" />
@@ -79,8 +83,10 @@ function typeIcon(type: string) {
 function typeBadgeVariant(type: string): "default" | "secondary" | "destructive" | "outline" {
   switch (type) {
     case "approved":
-    case "final_approved": return "default"
+    case "final_approved":
+    case "manual_payment_recorded": return "default"
     case "rejected":
+    case "manual_payment_removed":
     case "deleted":        return "destructive"
     case "paid":           return "secondary"
     case "payment_failed": return "destructive"
@@ -215,7 +221,9 @@ export default function ActivityPage() {
                   <SelectItem value="assigned">Assigned</SelectItem>
                   <SelectItem value="category_changed">Category changed</SelectItem>
                   <SelectItem value="category_adjustment_settled">Category adjustment handled</SelectItem>
-                   <SelectItem value="details_updated">Details updated</SelectItem>
+                  <SelectItem value="details_updated">Details updated</SelectItem>
+                  <SelectItem value="manual_payment_recorded">Manual payment recorded</SelectItem>
+                  <SelectItem value="manual_payment_removed">Manual payment removed</SelectItem>
                   <SelectItem value="deleted">Deleted</SelectItem>
                   <SelectItem value="new_application">New application</SelectItem>
                 </SelectContent>

@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, numeric, text, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, numeric, text, boolean, jsonb, timestamp, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { festivalYearsTable } from "./festivalYears";
@@ -22,11 +22,19 @@ export const sponsorsTable = pgTable("sponsors", {
   reviewNote: text("review_note"),
   portalToken: text("portal_token"),
   stripeSessionId: text("stripe_session_id"),
+  stripePaidAt: timestamp("stripe_paid_at", { withTimezone: true }),
+  stripeSettledAmount: numeric("stripe_settled_amount", { precision: 10, scale: 2 }),
   paidAt: timestamp("paid_at", { withTimezone: true }),
   // Set when an async payment method (e.g. ACH bank transfer) fails to settle
   // after checkout completed. Cleared again on the next successful payment.
   paymentFailedAt: timestamp("payment_failed_at", { withTimezone: true }),
   paymentFailureReason: text("payment_failure_reason"),
+  manualPaymentMethod: text("manual_payment_method"),
+  manualPaymentAmount: numeric("manual_payment_amount", { precision: 10, scale: 2 }),
+  manualPaymentReceivedDate: date("manual_payment_received_date", { mode: "string" }),
+  manualPaymentReference: text("manual_payment_reference"),
+  manualPaymentRecordedAt: timestamp("manual_payment_recorded_at", { withTimezone: true }),
+  manualPaymentRecordedBy: text("manual_payment_recorded_by"),
   approvedAt: timestamp("approved_at", { withTimezone: true }),
   detailsSubmittedAt: timestamp("details_submitted_at", { withTimezone: true }),
   finalApprovedAt: timestamp("final_approved_at", { withTimezone: true }), // repurposed: set when status → details_approved

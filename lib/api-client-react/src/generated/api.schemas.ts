@@ -177,6 +177,17 @@ export const VendorStatus = {
 
 export type VendorApplicationData = { [key: string]: unknown };
 
+/**
+ * @nullable
+ */
+export type VendorPaymentSource = typeof VendorPaymentSource[keyof typeof VendorPaymentSource] | null;
+
+
+export const VendorPaymentSource = {
+  stripe: 'stripe',
+  manual: 'manual',
+} as const;
+
 export type VendorSpecialAgreementSettlementStatus = typeof VendorSpecialAgreementSettlementStatus[keyof typeof VendorSpecialAgreementSettlementStatus];
 
 
@@ -207,6 +218,20 @@ export interface Vendor {
   reviewNote?: string | null;
   /** @nullable */
   paidAt?: string | null;
+  /** @nullable */
+  paymentSource?: VendorPaymentSource;
+  /** @nullable */
+  paymentMethod?: string | null;
+  /** @nullable */
+  manualPaymentAmount?: number | null;
+  /** @nullable */
+  manualPaymentReceivedDate?: string | null;
+  /** @nullable */
+  manualPaymentReference?: string | null;
+  /** @nullable */
+  manualPaymentRecordedAt?: string | null;
+  /** @nullable */
+  manualPaymentRecordedBy?: string | null;
   /** @nullable */
   paymentFailedAt?: string | null;
   /** @nullable */
@@ -278,6 +303,17 @@ export const SponsorStatus = {
 
 export type SponsorApplicationData = { [key: string]: unknown };
 
+/**
+ * @nullable
+ */
+export type SponsorPaymentSource = typeof SponsorPaymentSource[keyof typeof SponsorPaymentSource] | null;
+
+
+export const SponsorPaymentSource = {
+  stripe: 'stripe',
+  manual: 'manual',
+} as const;
+
 export interface Sponsor {
   id: number;
   yearId: number;
@@ -301,6 +337,20 @@ export interface Sponsor {
   reviewNote?: string | null;
   /** @nullable */
   paidAt?: string | null;
+  /** @nullable */
+  paymentSource?: SponsorPaymentSource;
+  /** @nullable */
+  paymentMethod?: string | null;
+  /** @nullable */
+  manualPaymentAmount?: number | null;
+  /** @nullable */
+  manualPaymentReceivedDate?: string | null;
+  /** @nullable */
+  manualPaymentReference?: string | null;
+  /** @nullable */
+  manualPaymentRecordedAt?: string | null;
+  /** @nullable */
+  manualPaymentRecordedBy?: string | null;
   /** @nullable */
   paymentFailedAt?: string | null;
   /** @nullable */
@@ -424,6 +474,8 @@ export const ActivityItemType = {
   details_updated: 'details_updated',
   special_agreement_created: 'special_agreement_created',
   special_agreement_signed: 'special_agreement_signed',
+  manual_payment_recorded: 'manual_payment_recorded',
+  manual_payment_removed: 'manual_payment_removed',
   deleted: 'deleted',
 } as const;
 
@@ -434,6 +486,7 @@ export const ActivityItemEntityType = {
   vendor: 'vendor',
   sponsor: 'sponsor',
   volunteer: 'volunteer',
+  contribution: 'contribution',
 } as const;
 
 export interface ActivityItem {
@@ -612,6 +665,18 @@ export const ContributionStatus = {
   processing: 'processing',
   paid: 'paid',
   failed: 'failed',
+  removed: 'removed',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ContributionPaymentSource = typeof ContributionPaymentSource[keyof typeof ContributionPaymentSource] | null;
+
+
+export const ContributionPaymentSource = {
+  stripe: 'stripe',
+  manual: 'manual',
 } as const;
 
 export interface Contribution {
@@ -619,8 +684,25 @@ export interface Contribution {
   name: string;
   email: string;
   amount: number;
-  stripeSessionId: string;
+  /** @nullable */
+  stripeSessionId: string | null;
   status: ContributionStatus;
+  /** @nullable */
+  paymentSource?: ContributionPaymentSource;
+  /** @nullable */
+  paymentMethod?: string | null;
+  /** @nullable */
+  manualPaymentReference?: string | null;
+  /** @nullable */
+  manualPaymentReceivedDate?: string | null;
+  /** @nullable */
+  manualPaymentRecordedAt?: string | null;
+  /** @nullable */
+  manualPaymentRecordedBy?: string | null;
+  /** @nullable */
+  removedAt?: string | null;
+  /** @nullable */
+  removedBy?: string | null;
   /** @nullable */
   paidAt?: string | null;
   /** @nullable */
@@ -634,6 +716,41 @@ export interface ContributionListResponse {
   items: Contribution[];
   total: number;
 }
+
+export type ManualPaymentInputMethod = typeof ManualPaymentInputMethod[keyof typeof ManualPaymentInputMethod];
+
+
+export const ManualPaymentInputMethod = {
+  cash: 'cash',
+  check: 'check',
+  bank_transfer: 'bank_transfer',
+  other: 'other',
+} as const;
+
+export interface ManualPaymentInput {
+  method: ManualPaymentInputMethod;
+  /** @exclusiveMinimum 0 */
+  amount: number;
+  receivedDate: string;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  reference?: string | null;
+  confirmStripeOverlap?: boolean;
+  sendConfirmationEmail?: boolean;
+}
+
+export type ManualContributionInput = ManualPaymentInput & {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  name: string;
+  email: string;
+  /** @minimum 1 */
+  yearId: number;
+};
 
 export interface AgreementSignature {
   signedName: string;
@@ -1000,6 +1117,8 @@ export const GetRecentActivityType = {
   special_agreement_created: 'special_agreement_created',
   special_agreement_signed: 'special_agreement_signed',
   special_agreement_settlement_updated: 'special_agreement_settlement_updated',
+  manual_payment_recorded: 'manual_payment_recorded',
+  manual_payment_removed: 'manual_payment_removed',
   deleted: 'deleted',
 } as const;
 
@@ -1010,6 +1129,7 @@ export const GetRecentActivityEntityType = {
   vendor: 'vendor',
   sponsor: 'sponsor',
   volunteer: 'volunteer',
+  contribution: 'contribution',
 } as const;
 
 export type GetSettingsParams = {

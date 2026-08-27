@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react"
 import { useLocation, useParams } from "wouter"
-import { useGetVendor, useGetSettings, useReviewVendor, useUpdateVendorCategory, useSettleVendorCategoryAdjustment, useFinalApproveVendor, useAssignVendorSpot, getGetVendorQueryKey, getGetSettingsQueryKey, getGetSpecialAgreementSettlementSummaryQueryKey, useDeleteVendor, useResendVendorConfirmation, useUpdateSpecialAgreementSettlement, useUpdateVendorDetails } from "@workspace/api-client-react"
+import { useGetVendor, useGetSettings, useReviewVendor, useUpdateVendorCategory, useSettleVendorCategoryAdjustment, useFinalApproveVendor, useAssignVendorSpot, getGetVendorQueryKey, getGetSettingsQueryKey, getGetSpecialAgreementSettlementSummaryQueryKey, useDeleteVendor, useResendVendorConfirmation, useUpdateSpecialAgreementSettlement, useUpdateVendorDetails, useRecordVendorManualPayment, useRemoveVendorManualPayment } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,9 +10,11 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { ArrowLeft, CheckCircle2, XCircle, MapPin, Clock, Trash2, Pencil, AlertTriangle, Mail } from "lucide-react"
+import { ArrowLeft, CheckCircle2, XCircle, MapPin, Clock, Trash2, Pencil, AlertTriangle, Mail, DollarSign } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { ApplicantDetailsEditorDialog, type ApplicantDetailsField } from "@/components/applicant-details-editor-dialog"
+import { ManualPaymentDialog } from "@/components/manual-payment-dialog"
+import type { ManualPaymentInput } from "@workspace/api-client-react"
 
 // ---------------------------------------------------------------------------
 // Display helpers
@@ -136,6 +138,8 @@ export default function VendorDetailPage() {
   const resendMutation = useResendVendorConfirmation()
   const settlementMutation = useUpdateSpecialAgreementSettlement({ mutation: { mutationKey: ["updateSpecialAgreementSettlement", id] } })
   const detailsMutation = useUpdateVendorDetails({ mutation: { mutationKey: ["updateVendorDetails", id] } })
+  const recordPaymentMutation = useRecordVendorManualPayment({ mutation: { mutationKey: ["recordVendorManualPayment", id] } })
+  const removePaymentMutation = useRemoveVendorManualPayment({ mutation: { mutationKey: ["removeVendorManualPayment", id] } })
 
   const [reviewNote, setReviewNote] = useState("")
   const [spotNumber, setSpotNumber] = useState("")
@@ -145,6 +149,8 @@ export default function VendorDetailPage() {
   const [isSpotOpen, setIsSpotOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
+  const [isManualPaymentOpen, setIsManualPaymentOpen] = useState(false)
+  const [isRemovePaymentOpen, setIsRemovePaymentOpen] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState("")
   const [categoryReason, setCategoryReason] = useState("")
   const [settlementVendorId, setSettlementVendorId] = useState<number | null>(null)
@@ -316,6 +322,34 @@ export default function VendorDetailPage() {
       {
         onSuccess: () => toast({ title: "Confirmation email resent successfully" }),
         onError: () => toast({ title: "Failed to resend confirmation email", variant: "destructive" }),
+      }
+    )
+  }
+
+  const handleRecordPayment = (data: ManualPaymentInput) => {
+    recordPaymentMutation.mutate(
+      { id, data },
+      {
+        onSuccess: (updated) => {
+          queryClient.setQueryData(getGetVendorQueryKey(id), updated)
+          setIsManualPaymentOpen(false)
+          toast({ title: "Manual payment recorded successfully" })
+        },
+        onError: () => toast({ title: "Failed to record manual payment", variant: "destructive" }),
+      }
+    )
+  }
+
+  const handleRemovePayment = () => {
+    removePaymentMutation.mutate(
+      { id },
+      {
+        onSuccess: (updated) => {
+          queryClient.setQueryData(getGetVendorQueryKey(id), updated)
+          setIsRemovePaymentOpen(false)
+          toast({ title: "Manual payment removed" })
+        },
+        onError: () => toast({ title: "Failed to remove manual payment", variant: "destructive" }),
       }
     )
   }
@@ -541,6 +575,29 @@ export default function VendorDetailPage() {
               <Button onClick={handleFinalApprove} variant="default" className="bg-green-600 hover:bg-green-700 text-white">
                 <CheckCircle2 className="w-4 h-4 mr-2" /> Final Approve
               </Button>
+            )}
+
+            {!isSpecialAgreement && (
+              <>
+                <Button 
+                  variant="outline" 
+                  className="border-primary/20 hover:bg-primary/5 text-primary"
+                  onClick={() => setIsManualPaymentOpen(true)}
+                >
+                  <DollarSign className="w-4 h-4 mr-2" />
+                  Record Manual Payment
+                </Button>
+                <ManualPaymentDialog
+                  open={isManualPaymentOpen}
+                  onOpenChange={setIsManualPaymentOpen}
+                  title="Record Manual Payment"
+                  description="Record a cash, check, or bank transfer for this vendor."
+                  defaultAmount={vendor.paymentSource === 'stripe' ? (vendor.manualPaymentAmount ?? currentAmount) : (vendor.manualPaymentAmount || currentAmount)}
+                  hasStripePayment={vendor.paymentSource === 'stripe'}
+                  isPending={recordPaymentMutation.isPending}
+                  onSubmit={handleRecordPayment}
+                />
+              </>
             )}
 
             <Dialog open={isSpotOpen} onOpenChange={setIsSpotOpen}>
