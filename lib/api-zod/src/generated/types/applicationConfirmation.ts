@@ -9,4 +9,6 @@
 export interface ApplicationConfirmation {
   message: string;
   id: number;
+  /** @nullable */
+  checkoutUrl?: string | null;
 }

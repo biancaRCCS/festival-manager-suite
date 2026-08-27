@@ -16,4 +16,9 @@ export interface SponsorApplicationInput {
   /** @nullable */
   sponsorshipAmount?: number | null;
   answers: SponsorApplicationInputAnswers;
+  ackPromoOnly: boolean;
+  ackPermits: boolean;
+  ackPaymentRequired: boolean;
+  ackStyleGuidelines: boolean;
+  signatureName: string;
 }

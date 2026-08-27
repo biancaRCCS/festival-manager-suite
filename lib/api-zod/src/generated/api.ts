@@ -43,7 +43,8 @@ export const SubmitVendorApplicationBody = zod.object({
 
 export const SubmitVendorApplicationResponse = zod.object({
   "message": zod.string(),
-  "id": zod.number()
+  "id": zod.number(),
+  "checkoutUrl": zod.string().nullish()
 })
 
 
@@ -57,12 +58,18 @@ export const SubmitSponsorApplicationBody = zod.object({
   "phone": zod.string(),
   "tier": zod.string(),
   "sponsorshipAmount": zod.number().nullish(),
-  "answers": zod.record(zod.string(), zod.unknown())
+  "answers": zod.record(zod.string(), zod.unknown()),
+  "ackPromoOnly": zod.boolean(),
+  "ackPermits": zod.boolean(),
+  "ackPaymentRequired": zod.boolean(),
+  "ackStyleGuidelines": zod.boolean(),
+  "signatureName": zod.string()
 })
 
 export const SubmitSponsorApplicationResponse = zod.object({
   "message": zod.string(),
-  "id": zod.number()
+  "id": zod.number(),
+  "checkoutUrl": zod.string().nullish()
 })
 
 
@@ -79,7 +86,8 @@ export const SubmitVolunteerApplicationBody = zod.object({
 
 export const SubmitVolunteerApplicationResponse = zod.object({
   "message": zod.string(),
-  "id": zod.number()
+  "id": zod.number(),
+  "checkoutUrl": zod.string().nullish()
 })
 
 
@@ -1541,7 +1549,7 @@ export const ListSponsorsResponseItem = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "tier": zod.string(),
-  "status": zod.enum(['pending', 'approved', 'rejected', 'details_submitted', 'details_approved', 'payment_pending', 'paid', 'final_approved']),
+  "status": zod.enum(['pending_payment', 'paid', 'approved', 'rejected', 'details_submitted', 'details_approved']),
   "applicationData": zod.record(zod.string(), zod.unknown()),
   "agreementSigned": zod.boolean().optional(),
   "agreementSignedName": zod.string().nullish(),
@@ -1573,7 +1581,7 @@ export const GetSponsorResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "tier": zod.string(),
-  "status": zod.enum(['pending', 'approved', 'rejected', 'details_submitted', 'details_approved', 'payment_pending', 'paid', 'final_approved']),
+  "status": zod.enum(['pending_payment', 'paid', 'approved', 'rejected', 'details_submitted', 'details_approved']),
   "applicationData": zod.record(zod.string(), zod.unknown()),
   "agreementSigned": zod.boolean().optional(),
   "agreementSignedName": zod.string().nullish(),
@@ -1619,7 +1627,7 @@ export const ReviewSponsorResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "tier": zod.string(),
-  "status": zod.enum(['pending', 'approved', 'rejected', 'details_submitted', 'details_approved', 'payment_pending', 'paid', 'final_approved']),
+  "status": zod.enum(['pending_payment', 'paid', 'approved', 'rejected', 'details_submitted', 'details_approved']),
   "applicationData": zod.record(zod.string(), zod.unknown()),
   "agreementSigned": zod.boolean().optional(),
   "agreementSignedName": zod.string().nullish(),
@@ -1673,7 +1681,7 @@ export const UpdateSponsorDetailsResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "tier": zod.string(),
-  "status": zod.enum(['pending', 'approved', 'rejected', 'details_submitted', 'details_approved', 'payment_pending', 'paid', 'final_approved']),
+  "status": zod.enum(['pending_payment', 'paid', 'approved', 'rejected', 'details_submitted', 'details_approved']),
   "applicationData": zod.record(zod.string(), zod.unknown()),
   "agreementSigned": zod.boolean().optional(),
   "agreementSignedName": zod.string().nullish(),
@@ -1704,7 +1712,7 @@ export const FinalApproveSponsorResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "tier": zod.string(),
-  "status": zod.enum(['pending', 'approved', 'rejected', 'details_submitted', 'details_approved', 'payment_pending', 'paid', 'final_approved']),
+  "status": zod.enum(['pending_payment', 'paid', 'approved', 'rejected', 'details_submitted', 'details_approved']),
   "applicationData": zod.record(zod.string(), zod.unknown()),
   "agreementSigned": zod.boolean().optional(),
   "agreementSignedName": zod.string().nullish(),
@@ -1740,7 +1748,7 @@ export const AssignSponsorSpotResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "tier": zod.string(),
-  "status": zod.enum(['pending', 'approved', 'rejected', 'details_submitted', 'details_approved', 'payment_pending', 'paid', 'final_approved']),
+  "status": zod.enum(['pending_payment', 'paid', 'approved', 'rejected', 'details_submitted', 'details_approved']),
   "applicationData": zod.record(zod.string(), zod.unknown()),
   "agreementSigned": zod.boolean().optional(),
   "agreementSignedName": zod.string().nullish(),
@@ -1764,6 +1772,18 @@ export const ResendSponsorConfirmationParams = zod.object({
 })
 
 export const ResendSponsorConfirmationResponse = zod.void()
+
+
+/**
+ * @summary Resend the Stripe payment link to a sponsor stuck at pending_payment
+ */
+export const ResendSponsorPaymentLinkParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ResendSponsorPaymentLinkResponse = zod.object({
+  "checkoutUrl": zod.string()
+})
 
 
 /**

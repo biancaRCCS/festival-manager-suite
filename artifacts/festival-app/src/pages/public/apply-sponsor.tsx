@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2, Check, Mail } from "lucide-react"
 import { ApplicationDeadlineCountdown } from "@/components/application-deadline-countdown"
@@ -26,11 +27,12 @@ interface SponsorTier {
 interface FormConfig {
   sponsorTiers: SponsorTier[]
   applicationDeadline: string | null
+  styleGuidelinesUrl: string | null
 }
 
 async function fetchSponsorConfig(): Promise<FormConfig> {
   const res = await fetch("/api/public/form-questions?type=sponsor")
-  if (!res.ok) return { sponsorTiers: [], applicationDeadline: null }
+  if (!res.ok) return { sponsorTiers: [], applicationDeadline: null, styleGuidelinesUrl: null }
   return res.json()
 }
 
@@ -128,6 +130,35 @@ function SectionHeading({ title }: { title: string }) {
   )
 }
 
+function AckRow({ id, checked, onChange, children }: {
+  id: string; checked: boolean; onChange: (v: boolean) => void; children: React.ReactNode
+}) {
+  return (
+    <div className="flex items-start gap-3 py-2">
+      <Checkbox
+        id={id}
+        checked={checked}
+        onCheckedChange={(v) => onChange(!!v)}
+        className="mt-0.5 shrink-0"
+      />
+      <Label htmlFor={id} className="font-normal leading-snug cursor-pointer">{children}</Label>
+    </div>
+  )
+}
+
+function StyleGuidelinesLink({ url }: { url: string | null | undefined }) {
+  const isSafeUrl = !!url && (() => {
+    try {
+      return ["http:", "https:"].includes(new URL(url).protocol)
+    } catch {
+      return false
+    }
+  })()
+  return isSafeUrl
+    ? <a href={url!} target="_blank" rel="noreferrer" className="text-primary underline underline-offset-2">style guidelines</a>
+    : <>style guidelines</>
+}
+
 function BenefitsTable({ tiers }: { tiers: SponsorTier[] }) {
   // Map key → tier object for quick lookup; display order is Diamond → Bronze
   const tierMap = Object.fromEntries(tiers.map(t => [t.key, t]))
@@ -208,7 +239,7 @@ function BenefitsTable({ tiers }: { tiers: SponsorTier[] }) {
 // ---------------------------------------------------------------------------
 // Confirmation — exact text from spec
 // ---------------------------------------------------------------------------
-function ConfirmationMessage() {
+function PaymentPendingMessage() {
   return (
     <div className="py-10 space-y-6 max-w-xl mx-auto">
       <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto">
@@ -216,19 +247,19 @@ function ConfirmationMessage() {
       </div>
       <div className="space-y-4">
         <p className="text-foreground leading-relaxed">
-          Thank you for your interest in sponsoring the Romanian Festival. Someone from the Romanian
-          Community Center of Sacramento will be in touch within one to two business days.
+          Thank you for applying to sponsor the Romanian Festival. Your application has been
+          received, but a secure payment link could not be generated automatically.
         </p>
         <p className="text-foreground leading-relaxed">
-          If you have any questions in the meantime, please email us at{" "}
+          Please email us at{" "}
           <a
             href="mailto:vendors@romaniancenter.org"
             className="text-primary underline underline-offset-2 inline-flex items-center gap-1"
           >
             <Mail className="w-3.5 h-3.5" />
             vendors@romaniancenter.org
-          </a>
-          .
+          </a>{" "}
+          and we will send you a payment link to complete your sponsorship.
         </p>
       </div>
     </div>
@@ -261,6 +292,11 @@ export default function ApplySponsorPage() {
     participatedBefore: "",
     orgDescription: "",
     boothOrNameOnly: "",
+    ackPromoOnly: false,
+    ackPermits: false,
+    ackPaymentRequired: false,
+    ackStyleGuidelines: false,
+    signatureName: "",
   })
 
   const tiers: SponsorTier[] = config?.sponsorTiers ?? []
@@ -272,6 +308,10 @@ export default function ApplySponsorPage() {
       const result = validateAmount(form.sponsorshipAmount, v, tiers)
       setAmountError(result.ok ? null : (result.error ?? null))
     }
+  }
+
+  const setBool = (k: "ackPromoOnly" | "ackPermits" | "ackPaymentRequired" | "ackStyleGuidelines", v: boolean) => {
+    setForm(prev => ({ ...prev, [k]: v }))
   }
 
   const handleAmountBlur = () => {
@@ -296,6 +336,11 @@ export default function ApplySponsorPage() {
     if (!form.tier)               errors.push("Please select a sponsorship tier.")
     if (!form.participatedBefore) errors.push("Please answer whether you have sponsored the festival before.")
     if (!form.boothOrNameOnly)    errors.push("Please indicate whether you want a booth or name-only sponsorship.")
+    if (!form.ackPromoOnly)        errors.push("Please acknowledge the booth terms.")
+    if (!form.ackPermits)          errors.push("Please acknowledge the permits and insurance requirement.")
+    if (!form.ackPaymentRequired)  errors.push("Please acknowledge that sponsorship requires payment.")
+    if (!form.ackStyleGuidelines)  errors.push("Please acknowledge the festival style guidelines.")
+    if (!form.signatureName.trim()) errors.push("Please type your full name as your signature.")
 
     let parsedAmount: number | undefined
     if (!form.sponsorshipAmount.trim()) {
@@ -332,10 +377,21 @@ export default function ApplySponsorPage() {
             boothOrNameOnly: form.boothOrNameOnly,
             sponsorshipAmount: parsedAmount,
           },
+          ackPromoOnly: form.ackPromoOnly,
+          ackPermits: form.ackPermits,
+          ackPaymentRequired: form.ackPaymentRequired,
+          ackStyleGuidelines: form.ackStyleGuidelines,
+          signatureName: form.signatureName,
         },
       },
       {
-        onSuccess: () => setSubmitted(true),
+        onSuccess: (data) => {
+          if (data.checkoutUrl) {
+            window.location.href = data.checkoutUrl
+          } else {
+            setSubmitted(true)
+          }
+        },
         onError: () => toast({ title: "Failed to submit application. Please try again.", variant: "destructive" }),
       }
     )
@@ -375,7 +431,7 @@ export default function ApplySponsorPage() {
               <p className="text-muted-foreground">We are not currently accepting sponsor applications.</p>
             </div>
           ) : submitted ? (
-            <ConfirmationMessage />
+            <PaymentPendingMessage />
           ) : (
             <form onSubmit={handleSubmit} className="space-y-10" noValidate>
 
@@ -564,6 +620,55 @@ export default function ApplySponsorPage() {
                 </div>
               </section>
 
+              {/* ── Sponsor Agreement ── */}
+              <section>
+                <SectionHeading title="Sponsor Agreement" />
+                <p className="text-sm text-muted-foreground mb-3">
+                  Each of the following must be acknowledged before submitting.<RequiredStar />
+                </p>
+                <div className="divide-y divide-border">
+                  <AckRow id="ackPromoOnly" checked={form.ackPromoOnly} onChange={v => setBool("ackPromoOnly", v)}>
+                    I understand that my complimentary sponsor booth is for <strong>promotional purposes</strong>,
+                    and that selling prepared food requires a separate vendor application and vendor fee.
+                  </AckRow>
+                  <AckRow id="ackPermits" checked={form.ackPermits} onChange={v => setBool("ackPermits", v)}>
+                    I understand that additional permits, licenses, or proof of insurance may be required
+                    before participating.
+                  </AckRow>
+                  <AckRow id="ackPaymentRequired" checked={form.ackPaymentRequired} onChange={v => setBool("ackPaymentRequired", v)}>
+                    I understand that my sponsorship is <strong>not confirmed</strong> until payment is
+                    received in full, and that I will be directed to secure payment immediately after
+                    submitting this application.
+                  </AckRow>
+                  <AckRow id="ackStyleGuidelines" checked={form.ackStyleGuidelines} onChange={v => setBool("ackStyleGuidelines", v)}>
+                    I agree to follow the Romanian Festival <StyleGuidelinesLink url={config?.styleGuidelinesUrl} /> provided
+                    by RCCS for sponsor signage, booth presentation, and promotional materials, to help present
+                    a consistent festival identity.
+                  </AckRow>
+                </div>
+              </section>
+
+              {/* ── Signature ── */}
+              <section>
+                <SectionHeading title="Signature" />
+                <div className="space-y-4">
+                  <div className="space-y-1.5 max-w-sm">
+                    <Label htmlFor="signatureName">Type your full name<RequiredStar /></Label>
+                    <Input
+                      id="signatureName"
+                      className="font-serif text-lg"
+                      placeholder="Full name as signature"
+                      value={form.signatureName}
+                      onChange={e => set("signatureName", e.target.value)}
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    By typing your name above, you certify that all information provided is accurate,
+                    and that you have read and agree to all terms set out in this application.
+                  </p>
+                </div>
+              </section>
+
               {/* Submit */}
               <Button
                 type="submit"
@@ -572,7 +677,7 @@ export default function ApplySponsorPage() {
               >
                 {submitMutation.isPending
                   ? <><Loader2 className="w-5 h-5 animate-spin mr-2" />Submitting…</>
-                  : "Submit Sponsor Application"
+                  : "Continue to Payment"
                 }
               </Button>
             </form>

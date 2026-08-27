@@ -262,14 +262,12 @@ export type SponsorStatus = typeof SponsorStatus[keyof typeof SponsorStatus];
 
 
 export const SponsorStatus = {
-  pending: 'pending',
+  pending_payment: 'pending_payment',
+  paid: 'paid',
   approved: 'approved',
   rejected: 'rejected',
   details_submitted: 'details_submitted',
   details_approved: 'details_approved',
-  payment_pending: 'payment_pending',
-  paid: 'paid',
-  final_approved: 'final_approved',
 } as const;
 
 export type SponsorApplicationData = { [key: string]: unknown };
@@ -474,6 +472,11 @@ export interface SponsorApplicationInput {
   /** @nullable */
   sponsorshipAmount?: number | null;
   answers: SponsorApplicationInputAnswers;
+  ackPromoOnly: boolean;
+  ackPermits: boolean;
+  ackPaymentRequired: boolean;
+  ackStyleGuidelines: boolean;
+  signatureName: string;
 }
 
 export type VolunteerApplicationInputAnswers = { [key: string]: unknown };
@@ -489,6 +492,8 @@ export interface VolunteerApplicationInput {
 export interface ApplicationConfirmation {
   message: string;
   id: number;
+  /** @nullable */
+  checkoutUrl?: string | null;
 }
 
 export type PortalInfoType = typeof PortalInfoType[keyof typeof PortalInfoType];

@@ -259,13 +259,6 @@ const EMPTY_STAGE2 = {
   dayOfContactPhone: "",
   backupContactName: "",
   backupContactPhone: "",
-  // Acknowledgements (all sponsors)
-  ackPromoOnly: false,
-  ackPermits: false,
-  ackPaymentRequired: false,
-  ackStyleGuidelines: false,
-  // Signature (all)
-  signatureName: "",
 }
 
 // ---------------------------------------------------------------------------
@@ -340,12 +333,6 @@ export default function PortalPage() {
       if (!stage2.backupContactPhone.trim()) errors.push("Backup contact mobile is required.")
     }
 
-    if (!stage2.ackPromoOnly)     errors.push("Please acknowledge the booth terms.")
-    if (!stage2.ackPermits)       errors.push("Please acknowledge the permits and insurance requirement.")
-    if (!stage2.ackPaymentRequired) errors.push("Please acknowledge that sponsorship requires payment.")
-    if (!stage2.ackStyleGuidelines) errors.push("Please acknowledge the festival style guidelines.")
-    if (!stage2.signatureName.trim()) errors.push("Please type your full name as your signature.")
-
     if (errors.length > 0) {
       toast({ title: errors[0], variant: "destructive" })
       return
@@ -393,14 +380,14 @@ export default function PortalPage() {
 
   const sponsorNeedsDetails = isSponsor && portal.status === "approved"
   const sponsorDetailsUnder = isSponsor && portal.status === "details_submitted"
-  const sponsorCanPay       = isSponsor && (portal.status === "details_approved" || portal.status === "payment_pending")
 
+  // Sponsors pay at the time of their public application, not through the portal.
   const vendorCanPay = !isSponsor && (portal.status === "approved" || portal.status === "payment_pending")
 
-  const showAgreementAndPayment = vendorCanPay || sponsorCanPay
+  const showAgreementAndPayment = vendorCanPay
 
   const isPaid  = portal.status === "paid"
-  const isFinal = portal.status === "final_approved"
+  const isFinal = isSponsor ? portal.status === "details_approved" : portal.status === "final_approved"
 
   // ── Amount ───────────────────────────────────────────────────────────────
   const vendorTypePrice: Record<string, number | null | undefined> = {
@@ -429,7 +416,6 @@ export default function PortalPage() {
   const isBoothSponsor   = portal.boothOrNameOnly === "Booth"
   const sponsorshipAmount = (portal as any).sponsorshipAmount as number | undefined
   const tierLabel         = TIER_LABELS[portal.tier ?? ""] ?? portal.tier ?? ""
-  const todayStr          = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
 
   return (
     <div className="min-h-screen bg-noise bg-background font-sans relative pb-20">
@@ -469,9 +455,9 @@ export default function PortalPage() {
                 Complete Your Sponsorship Details
               </CardTitle>
               <CardDescription>
-                Your application has been accepted. Please complete the details below so we can
+                Your application and payment have been accepted. Please complete the details below so we can
                 finalise your participation. Once our team reviews your information, you will receive
-                a separate email with payment instructions.
+                a confirmation email with next steps for the festival.
               </CardDescription>
 
               {/* Sponsorship summary */}
@@ -709,71 +695,6 @@ export default function PortalPage() {
                 </div>
               </section>
 
-              {/* ── Acknowledgements (all sponsors) ─────────────────────── */}
-              <section>
-                <SectionHeading title="Acknowledgements" />
-                <p className="text-sm text-muted-foreground mb-1">
-                  Each of the following must be acknowledged before submitting.<RequiredStar />
-                </p>
-                <div className="divide-y divide-border">
-                  <AckRow
-                    id="ackPromoOnly"
-                    checked={stage2.ackPromoOnly}
-                    onChange={v => setS2("ackPromoOnly", v)}
-                  >
-                    I understand that my complimentary sponsor booth is for <strong>promotional purposes</strong>,
-                    and that selling prepared food requires a separate vendor application and vendor fee.
-                  </AckRow>
-                  <AckRow
-                    id="ackPermits"
-                    checked={stage2.ackPermits}
-                    onChange={v => setS2("ackPermits", v)}
-                  >
-                    I understand that additional permits, licenses, or proof of insurance may be required
-                    before participating.
-                  </AckRow>
-                  <AckRow
-                    id="ackPaymentRequired"
-                    checked={stage2.ackPaymentRequired}
-                    onChange={v => setS2("ackPaymentRequired", v)}
-                  >
-                    I understand that my sponsorship is <strong>not confirmed</strong> until payment is received
-                    in full.
-                  </AckRow>
-                  <AckRow
-                    id="ackStyleGuidelines"
-                    checked={stage2.ackStyleGuidelines}
-                    onChange={v => setS2("ackStyleGuidelines", v)}
-                  >
-                    I agree to follow the Romanian Festival <StyleGuidelinesLink url={portal.styleGuidelinesUrl} /> provided by RCCS for sponsor signage, booth presentation, and promotional materials, to help present a consistent festival identity.
-                  </AckRow>
-                </div>
-              </section>
-
-              {/* ── Signature (all sponsors) ─────────────────────────────── */}
-              <section>
-                <SectionHeading title="Signature" />
-                <div className="space-y-4">
-                  <div className="space-y-1.5 max-w-sm">
-                    <Label htmlFor="signatureName">Type your full name<RequiredStar /></Label>
-                    <Input
-                      id="signatureName"
-                      className="font-serif text-lg"
-                      placeholder="Full name as signature"
-                      value={stage2.signatureName}
-                      onChange={s2("signatureName")}
-                    />
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Date: <strong>{todayStr}</strong>
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    By typing your name above, you certify that all information provided is accurate and
-                    that you have read and agree to the terms set out in this form.
-                  </p>
-                </div>
-              </section>
-
               {/* Submit */}
               <Button
                 onClick={handleSubmitDetails}
@@ -801,7 +722,7 @@ export default function PortalPage() {
               <h3 className="text-xl font-serif text-blue-900 mb-2">Details Under Review</h3>
               <p className="text-blue-800 max-w-sm">
                 Thank you for submitting your sponsorship details. Our team at RCCS will review your
-                information and email you with payment instructions shortly.
+                information and email you a confirmation shortly.
               </p>
             </CardContent>
           </Card>

@@ -12,13 +12,11 @@ import { Search, Eye, Download, AlertCircle } from "lucide-react"
 // Status display
 // ---------------------------------------------------------------------------
 const STATUS_CONFIG: Record<string, { label: string; className: string; needsRccsAction?: boolean }> = {
-  pending:           { label: "Pending Review",          className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100",  needsRccsAction: true },
+  pending_payment:   { label: "Awaiting Payment",        className: "bg-orange-100 text-orange-800 hover:bg-orange-100" },
+  paid:              { label: "Paid — Review Needed",    className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100",  needsRccsAction: true },
   approved:          { label: "Awaiting Details",        className: "bg-blue-100 text-blue-800 hover:bg-blue-100" },
   details_submitted: { label: "Details In — Review Needed", className: "bg-purple-100 text-purple-800 hover:bg-purple-100", needsRccsAction: true },
-  details_approved:  { label: "Awaiting Payment",        className: "bg-indigo-100 text-indigo-800 hover:bg-indigo-100" },
-  payment_pending:   { label: "Payment Pending",         className: "bg-orange-100 text-orange-800 hover:bg-orange-100" },
-  paid:              { label: "Paid",                    className: "bg-green-100 text-green-800 hover:bg-green-100" },
-  final_approved:    { label: "Final Approved",          className: "bg-green-100 text-green-800 hover:bg-green-100" },
+  details_approved:  { label: "Confirmed",               className: "bg-green-100 text-green-800 hover:bg-green-100" },
   rejected:          { label: "Rejected",                className: "bg-red-100 text-red-800 hover:bg-red-100" },
 }
 
@@ -38,25 +36,25 @@ const TIER_LABELS: Record<string, string> = {
 // ---------------------------------------------------------------------------
 // Tab definitions
 // ---------------------------------------------------------------------------
-type TabKey = "all" | "needs_action" | "awaiting_details" | "details_submitted" | "awaiting_payment" | "paid" | "rejected"
+type TabKey = "all" | "needs_action" | "awaiting_payment" | "awaiting_details" | "details_submitted" | "confirmed" | "rejected"
 
 const TABS: { key: TabKey; label: string; needsAction?: boolean }[] = [
   { key: "all",              label: "All" },
   { key: "needs_action",     label: "Needs Review",     needsAction: true },
+  { key: "awaiting_payment", label: "Awaiting Payment" },
   { key: "awaiting_details", label: "Awaiting Details" },
   { key: "details_submitted",label: "Details In",       needsAction: true },
-  { key: "awaiting_payment", label: "Awaiting Payment" },
-  { key: "paid",             label: "Paid" },
+  { key: "confirmed",        label: "Confirmed" },
   { key: "rejected",         label: "Rejected" },
 ]
 
 const STATUS_SETS: Record<TabKey, string[]> = {
   all:               [],
-  needs_action:      ["pending", "details_submitted"],
+  needs_action:      ["paid", "details_submitted"],
+  awaiting_payment:  ["pending_payment"],
   awaiting_details:  ["approved"],
   details_submitted: ["details_submitted"],
-  awaiting_payment:  ["details_approved", "payment_pending"],
-  paid:              ["paid", "final_approved"],
+  confirmed:         ["details_approved"],
   rejected:          ["rejected"],
 }
 

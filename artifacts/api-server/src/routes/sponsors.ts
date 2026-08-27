@@ -15,7 +15,8 @@ import {
   AssignSponsorSpotBody,
 } from "@workspace/api-zod";
 import { randomBytes } from "crypto";
-import { sendSponsorDetailsInviteEmail, sendSponsorPaymentReadyEmail, sendApplicantConfirmation, TIER_LABELS } from "../lib/email";
+import { sendSponsorDetailsInviteEmail, sendSponsorFinalConfirmationEmail, sendSponsorPaymentLinkEmail, sendApplicantConfirmation, TIER_LABELS } from "../lib/email";
+import { getOrCreateSponsorCheckoutUrl } from "./stripe";
 import {
   addDetailChange,
   applicationText,
@@ -170,6 +171,16 @@ router.patch("/sponsors/:id/review", requireStaff, async (req, res): Promise<voi
   const { id } = paramsParsed.data;
   const { status, note } = bodyParsed.data;
 
+  const [current] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, id)).limit(1);
+  if (!current) {
+    res.status(404).json({ error: "Sponsor not found" });
+    return;
+  }
+  if (current.status !== "paid") {
+    res.status(409).json({ error: `Cannot review: sponsor is currently '${current.status}', expected 'paid'` });
+    return;
+  }
+
   const updates: Record<string, unknown> = { status, reviewNote: note ?? null };
   if (status === "approved") {
     updates.approvedAt = new Date();
@@ -243,39 +254,23 @@ router.patch("/sponsors/:id/final-approve", requireStaff, async (req, res): Prom
 
   await db.insert(activityLogTable).values({
     type: "final_approved",
-    message: `Sponsor ${updated.name} (${updated.orgName}) details approved — payment email sent`,
+    message: `Sponsor ${updated.name} (${updated.orgName}) details approved — sponsorship confirmed`,
     entityType: "sponsor",
     entityId: updated.id,
     performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
   });
 
-  // Send payment-ready email: includes tier, amount, and document deadline
+  // Payment already happened at application time — this is a plain confirmation.
   if (updated.portalToken) {
     const domain = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost";
     const portalUrl = `https://${domain}/portal/${updated.portalToken}`;
     const years = await db.select().from(festivalYearsTable).where(eq(festivalYearsTable.id, updated.yearId)).limit(1);
-    const settings = await db.select().from(festivalSettingsTable).where(eq(festivalSettingsTable.yearId, updated.yearId)).limit(1);
 
-    const sponsorshipAmount = updated.sponsorshipAmount != null
-      ? parseFloat(updated.sponsorshipAmount)
-      : (() => {
-          const s = settings[0];
-          if (!s) return 0;
-          const tierMinMap: Record<string, string> = {
-            bronze: s.sponsorPriceBronze, silver: s.sponsorPriceSilver,
-            gold: s.sponsorPriceGold, platinum: s.sponsorPricePlatinum,
-            diamond: s.sponsorPriceDiamond,
-          };
-          return parseFloat(tierMinMap[updated.tier] ?? "0");
-        })();
-
-    sendSponsorPaymentReadyEmail({
+    sendSponsorFinalConfirmationEmail({
       to: updated.email,
       name: updated.name,
       orgName: updated.orgName,
       tier: updated.tier,
-      sponsorshipAmount,
-      paymentDeadline: settings[0]?.documentDeadline ?? null,
       portalUrl,
       festivalName: years[0]?.eventName ?? "Romanian Festival",
     });
@@ -342,6 +337,51 @@ router.post("/sponsors/:id/resend-confirmation", requireStaff, async (req, res):
   });
 
   res.status(204).send();
+});
+
+router.post("/sponsors/:id/resend-payment-link", requireStaff, async (req, res): Promise<void> => {
+  const parsed = GetSponsorParams.safeParse(req.params);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid ID" });
+    return;
+  }
+  const [sponsor] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, parsed.data.id));
+  if (!sponsor) {
+    res.status(404).json({ error: "Sponsor not found" });
+    return;
+  }
+  if (sponsor.status !== "pending_payment") {
+    res.status(409).json({ error: `Cannot resend payment link: sponsor is currently '${sponsor.status}', expected 'pending_payment'` });
+    return;
+  }
+
+  let checkoutUrl: string;
+  try {
+    checkoutUrl = await getOrCreateSponsorCheckoutUrl(sponsor.id);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(409).json({ error: message });
+    return;
+  }
+
+  const years = await db.select().from(festivalYearsTable).where(eq(festivalYearsTable.id, sponsor.yearId)).limit(1);
+  sendSponsorPaymentLinkEmail({
+    to: sponsor.email,
+    name: sponsor.name,
+    orgName: sponsor.orgName,
+    checkoutUrl,
+    festivalName: years[0]?.eventName ?? "Romanian Festival",
+  });
+
+  await db.insert(activityLogTable).values({
+    type: "email_resent",
+    message: `Payment link resent to sponsor ${sponsor.name} (${sponsor.orgName}) at ${sponsor.email}`,
+    entityType: "sponsor",
+    entityId: sponsor.id,
+    performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
+  });
+
+  res.json({ checkoutUrl });
 });
 
 router.delete("/sponsors/:id", requireStaff, async (req, res): Promise<void> => {

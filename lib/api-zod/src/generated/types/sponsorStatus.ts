@@ -10,12 +10,10 @@ export type SponsorStatus = typeof SponsorStatus[keyof typeof SponsorStatus];
 
 
 export const SponsorStatus = {
-  pending: 'pending',
+  pending_payment: 'pending_payment',
+  paid: 'paid',
   approved: 'approved',
   rejected: 'rejected',
   details_submitted: 'details_submitted',
   details_approved: 'details_approved',
-  payment_pending: 'payment_pending',
-  paid: 'paid',
-  final_approved: 'final_approved',
 } as const;

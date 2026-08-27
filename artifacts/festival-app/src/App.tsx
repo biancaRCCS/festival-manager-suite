@@ -24,6 +24,7 @@ import ActivityPage from '@/pages/activity';
 
 import ApplyVendorPage from '@/pages/public/apply-vendor';
 import ApplySponsorPage from '@/pages/public/apply-sponsor';
+import ApplySponsorSuccessPage from '@/pages/public/apply-sponsor-success';
 import ApplyVolunteerPage from '@/pages/public/apply-volunteer';
 import ApplySuccessPage from '@/pages/public/apply-success';
 
@@ -444,6 +445,7 @@ function ClerkProviderWithRoutes() {
             
             <Route path="/apply/vendor" component={ApplyVendorPage} />
             <Route path="/apply/sponsor" component={ApplySponsorPage} />
+            <Route path="/apply/sponsor/success" component={ApplySponsorSuccessPage} />
             <Route path="/apply/volunteer" component={ApplyVolunteerPage} />
             <Route path="/apply/success" component={ApplySuccessPage} />
 

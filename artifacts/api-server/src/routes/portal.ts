@@ -222,10 +222,6 @@ router.post("/portal/:token/submit-details", async (req, res): Promise<void> => 
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  if (parsed.data.ackStyleGuidelines !== true) {
-    res.status(400).json({ error: "Festival style guidelines must be acknowledged before submitting details." });
-    return;
-  }
 
   const sponsors = await db.select().from(sponsorsTable).where(eq(sponsorsTable.portalToken, token)).limit(1);
   if (sponsors.length === 0) {
@@ -350,34 +346,13 @@ router.post("/portal/:token/sign-agreement", async (req, res): Promise<void> => 
     return;
   }
 
-  // --- Sponsors: only allowed at details_approved or payment_pending ---
-  const sponsorRows = await db.select().from(sponsorsTable).where(eq(sponsorsTable.portalToken, token)).limit(1);
+  // Sponsors no longer sign an agreement through the portal — they accept
+  // the acknowledgements and sign electronically at the public apply stage,
+  // before payment. If the token belongs to a sponsor, there's nothing to sign.
+  const sponsorRows = await db.select({ id: sponsorsTable.id }).from(sponsorsTable).where(eq(sponsorsTable.portalToken, token)).limit(1);
   if (sponsorRows.length > 0) {
-    const sponsor = sponsorRows[0];
-    const allowedStatuses = ["details_approved", "payment_pending"];
-    if (!allowedStatuses.includes(sponsor.status)) {
-      res.status(409).json({
-        error: `Agreement signing is not available yet. Current status: '${sponsor.status}'. Please complete your sponsorship details first.`,
-      });
-      return;
-    }
-    if (sponsor.agreementSigned) {
-      res.status(409).json({ error: "Agreement already signed" });
-      return;
-    }
-
-    const updatedSponsors = await db.update(sponsorsTable)
-      .set({ agreementSigned: true, agreementSignedName: parsed.data.signedName })
-      .where(and(eq(sponsorsTable.portalToken, token), eq(sponsorsTable.agreementSigned, false)))
-      .returning();
-
-    if (updatedSponsors.length > 0) {
-      const updated = updatedSponsors[0];
-      const years = await db.select().from(festivalYearsTable).where(eq(festivalYearsTable.id, updated.yearId)).limit(1);
-      const settingsRows = await db.select().from(festivalSettingsTable).where(eq(festivalSettingsTable.yearId, updated.yearId)).limit(1);
-      res.json(buildSponsorPortalInfo(updated, years[0], settingsRows[0]));
-      return;
-    }
+    res.status(409).json({ error: "Sponsors sign their agreement at the time of application, not in the portal." });
+    return;
   }
 
   res.status(404).json({ error: "Portal not found" });
@@ -390,30 +365,23 @@ router.post("/portal/:token/checkout", async (req, res): Promise<void> => {
   const { token } = req.params;
 
   const vendors = await db.select().from(vendorsTable).where(eq(vendorsTable.portalToken, token)).limit(1);
-  const sponsors = await db.select().from(sponsorsTable).where(eq(sponsorsTable.portalToken, token)).limit(1);
 
   if (vendors[0]?.vendorType === "special_agreement") {
     res.status(409).json({ error: "Special Agreement Vendors do not have a booth fee or online payment." });
     return;
   }
 
-  const entity = vendors[0] ?? sponsors[0];
-  const entityType = vendors.length > 0 ? "vendor" : "sponsor";
+  const entity = vendors[0];
 
   if (!entity) {
-    res.status(404).json({ error: "Portal not found" });
-    return;
-  }
-
-  // Sponsors must be at details_approved (or payment_pending if retrying) before checkout
-  if (entityType === "sponsor") {
-    const allowedStatuses = ["details_approved", "payment_pending"];
-    if (!allowedStatuses.includes(entity.status)) {
-      res.status(403).json({
-        error: `Payment is not available yet. Your sponsorship details must be reviewed and approved before you can complete payment. Current status: '${entity.status}'.`,
-      });
+    // Sponsors pay at the time of their public application, not via the portal.
+    const sponsorRows = await db.select({ id: sponsorsTable.id }).from(sponsorsTable).where(eq(sponsorsTable.portalToken, token)).limit(1);
+    if (sponsorRows.length > 0) {
+      res.status(409).json({ error: "Sponsors complete payment during application, not through the portal." });
       return;
     }
+    res.status(404).json({ error: "Portal not found" });
+    return;
   }
 
   const stripeModule = await import("./stripe").catch(() => null);
@@ -423,7 +391,7 @@ router.post("/portal/:token/checkout", async (req, res): Promise<void> => {
   }
 
   try {
-    const url = await stripeModule.createCheckoutSession({ token, entity, entityType });
+    const url = await stripeModule.createCheckoutSession({ token, entity, entityType: "vendor" });
     res.json({ checkoutUrl: url });
   } catch (err) {
     logger.error({ err }, "Checkout creation failed");

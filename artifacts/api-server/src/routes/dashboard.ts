@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, festivalYearsTable, festivalSettingsTable, vendorsTable, sponsorsTable, volunteersTable, activityLogTable } from "@workspace/db";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, isNotNull } from "drizzle-orm";
 import { requireStaff } from "../lib/auth";
 import { GetDashboardFinancialsQueryParams } from "@workspace/api-zod";
 
@@ -20,14 +20,27 @@ async function getStatsForYear(yearId: number) {
   const sponsors = await db.select().from(sponsorsTable).where(eq(sponsorsTable.yearId, yearId));
   const volunteers = await db.select().from(volunteersTable).where(eq(volunteersTable.yearId, yearId));
 
-  const statFor = (rows: Array<{ status: string }>) => ({
-    total: rows.length,
-    pending: rows.filter(r => r.status === "pending").length,
-    approved: rows.filter(r => r.status === "approved").length,
-    rejected: rows.filter(r => r.status === "rejected").length,
-    paid: rows.filter(r => r.status === "paid").length,
-    finalApproved: rows.filter(r => r.status === "final_approved").length,
-  });
+  // Buckets default to the vendor/volunteer status set. Callers with a different
+  // status flow (e.g. sponsors' pay-first flow) can override any bucket with a
+  // custom list of statuses that should count toward it.
+  const statFor = (rows: Array<{ status: string }>, buckets?: Partial<Record<"pending" | "approved" | "rejected" | "paid" | "finalApproved", string[]>>) => {
+    const b = {
+      pending: buckets?.pending ?? ["pending"],
+      approved: buckets?.approved ?? ["approved"],
+      rejected: buckets?.rejected ?? ["rejected"],
+      paid: buckets?.paid ?? ["paid"],
+      finalApproved: buckets?.finalApproved ?? ["final_approved"],
+    };
+    const countIn = (statuses: string[]) => rows.filter(r => statuses.includes(r.status)).length;
+    return {
+      total: rows.length,
+      pending: countIn(b.pending),
+      approved: countIn(b.approved),
+      rejected: countIn(b.rejected),
+      paid: countIn(b.paid),
+      finalApproved: countIn(b.finalApproved),
+    };
+  };
 
   return { vendors, sponsors, volunteers, statFor };
 }
@@ -76,13 +89,23 @@ router.get("/dashboard/summary", requireStaff, async (req, res): Promise<void> =
   const sponsorPriceMap = buildSponsorPriceMap(s);
 
   const paidVendors  = vendors.filter(v => v.status === "paid" || v.status === "final_approved");
-  const paidSponsors = sponsors.filter(sp => sp.status === "paid" || sp.status === "final_approved");
+  const paidSponsors = sponsors.filter(sp => sp.paidAt != null);
   const vendorRevenue  = paidVendors.reduce((sum, v) => sum + (vendorPriceMap[v.vendorType] ?? 300), 0);
   const sponsorRevenue = paidSponsors.reduce((sum, sp) => sum + sponsorAmount(sp, sponsorPriceMap), 0);
   const totalRevenue = vendorRevenue + sponsorRevenue;
 
   const vendorStats    = statFor(vendors);
-  const sponsorStats   = statFor(sponsors);
+  // Sponsors now pay before staff review, so the bucket meanings shift:
+  // "pending" (Pending Review) = paid, awaiting stage-1 review, or details submitted awaiting review;
+  // "approved" (Payment Pending label in the UI) = applied but not yet paid;
+  // "finalApproved" = fully confirmed sponsor.
+  const sponsorStats   = statFor(sponsors, {
+    pending: ["paid", "details_submitted"],
+    approved: ["pending_payment"],
+    rejected: ["rejected"],
+    paid: ["paid", "approved", "details_submitted", "details_approved", "rejected"],
+    finalApproved: ["details_approved"],
+  });
   const volunteerStats = statFor(volunteers);
   const pendingActions = vendorStats.pending + sponsorStats.pending + volunteerStats.pending;
 
@@ -134,7 +157,7 @@ router.get("/dashboard/financials", requireStaff, async (req, res): Promise<void
     and(eq(vendorsTable.yearId, yearId), sql`status IN ('paid', 'final_approved')`)
   );
   const sponsors = await db.select().from(sponsorsTable).where(
-    and(eq(sponsorsTable.yearId, yearId), sql`status IN ('paid', 'final_approved')`)
+    and(eq(sponsorsTable.yearId, yearId), isNotNull(sponsorsTable.paidAt))
   );
 
   const vendorRevenue  = vendors.reduce((sum, v) => sum + (vendorPriceMap[v.vendorType] ?? 300), 0);

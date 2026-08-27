@@ -1002,6 +1002,31 @@ paths:
         "404":
           description: Not found
 
+  /sponsors/{id}/resend-payment-link:
+    post:
+      operationId: resendSponsorPaymentLink
+      tags: [sponsors]
+      summary: Resend the Stripe payment link to a sponsor stuck at pending_payment
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Payment link resent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutSession"
+        "404":
+          description: Not found
+        "409":
+          description: Sponsor is not awaiting payment
+
   # ─── VOLUNTEERS ──────────────────────────────────────────
   /volunteers:
     get:
@@ -1647,7 +1672,7 @@ components:
           type: string
         status:
           type: string
-          enum: [pending, approved, rejected, details_submitted, details_approved, payment_pending, paid, final_approved]
+          enum: [pending_payment, paid, approved, rejected, details_submitted, details_approved]
         applicationData:
           type: object
           additionalProperties: true
@@ -1863,7 +1888,7 @@ components:
 
     SponsorApplicationInput:
       type: object
-      required: [name, orgName, email, phone, tier, answers]
+      required: [name, orgName, email, phone, tier, answers, ackPromoOnly, ackPermits, ackPaymentRequired, ackStyleGuidelines, signatureName]
       properties:
         name:
           type: string
@@ -1880,6 +1905,16 @@ components:
         answers:
           type: object
           additionalProperties: true
+        ackPromoOnly:
+          type: boolean
+        ackPermits:
+          type: boolean
+        ackPaymentRequired:
+          type: boolean
+        ackStyleGuidelines:
+          type: boolean
+        signatureName:
+          type: string
 
     VolunteerApplicationInput:
       type: object
@@ -1905,6 +1940,8 @@ components:
           type: string
         id:
           type: integer
+        checkoutUrl:
+          type: ["string", "null"]
 
     PortalInfo:
       type: object

@@ -3237,6 +3237,77 @@ export const useResendSponsorConfirmation = <TError = ErrorType<void>,
       return useMutation(getResendSponsorConfirmationMutationOptions(options));
     }
 
+export const getResendSponsorPaymentLinkUrl = (id: number,) => {
+
+
+
+
+  return `/api/sponsors/${id}/resend-payment-link`
+}
+
+/**
+ * @summary Resend the Stripe payment link to a sponsor stuck at pending_payment
+ */
+export const resendSponsorPaymentLink = async (id: number, options?: RequestInit): Promise<CheckoutSession> => {
+
+  return customFetch<CheckoutSession>(getResendSponsorPaymentLinkUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getResendSponsorPaymentLinkMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resendSponsorPaymentLink>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resendSponsorPaymentLink>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['resendSponsorPaymentLink'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resendSponsorPaymentLink>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  resendSponsorPaymentLink(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResendSponsorPaymentLinkMutationResult = NonNullable<Awaited<ReturnType<typeof resendSponsorPaymentLink>>>
+
+    export type ResendSponsorPaymentLinkMutationError = ErrorType<void>
+
+    /**
+ * @summary Resend the Stripe payment link to a sponsor stuck at pending_payment
+ */
+export const useResendSponsorPaymentLink = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resendSponsorPaymentLink>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof resendSponsorPaymentLink>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getResendSponsorPaymentLinkMutationOptions(options));
+    }
+
 export const getListVolunteersUrl = (params?: ListVolunteersParams,) => {
   const normalizedParams = new URLSearchParams();
 

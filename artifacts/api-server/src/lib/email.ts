@@ -418,48 +418,100 @@ export async function sendSponsorDetailsInviteEmail(params: {
 }
 
 // ---------------------------------------------------------------------------
-// 1c. Sponsor details approved — payment is now due
+// 1c. Sponsor details approved — final confirmation. Payment already
+//     happened at application time, so this must NOT mention payment.
 // ---------------------------------------------------------------------------
-export async function sendSponsorPaymentReadyEmail(params: {
+export async function sendSponsorFinalConfirmationEmail(params: {
   to: string;
   name: string;
   orgName: string;
   tier: string;
-  sponsorshipAmount: number;
-  paymentDeadline: string | null;
   portalUrl: string;
   festivalName: string;
 }) {
-  const { to, name, orgName, tier, sponsorshipAmount, paymentDeadline, portalUrl, festivalName } = params;
+  const { to, name, orgName, tier, portalUrl, festivalName } = params;
   const tierLabel = TIER_LABELS[tier] ?? tier;
-  const amountDisplay = `$${sponsorshipAmount.toLocaleString()}`;
-  const deadlineNote = paymentDeadline
-    ? `<p><strong>Payment deadline:</strong> ${new Date(paymentDeadline + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}. Payment received after this date may not be included in printed promotional materials.</p>`
-    : "";
-  const subject = `Your Sponsorship for ${festivalName} — Payment Due`;
+  const subject = `You're Confirmed! ${festivalName} Sponsorship — ${orgName}`;
   const html = `
     <div style="${BASE_STYLE}">
-      <h2 style="color: #8b1a1a;">Details Approved — Payment Now Due</h2>
+      <h2 style="color: #8b1a1a;">Your Sponsorship Is Confirmed</h2>
       <p>Dear ${name},</p>
-      <p>We have reviewed and approved the sponsorship details for <strong>${orgName}</strong>. You are now ready to complete your payment and secure your place at <strong>${festivalName}</strong>.</p>
+      <p>Great news — we have reviewed and approved the sponsorship details for <strong>${orgName}</strong>. Your participation in <strong>${festivalName}</strong> is now fully confirmed.</p>
       ${DIVIDER}
       ${field("Organisation", orgName)}
       ${field("Sponsorship Tier", tierLabel)}
-      ${field("Amount Due", amountDisplay)}
       ${DIVIDER}
-      ${deadlineNote}
-      <p>Please visit your portal to sign the participation agreement and complete payment:</p>
+      <p>You can view your sponsorship details at any time using your private portal link:</p>
+      <p style="color: #6b7280; font-size: 14px;">
+        <a href="${portalUrl}">${portalUrl}</a>
+      </p>
+      <p>Our team will follow up separately with any remaining logistics (spot assignment, signage, etc.) as the event approaches.</p>
+      <p>If you have any questions, please reply to this email.</p>
+      <p>Thank you for supporting the Romanian community!</p>
+    </div>`;
+  await send(to, subject, html);
+}
+
+// ---------------------------------------------------------------------------
+// 1d. Sponsor payment receipt — sent immediately after Stripe confirms
+//     payment on the public pay-first application checkout.
+// ---------------------------------------------------------------------------
+export async function sendSponsorPaymentReceiptEmail(params: {
+  to: string;
+  name: string;
+  orgName: string;
+  tier: string;
+  amount: number;
+  festivalName: string;
+}) {
+  const { to, name, orgName, tier, amount, festivalName } = params;
+  const tierLabel = TIER_LABELS[tier] ?? tier;
+  const amountDisplay = `$${amount.toLocaleString()}`;
+  const subject = `Payment Received — Your Sponsorship for ${festivalName}`;
+  const html = `
+    <div style="${BASE_STYLE}">
+      <h2 style="color: #8b1a1a;">Thank You — Payment Received</h2>
+      <p>Dear ${name},</p>
+      <p>We've received your sponsorship payment for <strong>${orgName}</strong>. Your application is now under review by our team.</p>
+      ${DIVIDER}
+      ${field("Organisation", orgName)}
+      ${field("Sponsorship Tier", tierLabel)}
+      ${field("Amount Paid", amountDisplay)}
+      ${DIVIDER}
+      <p>We'll follow up by email once your application has been reviewed — typically within one to two business days. If approved, we'll ask you to complete a short sponsorship details form (booth setup, contacts, acknowledgements, etc.).</p>
+      <p>If you have any questions in the meantime, please reply to this email.</p>
+      <p>Thank you for supporting the Romanian community!</p>
+    </div>`;
+  await send(to, subject, html);
+}
+
+// ---------------------------------------------------------------------------
+// 1e. Resend the Stripe payment link to a sponsor stuck at pending_payment
+// ---------------------------------------------------------------------------
+export async function sendSponsorPaymentLinkEmail(params: {
+  to: string;
+  name: string;
+  orgName: string;
+  checkoutUrl: string;
+  festivalName: string;
+}) {
+  const { to, name, orgName, checkoutUrl, festivalName } = params;
+  const subject = `Complete Your Sponsorship Payment — ${festivalName}`;
+  const html = `
+    <div style="${BASE_STYLE}">
+      <h2 style="color: #8b1a1a;">Complete Your Sponsorship Payment</h2>
+      <p>Dear ${name},</p>
+      <p>Your sponsorship application for <strong>${orgName}</strong> is almost complete — we just need your payment to move it forward.</p>
       <p>
-        <a href="${portalUrl}" style="display: inline-block; background: #8b1a1a; color: white; padding: 12px 24px; text-decoration: none; font-size: 16px;">
-          Go to Your Portal
+        <a href="${checkoutUrl}" style="display: inline-block; background: #8b1a1a; color: white; padding: 12px 24px; text-decoration: none; font-size: 16px;">
+          Complete Payment
         </a>
       </p>
       <p style="color: #6b7280; font-size: 14px;">
         If the button above does not work, copy and paste this link into your browser:<br>
-        <a href="${portalUrl}">${portalUrl}</a>
+        <a href="${checkoutUrl}">${checkoutUrl}</a>
       </p>
       <p>If you have any questions, please reply to this email.</p>
-      <p>Thank you for supporting the Romanian community!</p>
     </div>`;
   await send(to, subject, html);
 }
@@ -594,7 +646,7 @@ export async function sendApplicantConfirmation(params: {
     applicationType === "vendor"
       ? `We will review your application and be in touch at this email address once a decision has been made. If your application is approved, you will receive a link to your private portal to sign the agreement and complete payment.`
       : applicationType === "sponsor"
-      ? `Someone from the Romanian Community Center of Sacramento will be in touch within one to two business days. If you have any questions in the meantime, please email us at vendors@romaniancenter.org.`
+      ? `Your sponsorship application is under review by our team, and we will follow up by email as soon as a decision is made. If you have any questions in the meantime, please email us at vendors@romaniancenter.org.`
       : `We will be in touch as we finalize our volunteer schedule for the festival.`;
 
   const html = `

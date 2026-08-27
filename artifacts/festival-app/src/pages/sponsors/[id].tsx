@@ -1,6 +1,6 @@
 import { useState, useRef } from "react"
 import { useLocation, useParams } from "wouter"
-import { useGetSponsor, useReviewSponsor, useFinalApproveSponsor, useAssignSponsorSpot, getGetSponsorQueryKey, useDeleteSponsor, useResendSponsorConfirmation, useUpdateSponsorDetails } from "@workspace/api-client-react"
+import { useGetSponsor, useReviewSponsor, useFinalApproveSponsor, useAssignSponsorSpot, getGetSponsorQueryKey, useDeleteSponsor, useResendSponsorConfirmation, useResendSponsorPaymentLink, useUpdateSponsorDetails } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -41,14 +41,12 @@ const SPONSOR_DETAIL_FIELDS: ApplicantDetailsField[] = [
 ]
 
 const STATUS_META: Record<string, { label: string; color: string; step: number }> = {
-  pending:            { label: "Pending Review",                    color: "bg-yellow-100 text-yellow-800 border-yellow-200",  step: 1 },
-  approved:           { label: "Approved — Awaiting Details",       color: "bg-blue-100 text-blue-800 border-blue-200",        step: 2 },
-  rejected:           { label: "Rejected",                          color: "bg-red-100 text-red-800 border-red-200",           step: 1 },
-  details_submitted:  { label: "Details Submitted — Review Needed", color: "bg-purple-100 text-purple-800 border-purple-200",  step: 3 },
-  details_approved:   { label: "Details Approved — Awaiting Payment", color: "bg-indigo-100 text-indigo-800 border-indigo-200", step: 4 },
-  payment_pending:    { label: "Payment Pending",                   color: "bg-orange-100 text-orange-800 border-orange-200",  step: 4 },
-  paid:               { label: "Paid",                              color: "bg-green-100 text-green-800 border-green-200",     step: 5 },
-  final_approved:     { label: "Final Approved",                    color: "bg-green-100 text-green-800 border-green-200",     step: 5 },
+  pending_payment:    { label: "Awaiting Payment",                  color: "bg-orange-100 text-orange-800 border-orange-200",  step: 2 },
+  paid:               { label: "Paid — Review Needed",              color: "bg-yellow-100 text-yellow-800 border-yellow-200",  step: 3 },
+  approved:           { label: "Approved — Awaiting Details",       color: "bg-blue-100 text-blue-800 border-blue-200",        step: 4 },
+  rejected:           { label: "Rejected",                          color: "bg-red-100 text-red-800 border-red-200",           step: 3 },
+  details_submitted:  { label: "Details Submitted — Review Needed", color: "bg-purple-100 text-purple-800 border-purple-200",  step: 5 },
+  details_approved:   { label: "Confirmed",                         color: "bg-green-100 text-green-800 border-green-200",     step: 5 },
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -94,10 +92,10 @@ function AckDisplay({ checked, children }: { checked: boolean; children: React.R
 // ---------------------------------------------------------------------------
 const FLOW_STEPS = [
   { label: "Applied",            key: "applied" },
+  { label: "Payment Received",   key: "paid" },
   { label: "Stage 1 Approved",   key: "stage1" },
   { label: "Details Submitted",  key: "details" },
-  { label: "Details Approved",   key: "detailsApproved" },
-  { label: "Payment Received",   key: "paid" },
+  { label: "Confirmed",          key: "confirmed" },
 ]
 
 function FlowStepper({
@@ -110,11 +108,11 @@ function FlowStepper({
   const isRejected = status === "rejected"
 
   const timestamps: Record<string, string | null | undefined> = {
-    applied:        createdAt,
-    stage1:         approvedAt,
-    details:        detailsSubmittedAt,
-    detailsApproved: finalApprovedAt,
-    paid:           paidAt,
+    applied:   createdAt,
+    paid:      paidAt,
+    stage1:    approvedAt,
+    details:   detailsSubmittedAt,
+    confirmed: finalApprovedAt,
   }
 
   const fmtDate = (d?: string | null) =>
@@ -124,8 +122,8 @@ function FlowStepper({
     <div className="space-y-0">
       {FLOW_STEPS.map((step, i) => {
         const stepNum  = i + 1
-        const done     = currentStep > stepNum || (currentStep === stepNum && ["paid","final_approved"].includes(status))
-        const active   = currentStep === stepNum && !["paid","final_approved"].includes(status)
+        const done     = currentStep > stepNum || (currentStep === stepNum && ["details_approved"].includes(status))
+        const active   = currentStep === stepNum && !["details_approved"].includes(status)
         const ts       = fmtDate(timestamps[step.key])
         const isLast   = i === FLOW_STEPS.length - 1
 
@@ -134,7 +132,7 @@ function FlowStepper({
             {/* Connector column */}
             <div className="flex flex-col items-center">
               <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 border-2 transition-colors ${
-                isRejected && stepNum === 1
+                isRejected && stepNum === currentStep
                   ? "bg-red-100 border-red-400"
                   : done
                     ? "bg-green-600 border-green-600"
@@ -196,6 +194,7 @@ export default function SponsorDetailPage() {
   const assignSpotMutation   = useAssignSponsorSpot({ mutation: { mutationKey: ["assignSpotSponsor", id] } })
   const deleteMutation       = useDeleteSponsor()
   const resendMutation       = useResendSponsorConfirmation()
+  const resendPaymentLinkMutation = useResendSponsorPaymentLink()
   const detailsMutation      = useUpdateSponsorDetails({ mutation: { mutationKey: ["updateSponsorDetails", id] } })
 
   const [reviewNote, setReviewNote]             = useState("")
@@ -273,6 +272,16 @@ export default function SponsorDetailPage() {
       {
         onSuccess: () => toast({ title: "Confirmation email resent successfully" }),
         onError: () => toast({ title: "Failed to resend confirmation email", variant: "destructive" }),
+      }
+    )
+  }
+
+  const handleResendPaymentLink = () => {
+    resendPaymentLinkMutation.mutate(
+      { id },
+      {
+        onSuccess: () => toast({ title: "Payment link resent to sponsor" }),
+        onError: () => toast({ title: "Failed to resend payment link", variant: "destructive" }),
       }
     )
   }
@@ -363,7 +372,19 @@ export default function SponsorDetailPage() {
               onSave={handleSaveDetails}
               isSaving={detailsMutation.isPending}
             />
-            {sponsor.status === 'pending' && (
+            {sponsor.status === 'pending_payment' && (
+              <Button
+                variant="outline"
+                className="border-secondary/30 hover:bg-secondary/10 text-secondary-foreground"
+                onClick={handleResendPaymentLink}
+                disabled={resendPaymentLinkMutation.isPending}
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                {resendPaymentLinkMutation.isPending ? "Sending…" : "Resend Payment Link"}
+              </Button>
+            )}
+
+            {sponsor.status === 'paid' && (
               <Dialog open={isReviewOpen} onOpenChange={setIsReviewOpen}>
                 <DialogTrigger asChild>
                   <Button className="bg-secondary text-secondary-foreground hover:bg-secondary/80">
@@ -548,72 +569,67 @@ export default function SponsorDetailPage() {
                 </>
               )}
 
+              {/* ── Acknowledgements & Signature (collected at apply time, all sponsors) ── */}
+              <SectionDivider title="Acknowledgements & Signature" />
+              <div className="rounded-md border border-border bg-muted/20 p-4 space-y-0 divide-y divide-border">
+                <AckDisplay checked={ack("ackPromoOnly")}>
+                  Complimentary sponsor booth is for <strong>promotional purposes</strong> only — selling prepared food requires a separate vendor application and vendor fee.
+                </AckDisplay>
+                <AckDisplay checked={ack("ackPermits")}>
+                  Additional permits, licenses, or proof of insurance may be required before participating.
+                </AckDisplay>
+                <AckDisplay checked={ack("ackPaymentRequired")}>
+                  Sponsorship is <strong>not confirmed</strong> until payment is received in full.
+                </AckDisplay>
+                <AckDisplay checked={ack("ackStyleGuidelines")}>
+                  Agreed to follow RCCS Romanian Festival style guidelines for sponsor signage, booth presentation, and promotional materials.
+                </AckDisplay>
+              </div>
+
+              {str("signatureName") && (
+                <div className="pt-4 grid grid-cols-2 gap-x-6 gap-y-4">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-0.5">Signed by</p>
+                    <p className="text-base font-serif text-foreground">{str("signatureName")}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-0.5">Submission date</p>
+                    <p className="text-sm text-foreground">
+                      {fmtDateTime(sponsor.createdAt)}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* ── Stage 2 details ─────────────────────────────────────────── */}
-              {hasStage2 && (
+              {hasStage2 && isBoothSponsor && (
                 <>
-                  {/* Booth & Operational (booth sponsors only) */}
-                  {isBoothSponsor && (
-                    <>
-                      <SectionDivider title="Booth & Operational Information" />
-                      <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                        <Field label="Setup Type"       value={
-                          str("setupType") === "Other (describe)"
-                            ? `Other — ${str("setupOther") ?? ""}`
-                            : str("setupType")
-                        } />
-                        <Field label="Requires Electricity" value={str("requiresElectricity")} />
-                        {str("requiresElectricity") === "Yes" && (
-                          <>
-                            <Field label="Equipment Requiring Electricity" value={str("electricityEquipment")} />
-                            <Field label="Total Amps Needed"               value={str("electricityAmps")} />
-                          </>
-                        )}
-                        <Field label="Staff / Representatives" value={str("staffCount")} />
-                        <Field label="Placement Requests"      value={str("placementRequests")} />
-                        <Field label="Accessibility Needs"     value={str("accessibilityNeeds")} />
-                      </div>
-
-                      <SectionDivider title="Contacts" />
-                      <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                        <Field label="Day-of Contact — Name"   value={str("dayOfContactName")} />
-                        <Field label="Day-of Contact — Mobile" value={str("dayOfContactPhone")} />
-                        <Field label="Backup Contact — Name"   value={str("backupContactName")} />
-                        <Field label="Backup Contact — Mobile" value={str("backupContactPhone")} />
-                      </div>
-                    </>
-                  )}
-
-                  {/* Acknowledgements & Signature (all sponsors) */}
-                  <SectionDivider title="Acknowledgements & Signature" />
-                  <div className="rounded-md border border-border bg-muted/20 p-4 space-y-0 divide-y divide-border">
-                    <AckDisplay checked={ack("ackPromoOnly")}>
-                      Complimentary sponsor booth is for <strong>promotional purposes</strong> only — selling prepared food requires a separate vendor application and vendor fee.
-                    </AckDisplay>
-                    <AckDisplay checked={ack("ackPermits")}>
-                      Additional permits, licenses, or proof of insurance may be required before participating.
-                    </AckDisplay>
-                    <AckDisplay checked={ack("ackPaymentRequired")}>
-                      Sponsorship is <strong>not confirmed</strong> until payment is received in full.
-                    </AckDisplay>
-                    <AckDisplay checked={ack("ackStyleGuidelines")}>
-                      Agreed to follow RCCS Romanian Festival style guidelines for sponsor signage, booth presentation, and promotional materials.
-                    </AckDisplay>
+                  <SectionDivider title="Booth & Operational Information" />
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                    <Field label="Setup Type"       value={
+                      str("setupType") === "Other (describe)"
+                        ? `Other — ${str("setupOther") ?? ""}`
+                        : str("setupType")
+                    } />
+                    <Field label="Requires Electricity" value={str("requiresElectricity")} />
+                    {str("requiresElectricity") === "Yes" && (
+                      <>
+                        <Field label="Equipment Requiring Electricity" value={str("electricityEquipment")} />
+                        <Field label="Total Amps Needed"               value={str("electricityAmps")} />
+                      </>
+                    )}
+                    <Field label="Staff / Representatives" value={str("staffCount")} />
+                    <Field label="Placement Requests"      value={str("placementRequests")} />
+                    <Field label="Accessibility Needs"     value={str("accessibilityNeeds")} />
                   </div>
 
-                  {str("signatureName") && (
-                    <div className="pt-4 grid grid-cols-2 gap-x-6 gap-y-4">
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-0.5">Signed by</p>
-                        <p className="text-base font-serif text-foreground">{str("signatureName")}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-0.5">Submission date</p>
-                        <p className="text-sm text-foreground">
-                          {fmtDateTime(detailsSubmittedAt)}
-                        </p>
-                      </div>
-                    </div>
-                  )}
+                  <SectionDivider title="Contacts" />
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                    <Field label="Day-of Contact — Name"   value={str("dayOfContactName")} />
+                    <Field label="Day-of Contact — Mobile" value={str("dayOfContactPhone")} />
+                    <Field label="Backup Contact — Name"   value={str("backupContactName")} />
+                    <Field label="Backup Contact — Mobile" value={str("backupContactPhone")} />
+                  </div>
                 </>
               )}
 

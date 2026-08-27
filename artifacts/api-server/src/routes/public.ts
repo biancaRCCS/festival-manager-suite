@@ -11,6 +11,7 @@ import {
   sendNewApplicationNotification,
   sendApplicantConfirmation,
 } from "../lib/email";
+import { getOrCreateSponsorCheckoutUrl } from "./stripe";
 
 const router: IRouter = Router();
 
@@ -22,14 +23,6 @@ const VENDOR_LABELS: Record<string, string> = {
   specialty_food: "Specialty Food & Beverage Vendor",
   retail:        "Retail, Artisan & Business Vendor",
   nonprofit:     "Verified Nonprofit Organization",
-};
-
-const TIER_LABELS: Record<string, string> = {
-  bronze:   "Bronze ($750 – $1,499)",
-  silver:   "Silver ($1,500 – $2,999)",
-  gold:     "Gold ($3,000 – $4,999)",
-  platinum: "Platinum ($5,000 – $9,999)",
-  diamond:  "Diamond ($10,000 and above)",
 };
 
 async function getNotificationEmail(yearId: number): Promise<string> {
@@ -132,7 +125,30 @@ router.post("/public/apply/sponsor", async (req, res): Promise<void> => {
     return;
   }
 
-  const { name, orgName, email, phone, tier, sponsorshipAmount, answers } = parsed.data;
+  const {
+    name, orgName, email, phone, tier, sponsorshipAmount, answers,
+    ackPromoOnly, ackPermits, ackPaymentRequired, ackStyleGuidelines, signatureName,
+  } = parsed.data;
+
+  if (!ackPromoOnly || !ackPermits || !ackPaymentRequired || !ackStyleGuidelines) {
+    res.status(400).json({ error: "All acknowledgements must be accepted before submitting." });
+    return;
+  }
+  const trimmedSignature = signatureName.trim();
+  if (!trimmedSignature) {
+    res.status(400).json({ error: "A typed signature is required." });
+    return;
+  }
+
+  const applicationData = {
+    ...(answers as Record<string, unknown>),
+    ackPromoOnly,
+    ackPermits,
+    ackPaymentRequired,
+    ackStyleGuidelines,
+    signatureName: trimmedSignature,
+  };
+
   const [sponsor] = await db.insert(sponsorsTable).values({
     yearId: years[0].id,
     name,
@@ -141,8 +157,10 @@ router.post("/public/apply/sponsor", async (req, res): Promise<void> => {
     phone: phone ?? "",
     tier: tier ?? "bronze",
     sponsorshipAmount: sponsorshipAmount != null ? String(sponsorshipAmount) : undefined,
-    status: "pending",
-    applicationData: answers as Record<string, unknown>,
+    status: "pending_payment",
+    applicationData,
+    agreementSigned: true,
+    agreementSignedName: trimmedSignature,
   }).returning();
 
   await db.insert(activityLogTable).values({
@@ -152,32 +170,14 @@ router.post("/public/apply/sponsor", async (req, res): Promise<void> => {
     entityId: sponsor.id,
   });
 
-  res.status(201).json({ message: "Application submitted successfully", id: sponsor.id });
-
-  const tierLabel = TIER_LABELS[tier ?? "bronze"] ?? tier ?? null;
-  const amountExtra = sponsorshipAmount != null ? `$${Number(sponsorshipAmount).toLocaleString()}` : null;
-  const notificationEmail = await getNotificationEmail(years[0].id);
-
-  void Promise.all([
-    sendNewApplicationNotification({
-      notificationEmail,
-      applicationType: "sponsor",
-      applicantName: name,
-      organizationOrBusiness: orgName,
-      categoryOrTier: tierLabel,
-      contactEmail: email,
-      contactPhone: phone ?? null,
-      adminPath: `/sponsors/${sponsor.id}`,
-      extra: amountExtra,
-    }),
-    sendApplicantConfirmation({
-      to: email,
-      applicantName: name,
-      applicationType: "sponsor",
-      organizationOrBusiness: orgName,
-      categoryOrTier: tierLabel,
-    }),
-  ]);
+  try {
+    const checkoutUrl = await getOrCreateSponsorCheckoutUrl(sponsor.id);
+    res.status(201).json({ message: "Application submitted successfully", id: sponsor.id, checkoutUrl });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[public] Failed to create checkout session for sponsor ${sponsor.id}: ${message}`);
+    res.status(201).json({ message: "Application submitted successfully, but we couldn't start checkout. Please contact us.", id: sponsor.id, checkoutUrl: null });
+  }
 });
 
 // ── Volunteer ─────────────────────────────────────────────────────────────
