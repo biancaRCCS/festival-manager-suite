@@ -13,6 +13,7 @@ import { Search, Eye, Download, AlertCircle } from "lucide-react"
 // ---------------------------------------------------------------------------
 const STATUS_CONFIG: Record<string, { label: string; className: string; needsRccsAction?: boolean }> = {
   pending_payment:   { label: "Awaiting Payment",        className: "bg-orange-100 text-orange-800 hover:bg-orange-100" },
+  payment_processing: { label: "Payment Processing",     className: "bg-purple-100 text-purple-800 hover:bg-purple-100" },
   paid:              { label: "Paid — Review Needed",    className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100",  needsRccsAction: true },
   approved:          { label: "Awaiting Details",        className: "bg-blue-100 text-blue-800 hover:bg-blue-100" },
   details_submitted: { label: "Details In — Review Needed", className: "bg-purple-100 text-purple-800 hover:bg-purple-100", needsRccsAction: true },

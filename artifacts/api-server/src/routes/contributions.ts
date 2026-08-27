@@ -53,7 +53,7 @@ router.get("/contributions", requireStaff, async (req, res): Promise<void> => {
     .select()
     .from(contributionsTable)
     .where(eq(contributionsTable.yearId, queryParsed.data.yearId))
-    .orderBy(desc(contributionsTable.paidAt));
+    .orderBy(desc(contributionsTable.createdAt));
 
   const items = rows.map((row) => ({
     id: row.id,
@@ -61,10 +61,15 @@ router.get("/contributions", requireStaff, async (req, res): Promise<void> => {
     email: row.email,
     amount: Number(row.amount),
     stripeSessionId: row.stripeSessionId,
-    paidAt: row.paidAt.toISOString(),
+    status: row.status,
+    paidAt: row.paidAt ? row.paidAt.toISOString() : null,
+    paymentFailedAt: row.paymentFailedAt ? row.paymentFailedAt.toISOString() : null,
+    paymentFailureReason: row.paymentFailureReason ?? null,
     createdAt: row.createdAt.toISOString(),
   }));
-  const total = items.reduce((sum, item) => sum + item.amount, 0);
+  // Only settled donations count toward the reported total — bank transfers
+  // still processing (or that failed) haven't actually raised anything yet.
+  const total = items.filter((item) => item.status === "paid").reduce((sum, item) => sum + item.amount, 0);
   res.json({ items, total });
 });
 

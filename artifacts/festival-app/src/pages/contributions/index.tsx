@@ -5,8 +5,22 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
 import { Search, Heart } from "lucide-react"
 import { format } from "date-fns"
+
+function ContributionStatusBadge({ status }: { status: string }) {
+  switch (status) {
+    case "paid":
+      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Paid</Badge>
+    case "processing":
+      return <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">Processing</Badge>
+    case "failed":
+      return <Badge variant="destructive">Failed</Badge>
+    default:
+      return <Badge variant="outline">{status}</Badge>
+  }
+}
 
 export default function ContributionsPage() {
   const [search, setSearch] = useState("")
@@ -121,6 +135,7 @@ export default function ContributionsPage() {
                     <TableHead>Date</TableHead>
                     <TableHead>Contributor</TableHead>
                     <TableHead>Email</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -128,13 +143,19 @@ export default function ContributionsPage() {
                   {filtered.map(contribution => (
                     <TableRow key={contribution.id} className="hover:bg-muted/20">
                       <TableCell className="text-sm text-muted-foreground">
-                        {format(new Date(contribution.paidAt || contribution.createdAt), "MMM d, yyyy")}
+                        {format(new Date(contribution.paidAt ?? contribution.createdAt), "MMM d, yyyy")}
                       </TableCell>
                       <TableCell className="font-medium text-foreground">
                         {contribution.name}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {contribution.email}
+                      </TableCell>
+                      <TableCell>
+                        <ContributionStatusBadge status={contribution.status} />
+                        {contribution.status === "failed" && contribution.paymentFailureReason && (
+                          <p className="text-xs text-red-700 mt-1 max-w-xs">{contribution.paymentFailureReason}</p>
+                        )}
                       </TableCell>
                       <TableCell className="text-right font-medium text-foreground">
                         ${contribution.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

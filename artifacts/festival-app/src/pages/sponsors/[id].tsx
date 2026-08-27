@@ -42,6 +42,7 @@ const SPONSOR_DETAIL_FIELDS: ApplicantDetailsField[] = [
 
 const STATUS_META: Record<string, { label: string; color: string; step: number }> = {
   pending_payment:    { label: "Awaiting Payment",                  color: "bg-orange-100 text-orange-800 border-orange-200",  step: 2 },
+  payment_processing: { label: "Payment Processing",                color: "bg-purple-100 text-purple-800 border-purple-200", step: 2 },
   paid:               { label: "Paid — Review Needed",              color: "bg-yellow-100 text-yellow-800 border-yellow-200",  step: 3 },
   approved:           { label: "Approved — Awaiting Details",       color: "bg-blue-100 text-blue-800 border-blue-200",        step: 4 },
   rejected:           { label: "Rejected",                          color: "bg-red-100 text-red-800 border-red-200",           step: 3 },
@@ -540,6 +541,19 @@ export default function SponsorDetailPage() {
                   <span>Paid {new Date(sponsor.paidAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
                 )}
               </div>
+
+              {sponsor.status === 'payment_processing' && (
+                <div role="status" className="rounded-md border border-purple-200 bg-purple-50 p-3 text-sm text-purple-900 mb-2">
+                  <p className="font-semibold">Bank payment processing</p>
+                  <p className="mt-1">The sponsor completed checkout with a bank transfer (e.g. ACH). It can take a few business days to settle — this will update automatically once it clears.</p>
+                </div>
+              )}
+              {sponsor.paymentFailedAt && (
+                <div role="alert" className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-950 mb-2">
+                  <p className="font-semibold">Bank payment failed — {new Date(sponsor.paymentFailedAt).toLocaleString()}</p>
+                  <p className="mt-1">{sponsor.paymentFailureReason ?? "The bank payment did not settle."} The sponsor was reverted to Awaiting Payment so the payment link can be resent.</p>
+                </div>
+              )}
 
               {/* ── Contact Information ── */}
               <SectionDivider title="Contact Information" />

@@ -48,6 +48,8 @@ function formatSponsor(s: typeof sponsorsTable.$inferSelect) {
     location: s.location ?? null,
     reviewNote: s.reviewNote ?? null,
     paidAt: s.paidAt ? s.paidAt.toISOString() : null,
+    paymentFailedAt: s.paymentFailedAt ? s.paymentFailedAt.toISOString() : null,
+    paymentFailureReason: s.paymentFailureReason ?? null,
     approvedAt: s.approvedAt ? s.approvedAt.toISOString() : null,
     detailsSubmittedAt: s.detailsSubmittedAt ? s.detailsSubmittedAt.toISOString() : null,
     finalApprovedAt: s.finalApprovedAt ? s.finalApprovedAt.toISOString() : null,

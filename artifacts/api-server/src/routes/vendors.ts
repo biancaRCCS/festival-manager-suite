@@ -65,6 +65,8 @@ function formatVendor(v: typeof vendorsTable.$inferSelect) {
     location: v.location ?? null,
     reviewNote: v.reviewNote ?? null,
     paidAt: v.paidAt ? v.paidAt.toISOString() : null,
+    paymentFailedAt: v.paymentFailedAt ? v.paymentFailedAt.toISOString() : null,
+    paymentFailureReason: v.paymentFailureReason ?? null,
     settledAmount: v.settledAmount === null ? null : Number(v.settledAmount),
     pendingManualAdjustment: v.pendingManualAdjustment === null ? null : Number(v.pendingManualAdjustment),
     pendingAdjustmentTargetAmount: v.pendingAdjustmentTargetAmount === null ? null : Number(v.pendingAdjustmentTargetAmount),

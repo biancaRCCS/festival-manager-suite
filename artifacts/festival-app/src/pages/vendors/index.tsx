@@ -37,6 +37,7 @@ export default function VendorsPage() {
       case 'pending': return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Pending Review</Badge>
       case 'approved': return <Badge variant="secondary" className="bg-blue-100 text-blue-800 hover:bg-blue-100">Approved</Badge>
       case 'payment_pending': return <Badge variant="secondary" className="bg-orange-100 text-orange-800 hover:bg-orange-100">Payment Pending</Badge>
+      case 'payment_processing': return <Badge variant="secondary" className="bg-purple-100 text-purple-800 hover:bg-purple-100">Payment Processing</Badge>
       case 'paid': return <Badge variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-100">Paid</Badge>
       case 'final_approved': return <Badge variant="success">Final Approved</Badge>
       case 'rejected': return <Badge variant="destructive">Rejected</Badge>

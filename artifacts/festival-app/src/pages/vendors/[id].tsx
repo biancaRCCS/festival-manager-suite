@@ -626,6 +626,19 @@ export default function VendorDetailPage() {
                 )}
               </div>
 
+              {vendor.status === 'payment_processing' && (
+                <div role="status" className="rounded-md border border-purple-200 bg-purple-50 p-3 text-sm text-purple-900 mb-2">
+                  <p className="font-semibold">Bank payment processing</p>
+                  <p className="mt-1">The vendor completed checkout with a bank transfer (e.g. ACH). It can take a few business days to settle — this will update automatically once it clears.</p>
+                </div>
+              )}
+              {vendor.paymentFailedAt && (
+                <div role="alert" className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-950 mb-2">
+                  <p className="font-semibold">Bank payment failed — {new Date(vendor.paymentFailedAt).toLocaleString()}</p>
+                  <p className="mt-1">{vendor.paymentFailureReason ?? "The bank payment did not settle."} The vendor was reverted to Approved so a new payment link can be sent.</p>
+                </div>
+              )}
+
               {/* 4.1 Basic Information */}
               <SectionDivider title="4.1 Basic Information" />
               <div className="grid grid-cols-2 gap-x-6 gap-y-4">
@@ -852,6 +865,10 @@ export default function VendorDetailPage() {
                   <span className="text-sm font-medium">Payment</span>
                   {vendor.paidAt ?
                     <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Paid {new Date(vendor.paidAt).toLocaleDateString()}</Badge> :
+                    vendor.status === 'payment_processing' ?
+                    <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">Processing</Badge> :
+                    vendor.paymentFailedAt ?
+                    <Badge variant="destructive">Failed</Badge> :
                     <Badge variant="secondary">Pending</Badge>
                   }
                 </div>

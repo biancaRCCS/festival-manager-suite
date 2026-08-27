@@ -27,6 +27,7 @@ const {
   checkoutSessionCreateSpy,
   checkoutSessionRetrieveSpy,
   checkoutSessionExpireSpy,
+  paymentIntentRetrieveSpy,
   paymentReceiptSpy,
   paymentLinkEmailSpy,
   newApplicationNotificationSpy,
@@ -35,6 +36,7 @@ const {
   checkoutSessionCreateSpy: vi.fn(),
   checkoutSessionRetrieveSpy: vi.fn(),
   checkoutSessionExpireSpy: vi.fn().mockResolvedValue(undefined),
+  paymentIntentRetrieveSpy: vi.fn().mockResolvedValue({ last_payment_error: null }),
   paymentReceiptSpy: vi.fn().mockResolvedValue(undefined),
   paymentLinkEmailSpy: vi.fn().mockResolvedValue(undefined),
   newApplicationNotificationSpy: vi.fn().mockResolvedValue(undefined),
@@ -49,6 +51,9 @@ vi.mock("../lib/stripeClient", () => ({
         retrieve: checkoutSessionRetrieveSpy,
         expire: checkoutSessionExpireSpy,
       },
+    },
+    paymentIntents: {
+      retrieve: paymentIntentRetrieveSpy,
     },
     webhooks: {
       constructEvent: (payload: Buffer, _sig: string, _secret: string): Stripe.Event =>
@@ -156,6 +161,8 @@ beforeEach(() => {
   checkoutSessionCreateSpy.mockReset();
   checkoutSessionRetrieveSpy.mockReset();
   checkoutSessionExpireSpy.mockClear();
+  paymentIntentRetrieveSpy.mockReset();
+  paymentIntentRetrieveSpy.mockResolvedValue({ last_payment_error: null });
   paymentReceiptSpy.mockClear();
   paymentLinkEmailSpy.mockClear();
   newApplicationNotificationSpy.mockClear();
@@ -409,6 +416,70 @@ describe("checkout.session.completed webhook for sponsors", () => {
     const [unchanged] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, sponsor.id));
     expect(unchanged?.status).toBe("approved");
     expect(unchanged?.paidAt).toBeNull();
+    expect(paymentReceiptSpy).not.toHaveBeenCalled();
+  });
+
+  it("moves an unpaid completed Checkout into payment processing, then fulfills async success", async () => {
+    const sponsor = await createSponsor({ stripeSessionId: "cs_sponsor_async_success" });
+    const session = {
+      id: "cs_sponsor_async_success",
+      object: "checkout.session",
+      amount_total: 75000,
+      metadata: { entityType: "sponsor", entityId: String(sponsor.id) },
+    };
+
+    const pending = await postWebhook(makeEvent("checkout.session.completed", {
+      ...session,
+      payment_status: "unpaid",
+    }));
+    expect(pending.status).toBe(200);
+
+    const [processing] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, sponsor.id));
+    expect(processing?.status).toBe("payment_processing");
+    expect(processing?.paidAt).toBeNull();
+    expect(paymentReceiptSpy).not.toHaveBeenCalled();
+
+    const success = await postWebhook(makeEvent("checkout.session.async_payment_succeeded", {
+      ...session,
+      payment_status: "paid",
+    }));
+    expect(success.status).toBe(200);
+
+    const [paid] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, sponsor.id));
+    expect(paid?.status).toBe("paid");
+    expect(paid?.paidAt).not.toBeNull();
+    expect(paymentReceiptSpy).toHaveBeenCalledOnce();
+    expect(newApplicationNotificationSpy).toHaveBeenCalledOnce();
+  });
+
+  it("reverts a failed async sponsor payment and records the Stripe failure reason", async () => {
+    const sponsor = await createSponsor({
+      status: "payment_processing",
+      stripeSessionId: "cs_sponsor_async_failed",
+    });
+    paymentIntentRetrieveSpy.mockResolvedValue({
+      id: "pi_sponsor_async_failed",
+      last_payment_error: { message: "The bank account was closed." },
+    });
+
+    const res = await postWebhook(makeEvent("checkout.session.async_payment_failed", {
+      id: "cs_sponsor_async_failed",
+      object: "checkout.session",
+      payment_status: "unpaid",
+      amount_total: 75000,
+      payment_intent: "pi_sponsor_async_failed",
+      metadata: { entityType: "sponsor", entityId: String(sponsor.id) },
+    }));
+    expect(res.status).toBe(200);
+
+    const [updated] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, sponsor.id));
+    expect(updated?.status).toBe("pending_payment");
+    expect(updated?.paidAt).toBeNull();
+    expect(updated?.paymentFailedAt).not.toBeNull();
+    expect(updated?.paymentFailureReason).toBe("The bank account was closed.");
+
+    const logs = await db.select().from(activityLogTable).where(eq(activityLogTable.entityId, sponsor.id));
+    expect(logs.some((log) => log.type === "payment_failed")).toBe(true);
     expect(paymentReceiptSpy).not.toHaveBeenCalled();
   });
 });

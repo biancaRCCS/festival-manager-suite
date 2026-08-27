@@ -32,6 +32,7 @@ const {
   checkoutSessionRetrieveSpy,
   checkoutSessionExpireSpy,
   vendorCategoryAdjustedEmailSpy,
+  paymentIntentRetrieveSpy,
 } = vi.hoisted(() => ({
   processWebhookSpy: vi.fn().mockResolvedValue(undefined),
   contributionReceiptSpy: vi.fn().mockResolvedValue(undefined),
@@ -39,6 +40,7 @@ const {
   checkoutSessionRetrieveSpy: vi.fn(),
   checkoutSessionExpireSpy: vi.fn(),
   vendorCategoryAdjustedEmailSpy: vi.fn().mockResolvedValue(undefined),
+  paymentIntentRetrieveSpy: vi.fn().mockResolvedValue({ last_payment_error: null }),
 }));
 
 vi.mock("../lib/stripeClient", () => {
@@ -59,6 +61,9 @@ vi.mock("../lib/stripeClient", () => {
           retrieve: checkoutSessionRetrieveSpy,
           expire: checkoutSessionExpireSpy,
         },
+      },
+      paymentIntents: {
+        retrieve: paymentIntentRetrieveSpy,
       },
       webhooks: {
         constructEvent: (
@@ -177,6 +182,8 @@ beforeEach(() => {
   checkoutSessionRetrieveSpy.mockReset();
   checkoutSessionExpireSpy.mockReset();
   vendorCategoryAdjustedEmailSpy.mockClear();
+  paymentIntentRetrieveSpy.mockReset();
+  paymentIntentRetrieveSpy.mockResolvedValue({ last_payment_error: null });
 });
 
 async function createVendor(overrides: Partial<typeof vendorsTable.$inferInsert> = {}) {
@@ -524,5 +531,147 @@ describe("POST /api/stripe/webhook", () => {
       .where(eq(contributionsTable.stripeSessionId, sessionId));
     expect(rows).toHaveLength(1);
     expect(contributionReceiptSpy).toHaveBeenCalledOnce();
+  });
+});
+
+describe("async bank payment methods (e.g. ACH) for vendors", () => {
+  it("marks a vendor payment_processing when checkout completes but payment is still unpaid", async () => {
+    const vendor = await createVendor({ status: "payment_pending", stripeSessionId: "cs_async_pending" });
+    testVendorId = vendor.id;
+
+    const res = await postWebhook(makeEvent("checkout.session.completed", {
+      id: "cs_async_pending",
+      object: "checkout.session",
+      payment_status: "unpaid",
+      amount_total: 30000,
+      metadata: { entityType: "vendor", entityId: String(vendor.id) },
+    }));
+    expect(res.status).toBe(200);
+
+    const [updated] = await db.select().from(vendorsTable).where(eq(vendorsTable.id, vendor.id));
+    expect(updated?.status).toBe("payment_processing");
+    expect(updated?.paidAt).toBeNull();
+
+    const logs = await db.select().from(activityLogTable).where(eq(activityLogTable.entityId, vendor.id));
+    expect(logs.some((l) => l.type === "payment_processing")).toBe(true);
+  });
+
+  it("finalizes a vendor to paid when async_payment_succeeded arrives after payment_processing", async () => {
+    const vendor = await createVendor({ status: "payment_processing", stripeSessionId: "cs_async_success" });
+    testVendorId = vendor.id;
+
+    const res = await postWebhook(makeEvent("checkout.session.async_payment_succeeded", {
+      id: "cs_async_success",
+      object: "checkout.session",
+      payment_status: "paid",
+      amount_total: 30000,
+      metadata: { entityType: "vendor", entityId: String(vendor.id) },
+    }));
+    expect(res.status).toBe(200);
+
+    const [updated] = await db.select().from(vendorsTable).where(eq(vendorsTable.id, vendor.id));
+    expect(updated?.status).toBe("paid");
+    expect(updated?.paidAt).not.toBeNull();
+  });
+
+  it("reverts a vendor to approved and records the failure reason when async_payment_failed arrives", async () => {
+    const vendor = await createVendor({ status: "payment_processing", stripeSessionId: "cs_async_fail" });
+    testVendorId = vendor.id;
+
+    paymentIntentRetrieveSpy.mockResolvedValue({
+      id: "pi_test_failed",
+      last_payment_error: { message: "Your bank account has insufficient funds." },
+    });
+
+    const res = await postWebhook(makeEvent("checkout.session.async_payment_failed", {
+      id: "cs_async_fail",
+      object: "checkout.session",
+      payment_status: "unpaid",
+      amount_total: 30000,
+      payment_intent: "pi_test_failed",
+      metadata: { entityType: "vendor", entityId: String(vendor.id) },
+    }));
+    expect(res.status).toBe(200);
+
+    const [updated] = await db.select().from(vendorsTable).where(eq(vendorsTable.id, vendor.id));
+    expect(updated?.status).toBe("approved");
+    expect(updated?.paidAt).toBeNull();
+    expect(updated?.paymentFailedAt).not.toBeNull();
+    expect(updated?.paymentFailureReason).toBe("Your bank account has insufficient funds.");
+
+    const logs = await db.select().from(activityLogTable).where(eq(activityLogTable.entityId, vendor.id));
+    expect(logs.some((l) => l.type === "payment_failed")).toBe(true);
+  });
+});
+
+describe("async bank payment methods (e.g. ACH) for contributions", () => {
+  it("records a processing contribution, then finalizes to paid and sends exactly one receipt", async () => {
+    const sessionId = `cs_contribution_async_${Date.now()}`;
+    const baseSession = {
+      id: sessionId,
+      object: "checkout.session" as const,
+      amount_total: 5000,
+      customer_email: "asyncdonor@example.com",
+      metadata: {
+        entityType: "contribution",
+        contributorName: "Async Donor",
+        contributorEmail: "asyncdonor@example.com",
+        yearId: String(testYearId),
+      },
+    };
+
+    const pending = await postWebhook(makeEvent("checkout.session.completed", { ...baseSession, payment_status: "unpaid" }));
+    expect(pending.status).toBe(200);
+
+    const [processing] = await db.select().from(contributionsTable).where(eq(contributionsTable.stripeSessionId, sessionId));
+    expect(processing?.status).toBe("processing");
+    expect(processing?.paidAt).toBeNull();
+    expect(contributionReceiptSpy).not.toHaveBeenCalled();
+
+    const success = await postWebhook(makeEvent("checkout.session.async_payment_succeeded", { ...baseSession, payment_status: "paid" }));
+    expect(success.status).toBe(200);
+
+    const [paid] = await db.select().from(contributionsTable).where(eq(contributionsTable.stripeSessionId, sessionId));
+    expect(paid?.status).toBe("paid");
+    expect(paid?.paidAt).not.toBeNull();
+    expect(contributionReceiptSpy).toHaveBeenCalledOnce();
+
+    // A retried success webhook must not send a second receipt or downgrade the row.
+    const retried = await postWebhook(makeEvent("checkout.session.async_payment_succeeded", { ...baseSession, payment_status: "paid" }));
+    expect(retried.status).toBe(200);
+    expect(contributionReceiptSpy).toHaveBeenCalledOnce();
+  });
+
+  it("marks a processing contribution failed and never marks it paid", async () => {
+    const sessionId = `cs_contribution_failed_${Date.now()}`;
+    const baseSession = {
+      id: sessionId,
+      object: "checkout.session" as const,
+      amount_total: 2000,
+      payment_intent: "pi_contribution_failed",
+      customer_email: "faileddonor@example.com",
+      metadata: {
+        entityType: "contribution",
+        contributorName: "Failed Donor",
+        contributorEmail: "faileddonor@example.com",
+        yearId: String(testYearId),
+      },
+    };
+
+    await postWebhook(makeEvent("checkout.session.completed", { ...baseSession, payment_status: "unpaid" }));
+
+    paymentIntentRetrieveSpy.mockResolvedValue({
+      id: "pi_contribution_failed",
+      last_payment_error: { message: "The bank account could not be verified." },
+    });
+
+    const res = await postWebhook(makeEvent("checkout.session.async_payment_failed", { ...baseSession, payment_status: "unpaid" }));
+    expect(res.status).toBe(200);
+
+    const [row] = await db.select().from(contributionsTable).where(eq(contributionsTable.stripeSessionId, sessionId));
+    expect(row?.status).toBe("failed");
+    expect(row?.paidAt).toBeNull();
+    expect(row?.paymentFailureReason).toBe("The bank account could not be verified.");
+    expect(contributionReceiptSpy).not.toHaveBeenCalled();
   });
 });
