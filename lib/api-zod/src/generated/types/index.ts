@@ -16,6 +16,7 @@ export * from './checkoutSession';
 export * from './contribution';
 export * from './contributionCheckoutInput';
 export * from './contributionListResponse';
+export * from './contributionStatus';
 export * from './dashboardSummary';
 export * from './exportSponsorsParams';
 export * from './exportVendorsParams';

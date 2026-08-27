@@ -21,6 +21,10 @@ export const vendorsTable = pgTable("vendors", {
   portalToken: text("portal_token"),
   stripeSessionId: text("stripe_session_id"),
   paidAt: timestamp("paid_at", { withTimezone: true }),
+  // Set when an async payment method (e.g. ACH bank transfer) fails to settle
+  // after checkout completed. Cleared again on the next successful payment.
+  paymentFailedAt: timestamp("payment_failed_at", { withTimezone: true }),
+  paymentFailureReason: text("payment_failure_reason"),
   // The amount fully settled against the vendor's current category. Stripe
   // establishes the initial value; staff update it only after resolving a
   // recorded manual category adjustment.

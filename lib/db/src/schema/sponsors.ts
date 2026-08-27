@@ -23,6 +23,10 @@ export const sponsorsTable = pgTable("sponsors", {
   portalToken: text("portal_token"),
   stripeSessionId: text("stripe_session_id"),
   paidAt: timestamp("paid_at", { withTimezone: true }),
+  // Set when an async payment method (e.g. ACH bank transfer) fails to settle
+  // after checkout completed. Cleared again on the next successful payment.
+  paymentFailedAt: timestamp("payment_failed_at", { withTimezone: true }),
+  paymentFailureReason: text("payment_failure_reason"),
   approvedAt: timestamp("approved_at", { withTimezone: true }),
   detailsSubmittedAt: timestamp("details_submitted_at", { withTimezone: true }),
   finalApprovedAt: timestamp("final_approved_at", { withTimezone: true }), // repurposed: set when status → details_approved

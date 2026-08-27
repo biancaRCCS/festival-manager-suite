@@ -170,6 +170,7 @@ export const VendorStatus = {
   approved: 'approved',
   rejected: 'rejected',
   payment_pending: 'payment_pending',
+  payment_processing: 'payment_processing',
   paid: 'paid',
   final_approved: 'final_approved',
 } as const;
@@ -206,6 +207,10 @@ export interface Vendor {
   reviewNote?: string | null;
   /** @nullable */
   paidAt?: string | null;
+  /** @nullable */
+  paymentFailedAt?: string | null;
+  /** @nullable */
+  paymentFailureReason?: string | null;
   /** @nullable */
   settledAmount?: number | null;
   /** @nullable */
@@ -263,6 +268,7 @@ export type SponsorStatus = typeof SponsorStatus[keyof typeof SponsorStatus];
 
 export const SponsorStatus = {
   pending_payment: 'pending_payment',
+  payment_processing: 'payment_processing',
   paid: 'paid',
   approved: 'approved',
   rejected: 'rejected',
@@ -295,6 +301,10 @@ export interface Sponsor {
   reviewNote?: string | null;
   /** @nullable */
   paidAt?: string | null;
+  /** @nullable */
+  paymentFailedAt?: string | null;
+  /** @nullable */
+  paymentFailureReason?: string | null;
   /** @nullable */
   approvedAt?: string | null;
   /** @nullable */
@@ -595,13 +605,28 @@ export interface ContributionCheckoutInput {
   amount: number;
 }
 
+export type ContributionStatus = typeof ContributionStatus[keyof typeof ContributionStatus];
+
+
+export const ContributionStatus = {
+  processing: 'processing',
+  paid: 'paid',
+  failed: 'failed',
+} as const;
+
 export interface Contribution {
   id: number;
   name: string;
   email: string;
   amount: number;
   stripeSessionId: string;
-  paidAt: string;
+  status: ContributionStatus;
+  /** @nullable */
+  paidAt?: string | null;
+  /** @nullable */
+  paymentFailedAt?: string | null;
+  /** @nullable */
+  paymentFailureReason?: string | null;
   createdAt: string;
 }
 

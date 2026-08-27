@@ -201,8 +201,9 @@ router.patch("/sponsors/:id/review", requireStaff, async (req, res): Promise<voi
     performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
   });
 
-  // When approved: email the sponsor a link to complete their stage 2 details.
-  // Payment is NOT mentioned — it comes only after details are approved.
+  // When approved: email the sponsor a link to complete their remaining stage 2
+  // details (booth/operational info, logo). Payment and acknowledgements
+  // already happened at application time under the pay-first flow.
   if (status === "approved" && updated.portalToken) {
     const domain = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost";
     const portalUrl = `https://${domain}/portal/${updated.portalToken}`;

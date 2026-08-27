@@ -381,8 +381,10 @@ export async function sendVendorCategoryAdjustedEmail(params: {
 }
 
 // ---------------------------------------------------------------------------
-// 1c. Sponsor stage-1 approval — invite to complete sponsorship details
-//     Payment is NOT mentioned here; it comes only after details are approved.
+// 1c. Sponsor stage-1 approval — invite to complete sponsorship details.
+//     Payment and acknowledgements already happened at application time
+//     (pay-first flow), so this only asks for the remaining operational
+//     details/logo and confirms payment has already been received.
 // ---------------------------------------------------------------------------
 export async function sendSponsorDetailsInviteEmail(params: {
   to: string;
@@ -400,7 +402,7 @@ export async function sendSponsorDetailsInviteEmail(params: {
       <h2 style="color: #8b1a1a;">Congratulations, ${name}!</h2>
       <p>We are delighted to confirm that <strong>${orgName}</strong>'s application to sponsor <strong>${festivalName}</strong> has been <strong>approved</strong>.</p>
       ${field("Sponsorship Tier", tierLabel)}
-      <p>The next step is to complete your sponsorship details — including your organization's booth and operational information, acknowledgements, and logo — so we can finalise your participation.</p>
+      <p>We've received your sponsorship payment — thank you! The next step is to complete your remaining sponsorship details, including your organization's booth and operational information and your logo, so we can finalise your participation.</p>
       <p>
         <a href="${portalUrl}" style="display: inline-block; background: #8b1a1a; color: white; padding: 12px 24px; text-decoration: none; font-size: 16px;">
           Complete Your Sponsorship Details
@@ -410,7 +412,7 @@ export async function sendSponsorDetailsInviteEmail(params: {
         If the button above does not work, copy and paste this link into your browser:<br>
         <a href="${portalUrl}">${portalUrl}</a>
       </p>
-      <p>Once our team reviews your details, we will send you a separate email with instructions to complete your payment.</p>
+      <p>Once our team reviews your details, we will send you a final confirmation email.</p>
       <p>If you have any questions, please reply to this email.</p>
       <p>We look forward to welcoming you to the festival!</p>
     </div>`;
@@ -478,7 +480,7 @@ export async function sendSponsorPaymentReceiptEmail(params: {
       ${field("Sponsorship Tier", tierLabel)}
       ${field("Amount Paid", amountDisplay)}
       ${DIVIDER}
-      <p>We'll follow up by email once your application has been reviewed — typically within one to two business days. If approved, we'll ask you to complete a short sponsorship details form (booth setup, contacts, acknowledgements, etc.).</p>
+      <p>We'll follow up by email once your application has been reviewed — typically within one to two business days. If approved, we'll ask you to complete a short sponsorship details form (booth setup, contacts, logo, etc.).</p>
       <p>If you have any questions in the meantime, please reply to this email.</p>
       <p>Thank you for supporting the Romanian community!</p>
     </div>`;

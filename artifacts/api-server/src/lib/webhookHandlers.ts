@@ -1,6 +1,6 @@
 import Stripe from 'stripe';
 import { getStripeSync, getUncachableStripeClient, getWebhookSecret } from './stripeClient';
-import { handleCheckoutComplete } from '../routes/stripe';
+import { handleCheckoutComplete, handleCheckoutAsyncPaymentFailed } from '../routes/stripe';
 
 export class WebhookHandlers {
   static async processWebhook(payload: Buffer, signature: string): Promise<void> {
@@ -38,9 +38,28 @@ export class WebhookHandlers {
         event = JSON.parse(payload.toString()) as Stripe.Event;
       }
 
+      // checkout.session.completed: fires as soon as checkout finishes. Card
+      // payments are already paid_status "paid" by then; async payment methods
+      // (e.g. ACH) fire this with "unpaid" and settle later via one of the two
+      // events below.
       if (event.type === 'checkout.session.completed') {
         const session = event.data.object as Stripe.Checkout.Session;
         await handleCheckoutComplete(session);
+      }
+
+      // checkout.session.async_payment_succeeded: an async payment method
+      // finished settling. By this point payment_status reads "paid", so the
+      // same fulfillment path used for synchronous payments applies here too.
+      if (event.type === 'checkout.session.async_payment_succeeded') {
+        const session = event.data.object as Stripe.Checkout.Session;
+        await handleCheckoutComplete(session);
+      }
+
+      // checkout.session.async_payment_failed: an async payment method did
+      // not settle. Must never be treated as paid — see handleCheckoutAsyncPaymentFailed.
+      if (event.type === 'checkout.session.async_payment_failed') {
+        const session = event.data.object as Stripe.Checkout.Session;
+        await handleCheckoutAsyncPaymentFailed(session);
       }
     } catch (err: any) {
       // Log but don't re-throw: stripe-replit-sync already verified the signature above.

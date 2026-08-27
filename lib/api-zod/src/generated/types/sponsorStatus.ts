@@ -11,6 +11,7 @@ export type SponsorStatus = typeof SponsorStatus[keyof typeof SponsorStatus];
 
 export const SponsorStatus = {
   pending_payment: 'pending_payment',
+  payment_processing: 'payment_processing',
   paid: 'paid',
   approved: 'approved',
   rejected: 'rejected',

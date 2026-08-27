@@ -14,6 +14,7 @@ export const VendorStatus = {
   approved: 'approved',
   rejected: 'rejected',
   payment_pending: 'payment_pending',
+  payment_processing: 'payment_processing',
   paid: 'paid',
   final_approved: 'final_approved',
 } as const;

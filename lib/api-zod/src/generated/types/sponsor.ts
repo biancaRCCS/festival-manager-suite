@@ -32,6 +32,10 @@ export interface Sponsor {
   /** @nullable */
   paidAt?: string | null;
   /** @nullable */
+  paymentFailedAt?: string | null;
+  /** @nullable */
+  paymentFailureReason?: string | null;
+  /** @nullable */
   approvedAt?: string | null;
   /** @nullable */
   detailsSubmittedAt?: string | null;

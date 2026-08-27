@@ -259,6 +259,83 @@ describe("sponsor pay-first Checkout", () => {
     await expect(getOrCreateSponsorCheckoutUrl(sponsor.id)).rejects.toThrow("expected 'pending_payment'");
     expect(checkoutSessionCreateSpy).not.toHaveBeenCalled();
   });
+
+  it("reconciles instead of issuing a second payable link when the stored session already completed payment before the webhook landed", async () => {
+    // Simulates the sponsor paying successfully, then someone (e.g. staff
+    // clicking "Resend Payment Link", or a retried apply-time call) hitting
+    // getOrCreateSponsorCheckoutUrl before checkout.session.completed has
+    // been processed. Our DB row is still 'pending_payment', but Stripe
+    // already shows the session as paid — creating a fresh session here
+    // would let the sponsor be charged twice.
+    const sponsor = await createSponsor({ stripeSessionId: "cs_test_already_paid" });
+    checkoutSessionRetrieveSpy.mockResolvedValue({
+      id: "cs_test_already_paid",
+      status: "complete",
+      url: null,
+      payment_status: "paid",
+      amount_total: 75000,
+      metadata: { entityType: "sponsor", entityId: String(sponsor.id) },
+    });
+
+    await expect(getOrCreateSponsorCheckoutUrl(sponsor.id)).rejects.toThrow("already completed payment");
+
+    expect(checkoutSessionCreateSpy).not.toHaveBeenCalled();
+    const [updated] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, sponsor.id));
+    expect(updated?.status).toBe("paid");
+    expect(updated?.paidAt).not.toBeNull();
+    expect(paymentReceiptSpy).toHaveBeenCalledOnce();
+  });
+
+  it("replaces a definitively expired (never-paid) stored session with a fresh one", async () => {
+    const sponsor = await createSponsor({ stripeSessionId: "cs_test_expired" });
+    checkoutSessionRetrieveSpy.mockResolvedValue({
+      id: "cs_test_expired",
+      status: "expired",
+      url: null,
+      payment_status: "unpaid",
+    });
+    checkoutSessionCreateSpy.mockResolvedValue({ id: "cs_test_fresh", url: "https://checkout.example.test/fresh" });
+
+    const url = await getOrCreateSponsorCheckoutUrl(sponsor.id);
+
+    expect(url).toBe("https://checkout.example.test/fresh");
+    const [updated] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, sponsor.id));
+    expect(updated?.stripeSessionId).toBe("cs_test_fresh");
+    expect(updated?.status).toBe("pending_payment");
+  });
+
+  it("reconciles instead of returning a stale url when the concurrently-won session turns out to already be paid", async () => {
+    const sponsor = await createSponsor({ stripeSessionId: null });
+
+    // First call (this test's direct invocation) loses the DB claim to a
+    // second, concurrent caller that we simulate by updating the row out from
+    // under it right after the first call reads the sponsor but before it
+    // claims a session.
+    checkoutSessionCreateSpy.mockImplementation(async () => {
+      // Simulate the sponsor's payment completing (and the webhook already
+      // having claimed the row for a *different* session) while our call is
+      // still in flight creating its own (soon to be discarded) session.
+      await db
+        .update(sponsorsTable)
+        .set({ stripeSessionId: "cs_test_winner_paid", status: "paid", paidAt: new Date() })
+        .where(eq(sponsorsTable.id, sponsor.id));
+      return { id: "cs_test_loser", url: "https://checkout.example.test/loser" };
+    });
+    checkoutSessionRetrieveSpy.mockResolvedValue({
+      id: "cs_test_winner_paid",
+      status: "complete",
+      url: null,
+      payment_status: "paid",
+      amount_total: 75000,
+      metadata: { entityType: "sponsor", entityId: String(sponsor.id) },
+    });
+
+    await expect(getOrCreateSponsorCheckoutUrl(sponsor.id)).rejects.toThrow("already completed payment");
+
+    expect(checkoutSessionExpireSpy).toHaveBeenCalledWith("cs_test_loser");
+    const [updated] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, sponsor.id));
+    expect(updated?.status).toBe("paid");
+  });
 });
 
 describe("POST /api/sponsors/:id/resend-payment-link", () => {

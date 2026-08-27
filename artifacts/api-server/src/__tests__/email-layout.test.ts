@@ -13,6 +13,8 @@ vi.mock("resend", () => ({
 import {
   sendApplicantConfirmation,
   sendContributionReceipt,
+  sendSponsorDetailsInviteEmail,
+  sendSponsorPaymentReceiptEmail,
   sendTestEmail,
   sendVendorCategoryAdjustedEmail,
   sendVendorPortalInviteEmail,
@@ -127,6 +129,45 @@ describe("shared email layout", () => {
     expect(email.html).toContain("Specialty Food &amp; Beverage Vendor");
     expect(email.html).toContain("$1,200.00");
     expect(email.html).toContain("The submitted menu is a specialty food booth.");
+    expectSharedLayout(email.html);
+  });
+
+  it("tells sponsors payment is already received and never mentions later payment instructions (pay-first flow)", async () => {
+    await sendSponsorDetailsInviteEmail({
+      to: "sponsor@example.com",
+      name: "Maria Ionescu",
+      orgName: "Ionescu Imports",
+      tier: "gold",
+      portalUrl: "https://festival.example.test/portal/example-token",
+      festivalName: "2026 Romanian Festival",
+    });
+
+    expect(resendSendSpy).toHaveBeenCalledOnce();
+    const email = resendSendSpy.mock.calls[0][0] as { subject: string; html: string };
+    expect(email.html).toContain("We've received your sponsorship payment");
+    expect(email.html).toContain("final confirmation");
+    // Acknowledgements and signature are collected at application time under
+    // the pay-first flow, so the stage-2 details invite must not ask for them
+    // or imply payment is still to come.
+    expect(email.html).not.toContain("acknowledgements");
+    expect(email.html).not.toContain("instructions to complete your payment");
+    expectSharedLayout(email.html);
+  });
+
+  it("does not ask sponsors for acknowledgements in the payment receipt's stage-2 preview (pay-first flow)", async () => {
+    await sendSponsorPaymentReceiptEmail({
+      to: "sponsor@example.com",
+      name: "Maria Ionescu",
+      orgName: "Ionescu Imports",
+      tier: "gold",
+      amount: 2500,
+      festivalName: "2026 Romanian Festival",
+    });
+
+    expect(resendSendSpy).toHaveBeenCalledOnce();
+    const email = resendSendSpy.mock.calls[0][0] as { subject: string; html: string };
+    expect(email.html).toContain("Payment Received");
+    expect(email.html).not.toContain("acknowledgements");
     expectSharedLayout(email.html);
   });
 });

@@ -10,7 +10,15 @@ export const contributionsTable = pgTable("contributions", {
   email: text("email").notNull(),
   amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
   stripeSessionId: text("stripe_session_id").notNull().unique(),
-  paidAt: timestamp("paid_at", { withTimezone: true }).notNull(),
+  // "processing": checkout completed via an async payment method (e.g. ACH)
+  // and settlement is pending. "paid": settled. "failed": the async payment
+  // did not settle. Existing rows predate this column and are all genuinely
+  // settled, hence the "paid" default.
+  status: text("status").notNull().default("paid"),
+  // Null while a bank payment is still processing.
+  paidAt: timestamp("paid_at", { withTimezone: true }),
+  paymentFailedAt: timestamp("payment_failed_at", { withTimezone: true }),
+  paymentFailureReason: text("payment_failure_reason"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

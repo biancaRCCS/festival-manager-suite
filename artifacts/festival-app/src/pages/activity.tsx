@@ -37,6 +37,8 @@ const TYPE_LABELS: Record<string, string> = {
   approved:        "Approved",
   rejected:        "Rejected",
   paid:            "Paid",
+  payment_processing: "Payment Processing",
+  payment_failed:  "Payment Failed",
   final_approved:  "Final Approved",
   assigned:        "Assigned",
   category_changed: "Category Changed",
@@ -60,6 +62,8 @@ function typeIcon(type: string) {
     case "final_approved":  return <Star         className="w-4 h-4 text-emerald-600" />
     case "rejected":        return <XCircle      className="w-4 h-4 text-red-500" />
     case "paid":            return <DollarSign   className="w-4 h-4 text-blue-500" />
+    case "payment_processing": return <DollarSign className="w-4 h-4 text-amber-500" />
+    case "payment_failed":  return <XCircle      className="w-4 h-4 text-red-500" />
     case "assigned":        return <Briefcase    className="w-4 h-4 text-violet-500" />
     case "category_changed": return <ClipboardList className="w-4 h-4 text-amber-600" />
     case "category_adjustment_settled": return <DollarSign className="w-4 h-4 text-amber-700" />
@@ -79,6 +83,8 @@ function typeBadgeVariant(type: string): "default" | "secondary" | "destructive"
     case "rejected":
     case "deleted":        return "destructive"
     case "paid":           return "secondary"
+    case "payment_failed": return "destructive"
+    case "payment_processing": return "outline"
     default:               return "outline"
   }
 }

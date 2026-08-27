@@ -1581,7 +1581,7 @@ components:
           type: string
         status:
           type: string
-          enum: [pending, approved, rejected, payment_pending, paid, final_approved]
+          enum: [pending, approved, rejected, payment_pending, payment_processing, paid, final_approved]
         applicationData:
           type: object
           additionalProperties: true
@@ -1596,6 +1596,10 @@ components:
         reviewNote:
           type: ["string", "null"]
         paidAt:
+          type: ["string", "null"]
+        paymentFailedAt:
+          type: ["string", "null"]
+        paymentFailureReason:
           type: ["string", "null"]
         settledAmount:
           type: ["number", "null"]
@@ -1672,7 +1676,7 @@ components:
           type: string
         status:
           type: string
-          enum: [pending_payment, paid, approved, rejected, details_submitted, details_approved]
+          enum: [pending_payment, payment_processing, paid, approved, rejected, details_submitted, details_approved]
         applicationData:
           type: object
           additionalProperties: true
@@ -1689,6 +1693,10 @@ components:
         reviewNote:
           type: ["string", "null"]
         paidAt:
+          type: ["string", "null"]
+        paymentFailedAt:
+          type: ["string", "null"]
+        paymentFailureReason:
           type: ["string", "null"]
         approvedAt:
           type: ["string", "null"]
@@ -2053,7 +2061,7 @@ components:
 
     Contribution:
       type: object
-      required: [id, name, email, amount, stripeSessionId, paidAt, createdAt]
+      required: [id, name, email, amount, stripeSessionId, status, createdAt]
       properties:
         id:
           type: integer
@@ -2065,9 +2073,17 @@ components:
           type: number
         stripeSessionId:
           type: string
-        paidAt:
+        status:
           type: string
+          enum: [processing, paid, failed]
+        paidAt:
+          type: ["string", "null"]
           format: date-time
+        paymentFailedAt:
+          type: ["string", "null"]
+          format: date-time
+        paymentFailureReason:
+          type: ["string", "null"]
         createdAt:
           type: string
           format: date-time

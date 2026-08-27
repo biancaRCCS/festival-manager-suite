@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 import { db, vendorsTable, sponsorsTable, contributionsTable, festivalYearsTable, festivalSettingsTable, activityLogTable } from "@workspace/db";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, inArray } from "drizzle-orm";
 import { getUncachableStripeClient } from "../lib/stripeClient";
 import { sendContributionReceipt, sendSponsorPaymentReceiptEmail, sendNewApplicationNotification, TIER_LABELS } from "../lib/email";
 import { logger } from "../lib/logger";
@@ -144,6 +144,36 @@ export async function createCheckoutSession(params: {
  * pay-first application. Called both from the public apply route (initial
  * payment) and from the staff-triggered resend-payment-link route.
  */
+/**
+ * Given a Stripe Checkout session already attached to a sponsor, decides whether
+ * it's still safe to hand back a payable URL for it.
+ *
+ * - Still `open`: return its URL — the sponsor can keep using this link.
+ * - Already paid (`payment_status === "paid"`, regardless of Stripe's session
+ *   `status`): the sponsor already completed payment. Our own webhook may just
+ *   not have landed yet, so reconcile immediately via the same idempotent
+ *   handler the webhook uses, then throw — callers must NOT fall through to
+ *   creating a second payable session, or the sponsor could be charged twice.
+ * - Otherwise (definitively `expired`/`canceled`, never paid): return null so
+ *   the caller knows it's safe to create a fresh replacement session.
+ */
+async function reconcilePayableSessionOrThrow(
+  stripe: Stripe,
+  session: Stripe.Checkout.Session,
+  sponsorId: number,
+): Promise<string | null> {
+  if (session.status === "open" && session.url) {
+    return session.url;
+  }
+  if (session.payment_status === "paid") {
+    await handleCheckoutComplete(session);
+    throw new Error(
+      `[stripe] Sponsor ${sponsorId} has already completed payment via Checkout session ${session.id}; refresh to see the updated status instead of issuing a new payment link.`,
+    );
+  }
+  return null;
+}
+
 export async function getOrCreateSponsorCheckoutUrl(sponsorId: number): Promise<string> {
   const stripe = await getUncachableStripeClient();
 
@@ -159,9 +189,11 @@ export async function getOrCreateSponsorCheckoutUrl(sponsorId: number): Promise<
 
   if (sponsor.stripeSessionId) {
     const existingSession = await stripe.checkout.sessions.retrieve(sponsor.stripeSessionId);
-    if (existingSession.status === "open" && existingSession.url) {
-      return existingSession.url;
+    const url = await reconcilePayableSessionOrThrow(stripe, existingSession, sponsor.id);
+    if (url) {
+      return url;
     }
+    // existing session is definitively expired/canceled (not paid) — safe to replace below.
   }
 
   const [settingsRow] = await db
@@ -260,7 +292,8 @@ export async function getOrCreateSponsorCheckoutUrl(sponsorId: number): Promise<
       .limit(1);
     if (current?.stripeSessionId) {
       const winningSession = await stripe.checkout.sessions.retrieve(current.stripeSessionId);
-      if (winningSession.url) return winningSession.url;
+      const url = await reconcilePayableSessionOrThrow(stripe, winningSession, sponsor.id);
+      if (url) return url;
     }
     throw new Error(
       `[stripe] Sponsor ${sponsor.id} Checkout session was claimed concurrently and the winning session could not be retrieved.`,
@@ -326,10 +359,20 @@ export async function createContributionCheckout(params: {
 
 /**
  * Post-payment fulfillment: called from webhookHandlers after stripe-replit-sync
- * processes a checkout.session.completed event.
+ * processes a checkout.session.completed or checkout.session.async_payment_succeeded
+ * event.
  *
  * stripe-replit-sync handles signature verification and event parsing;
  * this function performs the application-level state transitions.
+ *
+ * Card payments settle synchronously, so `checkout.session.completed` already
+ * carries `payment_status: "paid"` and fulfillment happens immediately below.
+ * Bank-debit methods (e.g. ACH) settle asynchronously: `checkout.session.completed`
+ * fires first with `payment_status: "unpaid"`, which we surface as a
+ * "payment_processing" state, and the final outcome arrives later as its own
+ * `checkout.session.async_payment_succeeded` (also routed here — by then
+ * `payment_status` reads "paid") or `checkout.session.async_payment_failed`
+ * event (handled by handleCheckoutAsyncPaymentFailed below).
  */
 export async function handleCheckoutComplete(session: Stripe.Checkout.Session): Promise<void> {
   const { entityType, entityId } = session.metadata ?? {};
@@ -345,22 +388,51 @@ export async function handleCheckoutComplete(session: Stripe.Checkout.Session): 
   if (isNaN(id)) return;
 
   if (entityType === "vendor") {
-    if (session.payment_status !== "paid" || session.amount_total === null) {
-      logger.warn({ sessionId: session.id, paymentStatus: session.payment_status }, "Ignoring unpaid vendor checkout");
+    if (session.amount_total === null) {
+      logger.warn({ sessionId: session.id }, "Ignoring vendor checkout with no amount_total");
       return;
     }
+
+    if (session.payment_status !== "paid") {
+      // Async payment method still settling. Only transition out of the
+      // pre-payment status so this stays idempotent against webhook retries.
+      const [updated] = await db
+        .update(vendorsTable)
+        .set({ status: "payment_processing" })
+        .where(
+          and(
+            eq(vendorsTable.id, id),
+            eq(vendorsTable.stripeSessionId, session.id),
+            eq(vendorsTable.status, "payment_pending"),
+          ),
+        )
+        .returning();
+
+      if (updated) {
+        await db.insert(activityLogTable).values({
+          type: "payment_processing",
+          message: `Vendor ${updated.name}'s bank payment is processing`,
+          entityType: "vendor",
+          entityId: updated.id,
+        });
+      }
+      return;
+    }
+
     const [updated] = await db
       .update(vendorsTable)
       .set({
         status: "paid",
         paidAt: new Date(),
         settledAmount: (session.amount_total / 100).toFixed(2),
+        paymentFailedAt: null,
+        paymentFailureReason: null,
       })
       .where(
         and(
           eq(vendorsTable.id, id),
           eq(vendorsTable.stripeSessionId, session.id),
-          eq(vendorsTable.status, "payment_pending"),
+          inArray(vendorsTable.status, ["payment_pending", "payment_processing"]),
         ),
       )
       .returning();
@@ -374,18 +446,43 @@ export async function handleCheckoutComplete(session: Stripe.Checkout.Session): 
       });
     }
   } else if (entityType === "sponsor") {
-    if (session.payment_status !== "paid" || session.amount_total === null) {
-      logger.warn({ sessionId: session.id, paymentStatus: session.payment_status }, "Ignoring unpaid sponsor checkout");
+    if (session.amount_total === null) {
+      logger.warn({ sessionId: session.id }, "Ignoring sponsor checkout with no amount_total");
       return;
     }
+
+    if (session.payment_status !== "paid") {
+      const [updated] = await db
+        .update(sponsorsTable)
+        .set({ status: "payment_processing" })
+        .where(
+          and(
+            eq(sponsorsTable.id, id),
+            eq(sponsorsTable.stripeSessionId, session.id),
+            eq(sponsorsTable.status, "pending_payment"),
+          ),
+        )
+        .returning();
+
+      if (updated) {
+        await db.insert(activityLogTable).values({
+          type: "payment_processing",
+          message: `Sponsor ${updated.name} (${updated.orgName})'s bank payment is processing`,
+          entityType: "sponsor",
+          entityId: updated.id,
+        });
+      }
+      return;
+    }
+
     const [updated] = await db
       .update(sponsorsTable)
-      .set({ status: "paid", paidAt: new Date() })
+      .set({ status: "paid", paidAt: new Date(), paymentFailedAt: null, paymentFailureReason: null })
       .where(
         and(
           eq(sponsorsTable.id, id),
           eq(sponsorsTable.stripeSessionId, session.id),
-          eq(sponsorsTable.status, "pending_payment"),
+          inArray(sponsorsTable.status, ["pending_payment", "payment_processing"]),
         ),
       )
       .returning();
@@ -430,31 +527,188 @@ export async function handleCheckoutComplete(session: Stripe.Checkout.Session): 
   }
 }
 
-async function handleContributionCheckoutComplete(session: Stripe.Checkout.Session): Promise<void> {
-  if (session.payment_status !== "paid" || !session.amount_total) {
-    logger.warn(
-      { sessionId: session.id, paymentStatus: session.payment_status },
-      "Ignoring contribution checkout that is not paid",
-    );
+/**
+ * Handles `checkout.session.async_payment_failed`: an async payment method
+ * (e.g. ACH bank transfer) did not settle. This never marks anything paid —
+ * vendors/sponsors revert to their pre-payment status so the existing
+ * retry/resend flows apply, and the failure is recorded for staff follow-up.
+ * Contributions have no pre-payment status to revert to, so the row (created
+ * as "processing" by the earlier checkout.session.completed event) is simply
+ * marked failed in place.
+ */
+export async function handleCheckoutAsyncPaymentFailed(session: Stripe.Checkout.Session): Promise<void> {
+  const { entityType, entityId } = session.metadata ?? {};
+  const stripe = await getUncachableStripeClient();
+  const reason = await describePaymentFailureReason(stripe, session);
+
+  if (entityType === "contribution") {
+    await upsertContributionFromSession(session, { status: "failed", paidAt: null, failureReason: reason });
+    logger.warn({ sessionId: session.id, reason }, "Contribution bank payment failed");
     return;
+  }
+
+  if (!entityId || !entityType) return;
+  const id = parseInt(entityId, 10);
+  if (isNaN(id)) return;
+
+  if (entityType === "vendor") {
+    const [updated] = await db
+      .update(vendorsTable)
+      .set({ status: "approved", paymentFailedAt: new Date(), paymentFailureReason: reason })
+      .where(
+        and(
+          eq(vendorsTable.id, id),
+          eq(vendorsTable.stripeSessionId, session.id),
+          inArray(vendorsTable.status, ["payment_pending", "payment_processing"]),
+        ),
+      )
+      .returning();
+
+    if (updated) {
+      logger.warn({ sessionId: session.id, vendorId: updated.id, reason }, "Vendor bank payment failed");
+      await db.insert(activityLogTable).values({
+        type: "payment_failed",
+        message: `Vendor ${updated.name}'s bank payment failed: ${reason}`,
+        entityType: "vendor",
+        entityId: updated.id,
+      });
+    }
+  } else if (entityType === "sponsor") {
+    const [updated] = await db
+      .update(sponsorsTable)
+      .set({ status: "pending_payment", paymentFailedAt: new Date(), paymentFailureReason: reason })
+      .where(
+        and(
+          eq(sponsorsTable.id, id),
+          eq(sponsorsTable.stripeSessionId, session.id),
+          inArray(sponsorsTable.status, ["pending_payment", "payment_processing"]),
+        ),
+      )
+      .returning();
+
+    if (updated) {
+      logger.warn({ sessionId: session.id, sponsorId: updated.id, reason }, "Sponsor bank payment failed");
+      await db.insert(activityLogTable).values({
+        type: "payment_failed",
+        message: `Sponsor ${updated.name} (${updated.orgName})'s bank payment failed: ${reason}`,
+        entityType: "sponsor",
+        entityId: updated.id,
+      });
+    }
+  }
+}
+
+/**
+ * The Checkout Session object carries no failure-reason field of its own —
+ * the underlying PaymentIntent does. Best-effort lookup; a description is
+ * always returned even if the retrieval fails.
+ */
+async function describePaymentFailureReason(stripe: Stripe, session: Stripe.Checkout.Session): Promise<string> {
+  const paymentIntentId = typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id;
+  if (!paymentIntentId) return "Bank payment failed to settle (no additional details available).";
+
+  try {
+    const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    if (intent.last_payment_error?.message) return intent.last_payment_error.message;
+  } catch (err) {
+    logger.warn({ err, paymentIntentId, sessionId: session.id }, "Failed to retrieve payment intent for failure reason");
+  }
+  return "Bank payment failed to settle (no additional details available).";
+}
+
+async function handleContributionCheckoutComplete(session: Stripe.Checkout.Session): Promise<void> {
+  if (!session.amount_total) {
+    logger.warn({ sessionId: session.id }, "Ignoring contribution checkout with no amount_total");
+    return;
+  }
+
+  if (session.payment_status === "paid") {
+    await fulfillPaidContribution(session);
+    return;
+  }
+
+  // Async payment method still settling (e.g. ACH): create/keep the row in a
+  // "processing" state so staff and the donor list can see it, rather than
+  // the donation silently vanishing until the bank transfer clears.
+  await upsertContributionFromSession(session, { status: "processing", paidAt: null, failureReason: null });
+}
+
+async function fulfillPaidContribution(session: Stripe.Checkout.Session): Promise<void> {
+  const paidAt = new Date();
+  const result = await upsertContributionFromSession(session, { status: "paid", paidAt, failureReason: null });
+  // Stripe retries webhook delivery; only send the receipt the first time a
+  // given session actually transitions into "paid" so donors never receive
+  // duplicate receipts.
+  if (!result || !result.justSettled) return;
+
+  const { row } = result;
+  const [settings] = await db
+    .select({ notificationEmail: festivalSettingsTable.notificationEmail })
+    .from(festivalSettingsTable)
+    .where(eq(festivalSettingsTable.yearId, row.yearId))
+    .limit(1);
+
+  await sendContributionReceipt({
+    to: row.email,
+    name: row.name,
+    amount: Number(row.amount),
+    paidAt,
+    notificationEmail: settings?.notificationEmail,
+  });
+}
+
+/**
+ * Creates or updates the contribution row for a Checkout Session, keyed on
+ * the session's unique ID so the same donation can move from "processing" to
+ * "paid"/"failed" as later webhook events arrive. Never downgrades a row
+ * that has already settled as "paid" — Stripe can redeliver webhooks out of
+ * order, and a settled donation must stay settled.
+ */
+async function upsertContributionFromSession(
+  session: Stripe.Checkout.Session,
+  opts: { status: "processing" | "paid" | "failed"; paidAt: Date | null; failureReason: string | null },
+): Promise<{ row: typeof contributionsTable.$inferSelect; justSettled: boolean } | null> {
+  const [existing] = await db
+    .select()
+    .from(contributionsTable)
+    .where(eq(contributionsTable.stripeSessionId, session.id))
+    .limit(1);
+
+  if (existing?.status === "paid") {
+    return { row: existing, justSettled: false };
+  }
+
+  const setValues = {
+    status: opts.status,
+    paidAt: opts.paidAt,
+    paymentFailedAt: opts.status === "failed" ? new Date() : null,
+    paymentFailureReason: opts.status === "failed" ? opts.failureReason : null,
+  };
+
+  if (existing) {
+    const [updated] = await db
+      .update(contributionsTable)
+      .set(setValues)
+      .where(eq(contributionsTable.id, existing.id))
+      .returning();
+    return updated ? { row: updated, justSettled: opts.status === "paid" } : null;
   }
 
   const metadata = session.metadata ?? {};
   const yearId = Number.parseInt(metadata.yearId ?? "", 10);
   const email = session.customer_details?.email ?? session.customer_email ?? metadata.contributorEmail;
   const name = metadata.contributorName?.trim() || "Friend";
-  const amount = session.amount_total / 100;
+  const amount = session.amount_total != null ? session.amount_total / 100 : null;
 
-  if (!Number.isSafeInteger(yearId) || yearId <= 0 || !email || amount < 5) {
+  if (!Number.isSafeInteger(yearId) || yearId <= 0 || !email || amount === null || amount < 5) {
     logger.error(
       { sessionId: session.id, hasEmail: !!email, yearId, amount },
       "Contribution checkout is missing required fulfillment data",
     );
-    return;
+    return null;
   }
 
-  const paidAt = new Date();
-  const inserted = await db
+  const [inserted] = await db
     .insert(contributionsTable)
     .values({
       yearId,
@@ -462,26 +716,18 @@ async function handleContributionCheckoutComplete(session: Stripe.Checkout.Sessi
       email,
       amount: amount.toFixed(2),
       stripeSessionId: session.id,
-      paidAt,
+      ...setValues,
     })
     .onConflictDoNothing()
-    .returning({ id: contributionsTable.id });
+    .returning();
 
-  // Stripe retries webhook delivery; the unique session ID makes fulfillment
-  // idempotent and ensures donors never receive duplicate receipts.
-  if (inserted.length === 0) return;
+  if (inserted) return { row: inserted, justSettled: opts.status === "paid" };
 
-  const [settings] = await db
-    .select({ notificationEmail: festivalSettingsTable.notificationEmail })
-    .from(festivalSettingsTable)
-    .where(eq(festivalSettingsTable.yearId, yearId))
+  // Lost a race against a concurrent webhook delivery for the same session.
+  const [race] = await db
+    .select()
+    .from(contributionsTable)
+    .where(eq(contributionsTable.stripeSessionId, session.id))
     .limit(1);
-
-  await sendContributionReceipt({
-    to: email,
-    name,
-    amount,
-    paidAt,
-    notificationEmail: settings?.notificationEmail,
-  });
+  return race ? { row: race, justSettled: false } : null;
 }
