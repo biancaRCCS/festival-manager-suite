@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast"
 import { Loader2, ExternalLink } from "lucide-react"
 import { ApplicationDeadlineCountdown } from "@/components/application-deadline-countdown"
+import { GuideLinks } from "@/components/guide-links"
 
 // ---------------------------------------------------------------------------
 // Section 8 — Vendor category reference text
@@ -388,6 +389,7 @@ export default function ApplyVendorPage() {
 
   return (
     <PublicLayout title="Vendor Application" subtitle="Apply for a booth at the 2026 Romanian Festival — Saturday, 26 September 2026.">
+      <GuideLinks />
       {config?.applicationDeadline && (
         <ApplicationDeadlineCountdown deadline={config.applicationDeadline} />
       )}

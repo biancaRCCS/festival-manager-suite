@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2, Check, Mail } from "lucide-react"
 import { ApplicationDeadlineCountdown } from "@/components/application-deadline-countdown"
+import { GuideLinks } from "@/components/guide-links"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -404,6 +405,7 @@ export default function ApplySponsorPage() {
       title="Sponsor Application"
       subtitle="Support the 2026 Romanian Festival — Saturday, 26 September 2026, Vernon Street Town Square, Roseville."
     >
+      <GuideLinks />
       {config?.applicationDeadline && (
         <ApplicationDeadlineCountdown deadline={config.applicationDeadline} />
       )}
