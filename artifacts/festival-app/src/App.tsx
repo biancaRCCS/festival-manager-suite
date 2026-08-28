@@ -264,7 +264,7 @@ function LandingPage() {
             />
             <p className="font-sans text-base text-muted-foreground mt-4">
               <a
-                href="PASTE_INSTAGRAM_URL_HERE"
+                href="https://www.instagram.com/reel/DcZ4wHmBrCn/?igsi=MzRlODBiNWFlZA=="
                 target="_blank"
                 rel="noopener"
                 className="text-secondary hover:underline"
