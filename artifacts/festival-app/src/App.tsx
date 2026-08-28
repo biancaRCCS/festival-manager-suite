@@ -248,6 +248,32 @@ function LandingPage() {
       <section className="bg-background">
         <div className="max-w-6xl mx-auto px-6 pt-16 pb-6">
 
+          <div className="mb-10 flex flex-col items-center">
+            <h2 className="font-serif text-3xl md:text-4xl font-bold text-secondary mb-4">
+              See the festival
+            </h2>
+            <video
+              src="/romanian-festival-2026.mp4"
+              autoPlay
+              muted
+              loop
+              playsInline
+              controls
+              preload="auto"
+              className="w-full max-w-[360px] rounded-none"
+            />
+            <p className="font-sans text-base text-muted-foreground mt-4">
+              <a
+                href="PASTE_INSTAGRAM_URL_HERE"
+                target="_blank"
+                rel="noopener"
+                className="text-secondary hover:underline"
+              >
+                Watch on Instagram →
+              </a>
+            </p>
+          </div>
+
           {/* Application deadline countdown — from settings */}
           {deadline && (
             <ApplicationDeadlineCountdown deadline={deadline} />
