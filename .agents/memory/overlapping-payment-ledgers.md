@@ -20,3 +20,9 @@ Stripe webhook events must treat payment state and application workflow state as
 **Why:** Legacy applicants can finish later workflow stages before a delayed Stripe or ACH event arrives; letting that event set a payment status sends completed applicants backwards and can re-enable applicant-facing email actions.
 
 **How to apply:** Preserve every non-payment-stage status during webhook handling, including completed and rejected states. Gate email-triggering review actions on stage timestamps as well as status.
+
+Webhook replays must use the original Stripe event creation time as the settlement timestamp, not the time the replay reaches the app.
+
+**Why:** Historical ACH events can be resent days later; stamping the retry time corrupts the payment date even when the amount and source are otherwise correct.
+
+**How to apply:** Pass the verified event envelope's `created` time into fulfillment for both synchronous completion and asynchronous success. Use current time only for non-webhook reconciliation paths that have no event envelope.

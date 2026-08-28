@@ -374,7 +374,10 @@ export async function createContributionCheckout(params: {
  * `payment_status` reads "paid") or `checkout.session.async_payment_failed`
  * event (handled by handleCheckoutAsyncPaymentFailed below).
  */
-export async function handleCheckoutComplete(session: Stripe.Checkout.Session): Promise<void> {
+export async function handleCheckoutComplete(
+  session: Stripe.Checkout.Session,
+  stripeEventCreatedAt?: Date,
+): Promise<void> {
   const { entityType, entityId } = session.metadata ?? {};
 
   if (entityType === "contribution") {
@@ -425,7 +428,7 @@ export async function handleCheckoutComplete(session: Stripe.Checkout.Session): 
 
     const shouldAdvanceToPaid = ["payment_pending", "payment_processing"].includes(current.status);
     if (current.stripePaidAt && !shouldAdvanceToPaid) return;
-    const settledAt = new Date();
+    const settledAt = stripeEventCreatedAt ?? new Date();
     const settledAmount = (session.amount_total / 100).toFixed(2);
     const [updated] = await db
       .update(vendorsTable)
@@ -492,7 +495,7 @@ export async function handleCheckoutComplete(session: Stripe.Checkout.Session): 
 
     const shouldAdvanceToPaid = ["pending_payment", "payment_processing"].includes(current.status);
     if (current.stripePaidAt && !shouldAdvanceToPaid) return;
-    const settledAt = new Date();
+    const settledAt = stripeEventCreatedAt ?? new Date();
     const [updated] = await db
       .update(sponsorsTable)
       .set({

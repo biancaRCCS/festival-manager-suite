@@ -510,19 +510,22 @@ describe("checkout.session.completed webhook for sponsors", () => {
 
   it("records ACH success without moving a details-submitted sponsor backwards", async () => {
     const detailsSubmittedAt = new Date("2026-08-24T04:41:00.039Z");
+    const stripeSettlementAt = new Date("2026-08-26T18:42:17.000Z");
     const sponsor = await createSponsor({
       status: "details_submitted",
       detailsSubmittedAt,
       stripeSessionId: "cs_sponsor_async_late_success",
     });
 
-    const res = await postWebhook(makeEvent("checkout.session.async_payment_succeeded", {
+    const event = makeEvent("checkout.session.async_payment_succeeded", {
       id: "cs_sponsor_async_late_success",
       object: "checkout.session",
       payment_status: "paid",
       amount_total: 90000,
       metadata: { entityType: "sponsor", entityId: String(sponsor.id) },
-    }));
+    });
+    event.created = Math.floor(stripeSettlementAt.getTime() / 1000);
+    const res = await postWebhook(event);
     expect(res.status).toBe(200);
 
     const [updated] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, sponsor.id));
@@ -531,7 +534,8 @@ describe("checkout.session.completed webhook for sponsors", () => {
       detailsSubmittedAt,
       stripeSettledAmount: "900.00",
     });
-    expect(updated?.stripePaidAt).not.toBeNull();
+    expect(updated?.stripePaidAt).toEqual(stripeSettlementAt);
+    expect(updated?.paidAt).toEqual(stripeSettlementAt);
   });
 
   it("reverts a failed async sponsor payment and records the Stripe failure reason", async () => {

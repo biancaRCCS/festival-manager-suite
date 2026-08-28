@@ -44,7 +44,7 @@ export class WebhookHandlers {
       // events below.
       if (event.type === 'checkout.session.completed') {
         const session = event.data.object as Stripe.Checkout.Session;
-        await handleCheckoutComplete(session);
+        await handleCheckoutComplete(session, new Date(event.created * 1000));
       }
 
       // checkout.session.async_payment_succeeded: an async payment method
@@ -52,7 +52,7 @@ export class WebhookHandlers {
       // same fulfillment path used for synchronous payments applies here too.
       if (event.type === 'checkout.session.async_payment_succeeded') {
         const session = event.data.object as Stripe.Checkout.Session;
-        await handleCheckoutComplete(session);
+        await handleCheckoutComplete(session, new Date(event.created * 1000));
       }
 
       // checkout.session.async_payment_failed: an async payment method did
