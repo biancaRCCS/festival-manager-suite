@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react"
 import { useLocation, useParams } from "wouter"
-import { useGetVendor, useGetSettings, useReviewVendor, useUpdateVendorCategory, useSettleVendorCategoryAdjustment, useFinalApproveVendor, useAssignVendorSpot, getGetVendorQueryKey, getGetSettingsQueryKey, getGetSpecialAgreementSettlementSummaryQueryKey, useDeleteVendor, useResendVendorConfirmation, useUpdateSpecialAgreementSettlement, useUpdateVendorDetails, useRecordVendorManualPayment, useRemoveVendorManualPayment } from "@workspace/api-client-react"
+import { useGetVendor, useGetSettings, useReviewVendor, useUpdateVendorCategory, useSettleVendorCategoryAdjustment, useFinalApproveVendor, useAssignVendorSpot, getGetVendorQueryKey, getGetSettingsQueryKey, getGetSpecialAgreementSettlementSummaryQueryKey, useDeleteVendor, useResendVendorConfirmation, useUpdateSpecialAgreementSettlement, useUpdateVendorDetails, useRecordVendorManualPayment, useRemoveVendorManualPayment, useReconcileVendorStatusFromTimestamps } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast"
 import { ApplicantDetailsEditorDialog, type ApplicantDetailsField } from "@/components/applicant-details-editor-dialog"
 import { ManualPaymentDialog } from "@/components/manual-payment-dialog"
 import { ApplicationFlow } from "@/components/application-flow"
+import { StatusRepairDialog } from "@/components/status-repair-dialog"
 import type { ManualPaymentInput } from "@workspace/api-client-react"
 
 // ---------------------------------------------------------------------------
@@ -141,6 +142,7 @@ export default function VendorDetailPage() {
   const detailsMutation = useUpdateVendorDetails({ mutation: { mutationKey: ["updateVendorDetails", id] } })
   const recordPaymentMutation = useRecordVendorManualPayment({ mutation: { mutationKey: ["recordVendorManualPayment", id] } })
   const removePaymentMutation = useRemoveVendorManualPayment({ mutation: { mutationKey: ["removeVendorManualPayment", id] } })
+  const repairStatusMutation = useReconcileVendorStatusFromTimestamps({ mutation: { mutationKey: ["reconcileVendorStatusFromTimestamps", id] } })
 
   const [reviewNote, setReviewNote] = useState("")
   const [spotNumber, setSpotNumber] = useState("")
@@ -359,6 +361,19 @@ export default function VendorDetailPage() {
     )
   }
 
+  const handleRepairStatus = async () => {
+    try {
+      const updated = await repairStatusMutation.mutateAsync({ id })
+      queryClient.setQueryData(getGetVendorQueryKey(id), updated)
+      queryClient.invalidateQueries({ queryKey: ["vendors"] })
+      queryClient.invalidateQueries({ queryKey: ["paginatedActivity"] })
+      toast({ title: "Vendor status repaired", description: "No email was sent." })
+    } catch (error) {
+      toast({ title: "Failed to repair vendor status", variant: "destructive" })
+      throw error
+    }
+  }
+
   const handleSettlementSave = () => {
     if (!vendor) return
     const parseAmount = (value: string) => {
@@ -464,6 +479,15 @@ export default function VendorDetailPage() {
             <Button variant="outline" className="border-primary/20 hover:bg-primary/5 text-primary" onClick={() => setIsDetailsOpen(true)}>
               <Pencil className="w-4 h-4 mr-2" /> Edit details
             </Button>
+            {vendor.statusNeedsRepair && vendor.timestampImpliedStatus && (
+              <StatusRepairDialog
+                entityLabel="vendor"
+                currentStatus={vendor.status}
+                targetStatus={vendor.timestampImpliedStatus}
+                isPending={repairStatusMutation.isPending}
+                onRepair={handleRepairStatus}
+              />
+            )}
             <ApplicantDetailsEditorDialog
               entityLabel="vendor"
               fields={VENDOR_DETAIL_FIELDS}

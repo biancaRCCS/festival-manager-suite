@@ -32,6 +32,7 @@ const {
   checkoutSessionRetrieveSpy,
   checkoutSessionExpireSpy,
   vendorCategoryAdjustedEmailSpy,
+  vendorWorkflowEmailSpy,
   paymentIntentRetrieveSpy,
 } = vi.hoisted(() => ({
   processWebhookSpy: vi.fn().mockResolvedValue(undefined),
@@ -40,6 +41,7 @@ const {
   checkoutSessionRetrieveSpy: vi.fn(),
   checkoutSessionExpireSpy: vi.fn(),
   vendorCategoryAdjustedEmailSpy: vi.fn().mockResolvedValue(undefined),
+  vendorWorkflowEmailSpy: vi.fn().mockResolvedValue(undefined),
   paymentIntentRetrieveSpy: vi.fn().mockResolvedValue({ last_payment_error: null }),
 }));
 
@@ -84,6 +86,11 @@ vi.mock("../lib/email", async (importOriginal) => {
     ...actual,
     sendContributionReceipt: contributionReceiptSpy,
     sendVendorCategoryAdjustedEmail: vendorCategoryAdjustedEmailSpy,
+    sendApplicantConfirmation: vendorWorkflowEmailSpy,
+    sendVendorPortalInviteEmail: vendorWorkflowEmailSpy,
+    sendSpecialAgreementPortalInviteEmail: vendorWorkflowEmailSpy,
+    sendSpecialAgreementCreatedNotification: vendorWorkflowEmailSpy,
+    sendManualPaymentConfirmationEmail: vendorWorkflowEmailSpy,
   };
 });
 
@@ -182,6 +189,7 @@ beforeEach(() => {
   checkoutSessionRetrieveSpy.mockReset();
   checkoutSessionExpireSpy.mockReset();
   vendorCategoryAdjustedEmailSpy.mockClear();
+  vendorWorkflowEmailSpy.mockClear();
   paymentIntentRetrieveSpy.mockReset();
   paymentIntentRetrieveSpy.mockResolvedValue({ last_payment_error: null });
 });
@@ -219,6 +227,57 @@ afterEach(async () => {
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
+
+describe("PATCH /api/vendors/:id/reconcile-status-from-timestamps", () => {
+  it("restores a timestamp-proven vendor status, logs the actor, and sends no email", async () => {
+    const vendor = await createVendor({
+      status: "paid",
+      approvedAt: new Date("2026-08-24T04:02:05.233Z"),
+      finalApprovedAt: new Date("2026-08-24T20:58:42.385Z"),
+    });
+
+    const before = await request(app).get(`/api/vendors/${vendor.id}`);
+    expect(before.body).toMatchObject({
+      status: "paid",
+      statusNeedsRepair: true,
+      timestampImpliedStatus: "final_approved",
+    });
+
+    const res = await request(app).patch(`/api/vendors/${vendor.id}/reconcile-status-from-timestamps`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      status: "final_approved",
+      statusNeedsRepair: false,
+      timestampImpliedStatus: "final_approved",
+    });
+    const logs = await db.select().from(activityLogTable).where(eq(activityLogTable.entityId, vendor.id));
+    expect(logs).toContainEqual(expect.objectContaining({
+      type: "status_reconciled",
+      performedBy: "Test Staff",
+    }));
+    expect(vendorCategoryAdjustedEmailSpy).not.toHaveBeenCalled();
+    expect(vendorWorkflowEmailSpy).not.toHaveBeenCalled();
+  });
+
+  it("never downgrades a later vendor status and creates no extra activity", async () => {
+    const vendor = await createVendor({
+      status: "final_approved",
+      approvedAt: new Date("2026-08-24T04:02:05.233Z"),
+    });
+
+    const res = await request(app).patch(`/api/vendors/${vendor.id}/reconcile-status-from-timestamps`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      status: "final_approved",
+      statusNeedsRepair: false,
+      timestampImpliedStatus: "approved",
+    });
+    expect(await db.select().from(activityLogTable).where(eq(activityLogTable.entityId, vendor.id))).toHaveLength(0);
+    expect(vendorWorkflowEmailSpy).not.toHaveBeenCalled();
+  });
+});
 
 describe("POST /api/stripe/webhook", () => {
   it("rejects invalid public contribution details before creating a Stripe Checkout session", async () => {

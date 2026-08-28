@@ -381,11 +381,20 @@ describe("checkout.session.completed webhook for sponsors", () => {
       stripeSessionId: "cs_status_repair",
     });
 
+    const before = await request(app).get(`/api/sponsors/${sponsor.id}`);
+    expect(before.body).toMatchObject({
+      status: "paid",
+      statusNeedsRepair: true,
+      timestampImpliedStatus: "details_approved",
+    });
+
     const res = await request(app).patch(`/api/sponsors/${sponsor.id}/reconcile-status-from-timestamps`);
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
       id: sponsor.id,
       status: "details_approved",
+      statusNeedsRepair: false,
+      timestampImpliedStatus: "details_approved",
       paidAt: "2026-08-26T02:15:18.136Z",
     });
     expect(paymentReceiptSpy).not.toHaveBeenCalled();
@@ -393,7 +402,31 @@ describe("checkout.session.completed webhook for sponsors", () => {
     expect(newApplicationNotificationSpy).not.toHaveBeenCalled();
 
     const logs = await db.select().from(activityLogTable).where(eq(activityLogTable.entityId, sponsor.id));
-    expect(logs.some((log) => log.type === "status_reconciled")).toBe(true);
+    expect(logs).toContainEqual(expect.objectContaining({
+      type: "status_reconciled",
+      performedBy: "Test Staff",
+    }));
+  });
+
+  it("does not update or log a sponsor whose status already matches its timestamps", async () => {
+    const sponsor = await createSponsor({
+      status: "details_submitted",
+      approvedAt: new Date("2026-08-24T04:02:05.233Z"),
+      detailsSubmittedAt: new Date("2026-08-24T04:41:00.039Z"),
+    });
+
+    const res = await request(app).patch(`/api/sponsors/${sponsor.id}/reconcile-status-from-timestamps`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      status: "details_submitted",
+      statusNeedsRepair: false,
+      timestampImpliedStatus: "details_submitted",
+    });
+    expect(await db.select().from(activityLogTable).where(eq(activityLogTable.entityId, sponsor.id))).toHaveLength(0);
+    expect(paymentReceiptSpy).not.toHaveBeenCalled();
+    expect(paymentLinkEmailSpy).not.toHaveBeenCalled();
+    expect(newApplicationNotificationSpy).not.toHaveBeenCalled();
   });
 
   it("marks a sponsor paid, logs it, and sends the receipt + staff notification", async () => {

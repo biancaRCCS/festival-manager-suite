@@ -2650,6 +2650,77 @@ export const useUpdateVendorDetails = <TError = ErrorType<void>,
       return useMutation(getUpdateVendorDetailsMutationOptions(options));
     }
 
+export const getReconcileVendorStatusFromTimestampsUrl = (id: number,) => {
+
+
+
+
+  return `/api/vendors/${id}/reconcile-status-from-timestamps`
+}
+
+/**
+ * @summary Restore a vendor status from existing workflow timestamps without sending email
+ */
+export const reconcileVendorStatusFromTimestamps = async (id: number, options?: RequestInit): Promise<Vendor> => {
+
+  return customFetch<Vendor>(getReconcileVendorStatusFromTimestampsUrl(id),
+  {
+    ...options,
+    method: 'PATCH'
+
+
+  }
+);}
+
+
+
+
+
+export const getReconcileVendorStatusFromTimestampsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reconcileVendorStatusFromTimestamps>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reconcileVendorStatusFromTimestamps>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['reconcileVendorStatusFromTimestamps'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reconcileVendorStatusFromTimestamps>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  reconcileVendorStatusFromTimestamps(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReconcileVendorStatusFromTimestampsMutationResult = NonNullable<Awaited<ReturnType<typeof reconcileVendorStatusFromTimestamps>>>
+
+    export type ReconcileVendorStatusFromTimestampsMutationError = ErrorType<void>
+
+    /**
+ * @summary Restore a vendor status from existing workflow timestamps without sending email
+ */
+export const useReconcileVendorStatusFromTimestamps = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reconcileVendorStatusFromTimestamps>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reconcileVendorStatusFromTimestamps>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getReconcileVendorStatusFromTimestampsMutationOptions(options));
+    }
+
 export const getSettleVendorCategoryAdjustmentUrl = (id: number,) => {
 
 
@@ -3452,6 +3523,77 @@ export const useUpdateSponsorDetails = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getUpdateSponsorDetailsMutationOptions(options));
+    }
+
+export const getReconcileSponsorStatusFromTimestampsUrl = (id: number,) => {
+
+
+
+
+  return `/api/sponsors/${id}/reconcile-status-from-timestamps`
+}
+
+/**
+ * @summary Restore a sponsor status from existing workflow timestamps without sending email
+ */
+export const reconcileSponsorStatusFromTimestamps = async (id: number, options?: RequestInit): Promise<Sponsor> => {
+
+  return customFetch<Sponsor>(getReconcileSponsorStatusFromTimestampsUrl(id),
+  {
+    ...options,
+    method: 'PATCH'
+
+
+  }
+);}
+
+
+
+
+
+export const getReconcileSponsorStatusFromTimestampsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reconcileSponsorStatusFromTimestamps>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reconcileSponsorStatusFromTimestamps>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['reconcileSponsorStatusFromTimestamps'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reconcileSponsorStatusFromTimestamps>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  reconcileSponsorStatusFromTimestamps(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReconcileSponsorStatusFromTimestampsMutationResult = NonNullable<Awaited<ReturnType<typeof reconcileSponsorStatusFromTimestamps>>>
+
+    export type ReconcileSponsorStatusFromTimestampsMutationError = ErrorType<void>
+
+    /**
+ * @summary Restore a sponsor status from existing workflow timestamps without sending email
+ */
+export const useReconcileSponsorStatusFromTimestamps = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reconcileSponsorStatusFromTimestamps>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reconcileSponsorStatusFromTimestamps>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getReconcileSponsorStatusFromTimestampsMutationOptions(options));
     }
 
 export const getFinalApproveSponsorUrl = (id: number,) => {

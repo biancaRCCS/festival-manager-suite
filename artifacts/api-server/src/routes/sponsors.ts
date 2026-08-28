@@ -33,6 +33,34 @@ import {
 
 const router: IRouter = Router();
 const paymentLabels: Record<string, string> = { cash: "Cash", check: "Check", bank_transfer: "Bank transfer", other: "Other" };
+const SPONSOR_STATUS_RANK: Record<string, number> = {
+  pending_payment: 0,
+  payment_processing: 0,
+  paid: 1,
+  approved: 2,
+  rejected: -1,
+  details_submitted: 3,
+  details_approved: 4,
+};
+
+function getSponsorTimestampImpliedStatus(sponsor: typeof sponsorsTable.$inferSelect): string | null {
+  return sponsor.finalApprovedAt
+    ? "details_approved"
+    : sponsor.detailsSubmittedAt
+      ? "details_submitted"
+      : sponsor.approvedAt
+        ? "approved"
+        : null;
+}
+
+function sponsorNeedsStatusRepair(sponsor: typeof sponsorsTable.$inferSelect): boolean {
+  const impliedStatus = getSponsorTimestampImpliedStatus(sponsor);
+  return Boolean(
+    impliedStatus
+    && (SPONSOR_STATUS_RANK[sponsor.status] ?? -1) < SPONSOR_STATUS_RANK[impliedStatus],
+  );
+}
+
 function validReceivedDate(value: Date): string | null {
   const text = value.toISOString().slice(0, 10), date = new Date(`${text}T00:00:00.000Z`), tomorrow = new Date();
   tomorrow.setUTCHours(0, 0, 0, 0); tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
@@ -42,6 +70,7 @@ function validManualAmount(value: number) { return Number.isFinite(value) && val
 
 function formatSponsor(s: typeof sponsorsTable.$inferSelect) {
   const hasStripePayment = Boolean(s.stripePaidAt || (s.stripeSessionId && s.paidAt));
+  const timestampImpliedStatus = getSponsorTimestampImpliedStatus(s);
   return {
     id: s.id,
     yearId: s.yearId,
@@ -52,6 +81,8 @@ function formatSponsor(s: typeof sponsorsTable.$inferSelect) {
     tier: s.tier,
     sponsorshipAmount: s.sponsorshipAmount != null ? parseFloat(s.sponsorshipAmount) : null,
     status: s.status,
+    statusNeedsRepair: sponsorNeedsStatusRepair(s),
+    timestampImpliedStatus,
     applicationData: s.applicationData,
     agreementSigned: s.agreementSigned,
     agreementSignedName: s.agreementSignedName ?? null,
@@ -124,27 +155,13 @@ router.patch("/sponsors/:id/reconcile-status-from-timestamps", requireStaff, asy
     return;
   }
 
-  const impliedStatus = sponsor.finalApprovedAt
-    ? "details_approved"
-    : sponsor.detailsSubmittedAt
-      ? "details_submitted"
-      : sponsor.approvedAt
-        ? "approved"
-        : null;
+  const impliedStatus = getSponsorTimestampImpliedStatus(sponsor);
   if (!impliedStatus) {
     res.status(409).json({ error: "This sponsor has no stage timestamp that can restore their workflow status." });
     return;
   }
 
-  const statusRank: Record<string, number> = {
-    pending_payment: 0,
-    payment_processing: 0,
-    paid: 1,
-    approved: 2,
-    details_submitted: 3,
-    details_approved: 4,
-  };
-  if ((statusRank[sponsor.status] ?? -1) >= statusRank[impliedStatus]) {
+  if (!sponsorNeedsStatusRepair(sponsor)) {
     res.json(formatSponsor(sponsor));
     return;
   }

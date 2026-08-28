@@ -1,6 +1,6 @@
 import { useState, useRef } from "react"
 import { useLocation, useParams } from "wouter"
-import { useGetSponsor, useReviewSponsor, useFinalApproveSponsor, useAssignSponsorSpot, getGetSponsorQueryKey, useDeleteSponsor, useResendSponsorConfirmation, useResendSponsorPaymentLink, useUpdateSponsorDetails, useRecordSponsorManualPayment, useRemoveSponsorManualPayment } from "@workspace/api-client-react"
+import { useGetSponsor, useReviewSponsor, useFinalApproveSponsor, useAssignSponsorSpot, getGetSponsorQueryKey, useDeleteSponsor, useResendSponsorConfirmation, useResendSponsorPaymentLink, useUpdateSponsorDetails, useRecordSponsorManualPayment, useRemoveSponsorManualPayment, useReconcileSponsorStatusFromTimestamps } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast"
 import { ApplicantDetailsEditorDialog, type ApplicantDetailsField } from "@/components/applicant-details-editor-dialog"
 import { ManualPaymentDialog } from "@/components/manual-payment-dialog"
 import { ApplicationFlow } from "@/components/application-flow"
+import { StatusRepairDialog } from "@/components/status-repair-dialog"
 import type { ManualPaymentInput } from "@workspace/api-client-react"
 
 // ---------------------------------------------------------------------------
@@ -111,6 +112,7 @@ export default function SponsorDetailPage() {
   const detailsMutation      = useUpdateSponsorDetails({ mutation: { mutationKey: ["updateSponsorDetails", id] } })
   const recordPaymentMutation = useRecordSponsorManualPayment({ mutation: { mutationKey: ["recordSponsorManualPayment", id] } })
   const removePaymentMutation = useRemoveSponsorManualPayment({ mutation: { mutationKey: ["removeSponsorManualPayment", id] } })
+  const repairStatusMutation = useReconcileSponsorStatusFromTimestamps({ mutation: { mutationKey: ["reconcileSponsorStatusFromTimestamps", id] } })
 
   const [reviewNote, setReviewNote]             = useState("")
   const [spotNumber, setSpotNumber]             = useState("")
@@ -259,6 +261,19 @@ export default function SponsorDetailPage() {
     )
   }
 
+  const handleRepairStatus = async () => {
+    try {
+      const updated = await repairStatusMutation.mutateAsync({ id })
+      queryClient.setQueryData(getGetSponsorQueryKey(id), updated)
+      queryClient.invalidateQueries({ queryKey: ["sponsors"] })
+      queryClient.invalidateQueries({ queryKey: ["paginatedActivity"] })
+      toast({ title: "Sponsor status repaired", description: "No email was sent." })
+    } catch (error) {
+      toast({ title: "Failed to repair sponsor status", variant: "destructive" })
+      throw error
+    }
+  }
+
   if (isLoading) return <AdminLayout><div className="p-8">Loading…</div></AdminLayout>
   if (!sponsor)  return <AdminLayout><div className="p-8">Sponsor not found.</div></AdminLayout>
 
@@ -310,6 +325,15 @@ export default function SponsorDetailPage() {
             <Button variant="outline" className="border-primary/20 hover:bg-primary/5 text-primary" onClick={() => setIsDetailsOpen(true)}>
               <Pencil className="w-4 h-4 mr-2" /> Edit details
             </Button>
+            {sponsor.statusNeedsRepair && sponsor.timestampImpliedStatus && (
+              <StatusRepairDialog
+                entityLabel="sponsor"
+                currentStatus={sponsor.status}
+                targetStatus={sponsor.timestampImpliedStatus}
+                isPending={repairStatusMutation.isPending}
+                onRepair={handleRepairStatus}
+              />
+            )}
             <ApplicantDetailsEditorDialog
               entityLabel="sponsor"
               fields={SPONSOR_DETAIL_FIELDS}

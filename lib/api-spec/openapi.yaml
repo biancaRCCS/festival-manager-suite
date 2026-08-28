@@ -792,6 +792,31 @@ paths:
         "404":
           description: Not found
 
+  /vendors/{id}/reconcile-status-from-timestamps:
+    patch:
+      operationId: reconcileVendorStatusFromTimestamps
+      tags: [vendors]
+      summary: Restore a vendor status from existing workflow timestamps without sending email
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Reconciled vendor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vendor"
+        "404":
+          description: Not found
+        "409":
+          description: No restorable later-stage timestamp or concurrent update
+
   /vendors/{id}/settle-category-adjustment:
     patch:
       operationId: settleVendorCategoryAdjustment
@@ -1043,6 +1068,31 @@ paths:
           description: Invalid details
         "404":
           description: Not found
+
+  /sponsors/{id}/reconcile-status-from-timestamps:
+    patch:
+      operationId: reconcileSponsorStatusFromTimestamps
+      tags: [sponsors]
+      summary: Restore a sponsor status from existing workflow timestamps without sending email
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Reconciled sponsor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sponsor"
+        "404":
+          description: Not found
+        "409":
+          description: No restorable later-stage timestamp or concurrent update
 
   /sponsors/{id}/final-approve:
     patch:
@@ -1699,6 +1749,10 @@ components:
         status:
           type: string
           enum: [pending, approved, rejected, payment_pending, payment_processing, paid, final_approved]
+        statusNeedsRepair:
+          type: boolean
+        timestampImpliedStatus:
+          type: ["string", "null"]
         applicationData:
           type: object
           additionalProperties: true
@@ -1817,6 +1871,10 @@ components:
         status:
           type: string
           enum: [pending_payment, payment_processing, paid, approved, rejected, details_submitted, details_approved]
+        statusNeedsRepair:
+          type: boolean
+        timestampImpliedStatus:
+          type: ["string", "null"]
         applicationData:
           type: object
           additionalProperties: true

@@ -206,6 +206,9 @@ export interface Vendor {
   phone: string;
   vendorType: string;
   status: VendorStatus;
+  statusNeedsRepair?: boolean;
+  /** @nullable */
+  timestampImpliedStatus?: string | null;
   applicationData: VendorApplicationData;
   agreementSigned?: boolean;
   /** @nullable */
@@ -330,6 +333,9 @@ export interface Sponsor {
   phone: string;
   tier: string;
   status: SponsorStatus;
+  statusNeedsRepair?: boolean;
+  /** @nullable */
+  timestampImpliedStatus?: string | null;
   applicationData: SponsorApplicationData;
   agreementSigned?: boolean;
   /** @nullable */

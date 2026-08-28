@@ -51,9 +51,36 @@ import {
 
 const router: IRouter = Router();
 
+const VENDOR_STATUS_RANK: Record<string, number> = {
+  pending: 0,
+  rejected: -1,
+  approved: 1,
+  payment_pending: 2,
+  payment_processing: 2,
+  paid: 3,
+  final_approved: 4,
+};
+
+function getVendorTimestampImpliedStatus(vendor: typeof vendorsTable.$inferSelect): string | null {
+  return vendor.finalApprovedAt
+    ? "final_approved"
+    : vendor.approvedAt
+      ? "approved"
+      : null;
+}
+
+function vendorNeedsStatusRepair(vendor: typeof vendorsTable.$inferSelect): boolean {
+  const impliedStatus = getVendorTimestampImpliedStatus(vendor);
+  return Boolean(
+    impliedStatus
+    && (VENDOR_STATUS_RANK[vendor.status] ?? -1) < VENDOR_STATUS_RANK[impliedStatus],
+  );
+}
+
 function formatVendor(v: typeof vendorsTable.$inferSelect) {
   const settlement = deriveSpecialAgreementSettlement(v);
   const hasStripePayment = Boolean(v.stripePaidAt || (v.stripeSessionId && v.paidAt));
+  const timestampImpliedStatus = getVendorTimestampImpliedStatus(v);
   return {
     id: v.id,
     yearId: v.yearId,
@@ -63,6 +90,8 @@ function formatVendor(v: typeof vendorsTable.$inferSelect) {
     phone: v.phone,
     vendorType: v.vendorType,
     status: v.status,
+    statusNeedsRepair: vendorNeedsStatusRepair(v),
+    timestampImpliedStatus,
     applicationData: v.applicationData,
     agreementSigned: v.agreementSigned,
     agreementSignedName: v.agreementSignedName ?? null,
@@ -343,6 +372,49 @@ router.get("/vendors/:id", requireStaff, async (req, res): Promise<void> => {
     return;
   }
   res.json(formatVendor(vendor));
+});
+
+router.patch("/vendors/:id/reconcile-status-from-timestamps", requireStaff, async (req, res): Promise<void> => {
+  const parsed = GetVendorParams.safeParse(req.params);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid ID" });
+    return;
+  }
+
+  const [vendor] = await db.select().from(vendorsTable).where(eq(vendorsTable.id, parsed.data.id));
+  if (!vendor) {
+    res.status(404).json({ error: "Vendor not found" });
+    return;
+  }
+
+  const impliedStatus = getVendorTimestampImpliedStatus(vendor);
+  if (!impliedStatus) {
+    res.status(409).json({ error: "This vendor has no stage timestamp that can restore their workflow status." });
+    return;
+  }
+  if (!vendorNeedsStatusRepair(vendor)) {
+    res.json(formatVendor(vendor));
+    return;
+  }
+
+  const [updated] = await db.update(vendorsTable)
+    .set({ status: impliedStatus })
+    .where(and(eq(vendorsTable.id, vendor.id), eq(vendorsTable.status, vendor.status)))
+    .returning();
+  if (!updated) {
+    res.status(409).json({ error: "The vendor changed while their status was being reconciled. Refresh and try again." });
+    return;
+  }
+
+  await db.insert(activityLogTable).values({
+    type: "status_reconciled",
+    message: `Vendor ${updated.name} (${updated.businessName}) status restored from ${vendor.status} to ${impliedStatus} using existing stage timestamps`,
+    entityType: "vendor",
+    entityId: updated.id,
+    performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
+  });
+
+  res.json(formatVendor(updated));
 });
 
 router.patch("/vendors/:id/details", requireStaff, async (req, res): Promise<void> => {

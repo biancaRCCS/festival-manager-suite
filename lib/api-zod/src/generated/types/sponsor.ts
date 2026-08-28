@@ -18,6 +18,9 @@ export interface Sponsor {
   phone: string;
   tier: string;
   status: SponsorStatus;
+  statusNeedsRepair?: boolean;
+  /** @nullable */
+  timestampImpliedStatus?: string | null;
   applicationData: SponsorApplicationData;
   agreementSigned?: boolean;
   /** @nullable */
