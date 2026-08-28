@@ -121,12 +121,12 @@ router.post("/sponsors/:id/manual-payment", requireStaff, async (req, res): Prom
   if (sponsor.manualPaymentRecordedAt) { res.status(409).json({ error: "Remove the active manual payment before recording another." }); return; }
   const hasStripe = Boolean(sponsor.stripePaidAt || (sponsor.stripeSessionId && sponsor.paidAt));
   if (hasStripe && !body.data.confirmStripeOverlap) { res.status(409).json({ error: "This sponsor already has a Stripe payment. Confirm the overlap to record a manual payment." }); return; }
-  if (!hasStripe && !["pending_payment", "payment_processing"].includes(sponsor.status)) { res.status(409).json({ error: "Manual payment can only be recorded while this sponsor is payable." }); return; }
   const actor = (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null, reference = body.data.reference?.trim() || null;
+  const shouldAdvanceToPaid = ["pending_payment", "payment_processing"].includes(sponsor.status);
   const updated = await db.transaction(async (tx) => {
     const [saved] = await tx.update(sponsorsTable).set({
-      status: hasStripe ? sponsor.status : "paid",
-      paidAt: hasStripe ? sponsor.paidAt : new Date(`${receivedDate}T00:00:00.000Z`),
+      status: hasStripe || !shouldAdvanceToPaid ? sponsor.status : "paid",
+      paidAt: hasStripe ? sponsor.paidAt : sponsor.paidAt ?? new Date(`${receivedDate}T00:00:00.000Z`),
       manualPaymentMethod: body.data.method,
       manualPaymentAmount: body.data.amount.toFixed(2),
       manualPaymentReceivedDate: receivedDate,

@@ -9,10 +9,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { ArrowLeft, CheckCircle2, MapPin, Clock, Trash2, Check, Circle, Mail, Pencil, DollarSign } from "lucide-react"
+import { ArrowLeft, CheckCircle2, MapPin, Clock, Trash2, Check, Mail, Pencil, DollarSign } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { ApplicantDetailsEditorDialog, type ApplicantDetailsField } from "@/components/applicant-details-editor-dialog"
 import { ManualPaymentDialog } from "@/components/manual-payment-dialog"
+import { ApplicationFlow } from "@/components/application-flow"
 import type { ManualPaymentInput } from "@workspace/api-client-react"
 
 // ---------------------------------------------------------------------------
@@ -86,97 +87,6 @@ function AckDisplay({ checked, children }: { checked: boolean; children: React.R
         {checked && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
       </div>
       <span className="text-sm text-foreground leading-snug">{children}</span>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Stage flow stepper
-// ---------------------------------------------------------------------------
-const FLOW_STEPS = [
-  { label: "Applied",            key: "applied" },
-  { label: "Payment Received",   key: "paid" },
-  { label: "Stage 1 Approved",   key: "stage1" },
-  { label: "Details Submitted",  key: "details" },
-  { label: "Confirmed",          key: "confirmed" },
-]
-
-function FlowStepper({
-  status, createdAt, approvedAt, detailsSubmittedAt, finalApprovedAt, paidAt,
-}: {
-  status: string; createdAt: string; approvedAt?: string | null;
-  detailsSubmittedAt?: string | null; finalApprovedAt?: string | null; paidAt?: string | null;
-}) {
-  const currentStep = STATUS_META[status]?.step ?? 1
-  const isRejected = status === "rejected"
-
-  const timestamps: Record<string, string | null | undefined> = {
-    applied:   createdAt,
-    paid:      paidAt,
-    stage1:    approvedAt,
-    details:   detailsSubmittedAt,
-    confirmed: finalApprovedAt,
-  }
-
-  const fmtDate = (d?: string | null) =>
-    d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : null
-
-  return (
-    <div className="space-y-0">
-      {FLOW_STEPS.map((step, i) => {
-        const stepNum  = i + 1
-        const done     = currentStep > stepNum || (currentStep === stepNum && ["details_approved"].includes(status))
-        const active   = currentStep === stepNum && !["details_approved"].includes(status)
-        const ts       = fmtDate(timestamps[step.key])
-        const isLast   = i === FLOW_STEPS.length - 1
-
-        return (
-          <div key={step.key} className="flex gap-3">
-            {/* Connector column */}
-            <div className="flex flex-col items-center">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 border-2 transition-colors ${
-                isRejected && stepNum === currentStep
-                  ? "bg-red-100 border-red-400"
-                  : done
-                    ? "bg-green-600 border-green-600"
-                    : active
-                      ? "bg-primary border-primary"
-                      : "bg-background border-muted-foreground/30"
-              }`}>
-                {done ? (
-                  <Check className="w-3 h-3 text-white" strokeWidth={3} />
-                ) : active ? (
-                  <Circle className="w-2 h-2 text-white fill-white" />
-                ) : (
-                  <span className="text-[10px] text-muted-foreground/60 font-medium">{stepNum}</span>
-                )}
-              </div>
-              {!isLast && (
-                <div className={`w-0.5 flex-1 my-1 min-h-[16px] ${done ? "bg-green-400" : "bg-border"}`} />
-              )}
-            </div>
-
-            {/* Label + timestamp */}
-            <div className={`pb-4 pt-0.5 ${isLast ? "" : ""}`}>
-              <p className={`text-sm font-medium leading-snug ${
-                active ? "text-primary" : done ? "text-foreground" : "text-muted-foreground/60"
-              }`}>
-                {step.label}
-                {active && <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wide text-primary bg-primary/10 rounded px-1.5 py-0.5">Now</span>}
-              </p>
-              {ts && (
-                <p className="text-xs text-muted-foreground mt-0.5">{ts}</p>
-              )}
-            </div>
-          </div>
-        )
-      })}
-
-      {isRejected && (
-        <div className="mt-2 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700 font-medium">
-          Application rejected
-        </div>
-      )}
     </div>
   )
 }
@@ -369,6 +279,11 @@ export default function SponsorDetailPage() {
 
   const detailsSubmittedAt = (sponsor as any).detailsSubmittedAt as string | null | undefined
   const hasStage2 = !!detailsSubmittedAt
+  const paymentReceivedAt = [
+    sponsor.hasStripePayment ? (sponsor.stripePaidAt ?? sponsor.paidAt) : null,
+    sponsor.manualPaymentRecordedAt ? (sponsor.manualPaymentReceivedDate ?? sponsor.manualPaymentRecordedAt) : null,
+  ].filter((value): value is string => Boolean(value))
+    .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0] ?? null
 
   const fmtDateTime = (d?: string | null) =>
     d ? new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : null
@@ -392,7 +307,7 @@ export default function SponsorDetailPage() {
           <div className="flex gap-3 items-center flex-wrap">
 
             {/* Stage 1 review — pending only */}
-            <Button variant="outline" className="border-secondary/30 hover:bg-secondary/10 text-secondary-foreground" onClick={() => setIsDetailsOpen(true)}>
+            <Button variant="outline" className="border-primary/20 hover:bg-primary/5 text-primary" onClick={() => setIsDetailsOpen(true)}>
               <Pencil className="w-4 h-4 mr-2" /> Edit details
             </Button>
             <ApplicantDetailsEditorDialog
@@ -414,7 +329,7 @@ export default function SponsorDetailPage() {
             {sponsor.status === 'pending_payment' && (
               <Button
                 variant="outline"
-                className="border-secondary/30 hover:bg-secondary/10 text-secondary-foreground"
+                className="border-primary/20 hover:bg-primary/5 text-primary"
                 onClick={handleResendPaymentLink}
                 disabled={resendPaymentLinkMutation.isPending}
               >
@@ -488,12 +403,10 @@ export default function SponsorDetailPage() {
               </Dialog>
             )}
 
-            {!sponsor.manualPaymentRecordedAt && (
-              sponsor.hasStripePayment || ["pending_payment", "payment_processing"].includes(sponsor.status)
-            ) && (
+            {!sponsor.manualPaymentRecordedAt && !sponsor.hasStripePayment && (
               <Button
                 variant="outline"
-                className="border-secondary/30 hover:bg-secondary/10 text-secondary-foreground"
+                className="border-primary/20 hover:bg-primary/5 text-primary"
                 onClick={() => setIsManualPaymentOpen(true)}
               >
                 <DollarSign className="w-4 h-4 mr-2" />
@@ -529,7 +442,7 @@ export default function SponsorDetailPage() {
 
             <Dialog open={isSpotOpen} onOpenChange={setIsSpotOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" className="border-secondary/30 hover:bg-secondary/10 text-secondary-foreground">
+                <Button variant="outline" className="border-primary/20 hover:bg-primary/5 text-primary">
                   <MapPin className="w-4 h-4 mr-2" />
                   {sponsor.spotNumber ? 'Edit Spot' : 'Assign Spot'}
                 </Button>
@@ -557,7 +470,7 @@ export default function SponsorDetailPage() {
 
             <Button
               variant="outline"
-              className="border-secondary/30 hover:bg-secondary/10 text-secondary-foreground"
+              className="border-primary/20 hover:bg-primary/5 text-primary"
               onClick={handleResend}
               disabled={resendMutation.isPending}
             >
@@ -799,13 +712,15 @@ export default function SponsorDetailPage() {
                 <CardTitle className="text-xl">Application Flow</CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <FlowStepper
-                  status={sponsor.status}
-                  createdAt={sponsor.createdAt}
-                  approvedAt={sponsor.approvedAt}
-                  detailsSubmittedAt={detailsSubmittedAt}
-                  finalApprovedAt={sponsor.finalApprovedAt}
-                  paidAt={sponsor.paidAt}
+                <ApplicationFlow
+                  rejected={sponsor.status === "rejected"}
+                  steps={[
+                    { key: "applied", label: "Applied", completedAt: sponsor.createdAt },
+                    { key: "paid", label: "Payment Received", completedAt: paymentReceivedAt },
+                    { key: "stage1", label: "Stage 1 Approved", completedAt: sponsor.approvedAt },
+                    { key: "details", label: "Details Submitted", completedAt: detailsSubmittedAt },
+                    { key: "confirmed", label: "Confirmed", completedAt: sponsor.finalApprovedAt },
+                  ]}
                 />
 
                 {/* Internal note */}

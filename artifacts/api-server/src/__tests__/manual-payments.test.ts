@@ -58,11 +58,13 @@ describe("manual payments", () => {
     expect((await request(app).post(`/api/vendors/${row.id}/manual-payment`).send(payment)).status).toBe(409);
   });
 
-  it("does not let unpaid vendors or sponsors bypass workflow status and permits only one concurrent record", async () => {
+  it("keeps vendor guards, preserves a sponsor's existing workflow status, and permits only one concurrent record", async () => {
     const pendingVendor = await vendor({ status: "pending" });
     expect((await request(app).post(`/api/vendors/${pendingVendor.id}/manual-payment`).send(payment)).status).toBe(409);
     const rejectedSponsor = await sponsor({ status: "rejected" });
-    expect((await request(app).post(`/api/sponsors/${rejectedSponsor.id}/manual-payment`).send(payment)).status).toBe(409);
+    const sponsorPayment = await request(app).post(`/api/sponsors/${rejectedSponsor.id}/manual-payment`).send(payment);
+    expect(sponsorPayment.status).toBe(200);
+    expect(sponsorPayment.body).toMatchObject({ status: "rejected", paymentSource: "manual" });
     const payable = await vendor();
     const results = await Promise.all([
       request(app).post(`/api/vendors/${payable.id}/manual-payment`).send(payment),

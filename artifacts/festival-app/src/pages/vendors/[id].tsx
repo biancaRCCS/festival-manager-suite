@@ -14,6 +14,7 @@ import { ArrowLeft, CheckCircle2, XCircle, MapPin, Clock, Trash2, Pencil, AlertT
 import { useToast } from "@/hooks/use-toast"
 import { ApplicantDetailsEditorDialog, type ApplicantDetailsField } from "@/components/applicant-details-editor-dialog"
 import { ManualPaymentDialog } from "@/components/manual-payment-dialog"
+import { ApplicationFlow } from "@/components/application-flow"
 import type { ManualPaymentInput } from "@workspace/api-client-react"
 
 // ---------------------------------------------------------------------------
@@ -406,6 +407,11 @@ export default function VendorDetailPage() {
   const isSpecialAgreement = vendor.vendorType === "special_agreement"
   const hasStripePayment = vendor.hasStripePayment
   const hasManualPayment = vendor.manualPaymentRecordedAt != null
+  const paymentReceivedAt = [
+    hasStripePayment ? (vendor.stripePaidAt ?? vendor.paidAt) : null,
+    hasManualPayment ? (vendor.manualPaymentReceivedDate ?? vendor.manualPaymentRecordedAt) : null,
+  ].filter((value): value is string => Boolean(value))
+    .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0] ?? null
   const canRecordManualPayment = !isSpecialAgreement && !hasManualPayment && (
     hasStripePayment || ["approved", "payment_pending", "payment_processing"].includes(vendor.status)
   )
@@ -942,6 +948,25 @@ export default function VendorDetailPage() {
                 )}
               </CardContent>
             </Card>
+
+            {!isSpecialAgreement && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-xl">Application Flow</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <ApplicationFlow
+                    rejected={vendor.status === "rejected"}
+                    steps={[
+                      { key: "applied", label: "Applied", completedAt: vendor.createdAt },
+                      { key: "approved", label: "Stage 1 Approved", completedAt: vendor.approvedAt },
+                      { key: "paid", label: "Payment Received", completedAt: paymentReceivedAt },
+                      { key: "confirmed", label: "Confirmed", completedAt: vendor.finalApprovedAt },
+                    ]}
+                  />
+                </CardContent>
+              </Card>
+            )}
 
              <Card>
               <CardHeader>
