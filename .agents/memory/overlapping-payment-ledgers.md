@@ -14,3 +14,9 @@ Application-flow completion must be evidence-driven, never inferred from status 
 **Why:** Workflow statuses can advance independently or contain legacy inconsistencies; position-based steppers can falsely claim that money was received.
 
 **How to apply:** Give each flow step its own timestamp/evidence field. Missing evidence always renders an incomplete, dateless step even when later steps have evidence.
+
+Stripe webhook events must treat payment state and application workflow state as separate dimensions. Synchronous settlement, ACH success, and ACH failure may record payment evidence, amounts, or failure details, but may only change status while the record is still in a payment-stage status.
+
+**Why:** Legacy applicants can finish later workflow stages before a delayed Stripe or ACH event arrives; letting that event set a payment status sends completed applicants backwards and can re-enable applicant-facing email actions.
+
+**How to apply:** Preserve every non-payment-stage status during webhook handling, including completed and rejected states. Gate email-triggering review actions on stage timestamps as well as status.

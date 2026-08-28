@@ -338,7 +338,7 @@ export default function SponsorDetailPage() {
               </Button>
             )}
 
-            {sponsor.status === 'paid' && (
+            {sponsor.status === 'paid' && !detailsSubmittedAt && !sponsor.finalApprovedAt && (
               <Dialog open={isReviewOpen} onOpenChange={setIsReviewOpen}>
                 <DialogTrigger asChild>
                   <Button className="bg-secondary text-secondary-foreground hover:bg-secondary/80">

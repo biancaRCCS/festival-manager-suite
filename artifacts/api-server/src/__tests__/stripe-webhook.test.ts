@@ -535,6 +535,36 @@ describe("POST /api/stripe/webhook", () => {
 });
 
 describe("async bank payment methods (e.g. ACH) for vendors", () => {
+  it("records a paid Checkout without moving a final-approved vendor backwards", async () => {
+    const finalApprovedAt = new Date("2026-08-24T20:58:42.385Z");
+    const vendor = await createVendor({
+      status: "final_approved",
+      finalApprovedAt,
+      stripeSessionId: "cs_vendor_late_final_approved",
+    });
+    testVendorId = vendor.id;
+
+    const event = makeEvent("checkout.session.completed", {
+      id: "cs_vendor_late_final_approved",
+      object: "checkout.session",
+      payment_status: "paid",
+      amount_total: 30000,
+      metadata: { entityType: "vendor", entityId: String(vendor.id) },
+    });
+    expect((await postWebhook(event)).status).toBe(200);
+    expect((await postWebhook(event)).status).toBe(200);
+
+    const [updated] = await db.select().from(vendorsTable).where(eq(vendorsTable.id, vendor.id));
+    expect(updated).toMatchObject({
+      status: "final_approved",
+      finalApprovedAt,
+      stripeSettledAmount: "300.00",
+      settledAmount: "300.00",
+    });
+    expect(updated?.paidAt).not.toBeNull();
+    expect(updated?.stripePaidAt).not.toBeNull();
+  });
+
   it("marks a vendor payment_processing when checkout completes but payment is still unpaid", async () => {
     const vendor = await createVendor({ status: "payment_pending", stripeSessionId: "cs_async_pending" });
     testVendorId = vendor.id;
@@ -574,6 +604,34 @@ describe("async bank payment methods (e.g. ACH) for vendors", () => {
     expect(updated?.paidAt).not.toBeNull();
   });
 
+  it("records ACH success without moving a final-approved vendor backwards", async () => {
+    const finalApprovedAt = new Date("2026-08-24T20:58:42.385Z");
+    const vendor = await createVendor({
+      status: "final_approved",
+      finalApprovedAt,
+      stripeSessionId: "cs_vendor_async_late_success",
+    });
+    testVendorId = vendor.id;
+
+    const res = await postWebhook(makeEvent("checkout.session.async_payment_succeeded", {
+      id: "cs_vendor_async_late_success",
+      object: "checkout.session",
+      payment_status: "paid",
+      amount_total: 60000,
+      metadata: { entityType: "vendor", entityId: String(vendor.id) },
+    }));
+    expect(res.status).toBe(200);
+
+    const [updated] = await db.select().from(vendorsTable).where(eq(vendorsTable.id, vendor.id));
+    expect(updated).toMatchObject({
+      status: "final_approved",
+      finalApprovedAt,
+      stripeSettledAmount: "600.00",
+      settledAmount: "600.00",
+    });
+    expect(updated?.stripePaidAt).not.toBeNull();
+  });
+
   it("reverts a vendor to approved and records the failure reason when async_payment_failed arrives", async () => {
     const vendor = await createVendor({ status: "payment_processing", stripeSessionId: "cs_async_fail" });
     testVendorId = vendor.id;
@@ -601,6 +659,38 @@ describe("async bank payment methods (e.g. ACH) for vendors", () => {
 
     const logs = await db.select().from(activityLogTable).where(eq(activityLogTable.entityId, vendor.id));
     expect(logs.some((l) => l.type === "payment_failed")).toBe(true);
+  });
+
+  it("records ACH failure without moving a final-approved vendor backwards", async () => {
+    const finalApprovedAt = new Date("2026-08-24T20:58:42.385Z");
+    const vendor = await createVendor({
+      status: "final_approved",
+      finalApprovedAt,
+      stripeSessionId: "cs_vendor_async_late_failure",
+    });
+    testVendorId = vendor.id;
+    paymentIntentRetrieveSpy.mockResolvedValue({
+      id: "pi_vendor_async_late_failure",
+      last_payment_error: { message: "The bank account was closed." },
+    });
+
+    const res = await postWebhook(makeEvent("checkout.session.async_payment_failed", {
+      id: "cs_vendor_async_late_failure",
+      object: "checkout.session",
+      payment_status: "unpaid",
+      amount_total: 30000,
+      payment_intent: "pi_vendor_async_late_failure",
+      metadata: { entityType: "vendor", entityId: String(vendor.id) },
+    }));
+    expect(res.status).toBe(200);
+
+    const [updated] = await db.select().from(vendorsTable).where(eq(vendorsTable.id, vendor.id));
+    expect(updated).toMatchObject({
+      status: "final_approved",
+      finalApprovedAt,
+      paymentFailureReason: "The bank account was closed.",
+    });
+    expect(updated?.paymentFailedAt).not.toBeNull();
   });
 });
 

@@ -111,6 +111,64 @@ router.get("/sponsors/:id", requireStaff, async (req, res): Promise<void> => {
   res.json(formatSponsor(sponsor));
 });
 
+router.patch("/sponsors/:id/reconcile-status-from-timestamps", requireStaff, async (req, res): Promise<void> => {
+  const parsed = GetSponsorParams.safeParse(req.params);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid ID" });
+    return;
+  }
+
+  const [sponsor] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, parsed.data.id));
+  if (!sponsor) {
+    res.status(404).json({ error: "Sponsor not found" });
+    return;
+  }
+
+  const impliedStatus = sponsor.finalApprovedAt
+    ? "details_approved"
+    : sponsor.detailsSubmittedAt
+      ? "details_submitted"
+      : sponsor.approvedAt
+        ? "approved"
+        : null;
+  if (!impliedStatus) {
+    res.status(409).json({ error: "This sponsor has no stage timestamp that can restore their workflow status." });
+    return;
+  }
+
+  const statusRank: Record<string, number> = {
+    pending_payment: 0,
+    payment_processing: 0,
+    paid: 1,
+    approved: 2,
+    details_submitted: 3,
+    details_approved: 4,
+  };
+  if ((statusRank[sponsor.status] ?? -1) >= statusRank[impliedStatus]) {
+    res.json(formatSponsor(sponsor));
+    return;
+  }
+
+  const [updated] = await db.update(sponsorsTable)
+    .set({ status: impliedStatus })
+    .where(and(eq(sponsorsTable.id, sponsor.id), eq(sponsorsTable.status, sponsor.status)))
+    .returning();
+  if (!updated) {
+    res.status(409).json({ error: "The sponsor changed while their status was being reconciled. Refresh and try again." });
+    return;
+  }
+
+  await db.insert(activityLogTable).values({
+    type: "status_reconciled",
+    message: `Sponsor ${updated.name} (${updated.orgName}) status restored from ${sponsor.status} to ${impliedStatus} using existing stage timestamps`,
+    entityType: "sponsor",
+    entityId: updated.id,
+    performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
+  });
+
+  res.json(formatSponsor(updated));
+});
+
 router.post("/sponsors/:id/manual-payment", requireStaff, async (req, res): Promise<void> => {
   const params = RecordSponsorManualPaymentParams.safeParse(req.params), body = RecordSponsorManualPaymentBody.safeParse(req.body);
   if (!params.success || !body.success || !validManualAmount(body.success ? body.data.amount : 0)) { res.status(400).json({ error: "Enter a positive amount in whole cents and a valid manual payment." }); return; }

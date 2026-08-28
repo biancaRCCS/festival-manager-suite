@@ -371,6 +371,31 @@ describe("POST /api/sponsors/:id/resend-payment-link", () => {
 });
 
 describe("checkout.session.completed webhook for sponsors", () => {
+  it("restores a timestamp-proven sponsor status without sending email", async () => {
+    const sponsor = await createSponsor({
+      status: "paid",
+      approvedAt: new Date("2026-08-24T04:02:05.233Z"),
+      detailsSubmittedAt: new Date("2026-08-24T04:41:00.039Z"),
+      finalApprovedAt: new Date("2026-08-24T20:58:42.385Z"),
+      paidAt: new Date("2026-08-26T02:15:18.136Z"),
+      stripeSessionId: "cs_status_repair",
+    });
+
+    const res = await request(app).patch(`/api/sponsors/${sponsor.id}/reconcile-status-from-timestamps`);
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      id: sponsor.id,
+      status: "details_approved",
+      paidAt: "2026-08-26T02:15:18.136Z",
+    });
+    expect(paymentReceiptSpy).not.toHaveBeenCalled();
+    expect(paymentLinkEmailSpy).not.toHaveBeenCalled();
+    expect(newApplicationNotificationSpy).not.toHaveBeenCalled();
+
+    const logs = await db.select().from(activityLogTable).where(eq(activityLogTable.entityId, sponsor.id));
+    expect(logs.some((log) => log.type === "status_reconciled")).toBe(true);
+  });
+
   it("marks a sponsor paid, logs it, and sends the receipt + staff notification", async () => {
     const sponsor = await createSponsor({ stripeSessionId: "cs_test_paid" });
 
@@ -392,6 +417,37 @@ describe("checkout.session.completed webhook for sponsors", () => {
     const logs = await db.select().from(activityLogTable).where(eq(activityLogTable.entityId, sponsor.id));
     expect(logs.some((l) => l.type === "paid")).toBe(true);
 
+    expect(paymentReceiptSpy).toHaveBeenCalledOnce();
+    expect(newApplicationNotificationSpy).toHaveBeenCalledOnce();
+  });
+
+  it("records a paid Checkout without moving a details-approved sponsor backwards", async () => {
+    const completedAt = new Date("2026-08-24T20:58:42.385Z");
+    const sponsor = await createSponsor({
+      status: "details_approved",
+      detailsSubmittedAt: new Date("2026-08-24T04:41:00.039Z"),
+      finalApprovedAt: completedAt,
+      stripeSessionId: "cs_late_details_approved",
+    });
+    const event = makeEvent("checkout.session.completed", {
+      id: "cs_late_details_approved",
+      object: "checkout.session",
+      payment_status: "paid",
+      amount_total: 125000,
+      metadata: { entityType: "sponsor", entityId: String(sponsor.id) },
+    });
+
+    expect((await postWebhook(event)).status).toBe(200);
+    expect((await postWebhook(event)).status).toBe(200);
+
+    const [updated] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, sponsor.id));
+    expect(updated).toMatchObject({
+      status: "details_approved",
+      stripeSettledAmount: "1250.00",
+      finalApprovedAt: completedAt,
+    });
+    expect(updated?.paidAt).not.toBeNull();
+    expect(updated?.stripePaidAt).not.toBeNull();
     expect(paymentReceiptSpy).toHaveBeenCalledOnce();
     expect(newApplicationNotificationSpy).toHaveBeenCalledOnce();
   });
@@ -452,6 +508,32 @@ describe("checkout.session.completed webhook for sponsors", () => {
     expect(newApplicationNotificationSpy).toHaveBeenCalledOnce();
   });
 
+  it("records ACH success without moving a details-submitted sponsor backwards", async () => {
+    const detailsSubmittedAt = new Date("2026-08-24T04:41:00.039Z");
+    const sponsor = await createSponsor({
+      status: "details_submitted",
+      detailsSubmittedAt,
+      stripeSessionId: "cs_sponsor_async_late_success",
+    });
+
+    const res = await postWebhook(makeEvent("checkout.session.async_payment_succeeded", {
+      id: "cs_sponsor_async_late_success",
+      object: "checkout.session",
+      payment_status: "paid",
+      amount_total: 90000,
+      metadata: { entityType: "sponsor", entityId: String(sponsor.id) },
+    }));
+    expect(res.status).toBe(200);
+
+    const [updated] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, sponsor.id));
+    expect(updated).toMatchObject({
+      status: "details_submitted",
+      detailsSubmittedAt,
+      stripeSettledAmount: "900.00",
+    });
+    expect(updated?.stripePaidAt).not.toBeNull();
+  });
+
   it("reverts a failed async sponsor payment and records the Stripe failure reason", async () => {
     const sponsor = await createSponsor({
       status: "payment_processing",
@@ -481,5 +563,37 @@ describe("checkout.session.completed webhook for sponsors", () => {
     const logs = await db.select().from(activityLogTable).where(eq(activityLogTable.entityId, sponsor.id));
     expect(logs.some((log) => log.type === "payment_failed")).toBe(true);
     expect(paymentReceiptSpy).not.toHaveBeenCalled();
+  });
+
+  it("records ACH failure without moving a details-approved sponsor backwards", async () => {
+    const finalApprovedAt = new Date("2026-08-24T20:58:42.385Z");
+    const sponsor = await createSponsor({
+      status: "details_approved",
+      detailsSubmittedAt: new Date("2026-08-24T04:41:00.039Z"),
+      finalApprovedAt,
+      stripeSessionId: "cs_sponsor_async_late_failure",
+    });
+    paymentIntentRetrieveSpy.mockResolvedValue({
+      id: "pi_sponsor_async_late_failure",
+      last_payment_error: { message: "The bank account could not be verified." },
+    });
+
+    const res = await postWebhook(makeEvent("checkout.session.async_payment_failed", {
+      id: "cs_sponsor_async_late_failure",
+      object: "checkout.session",
+      payment_status: "unpaid",
+      amount_total: 75000,
+      payment_intent: "pi_sponsor_async_late_failure",
+      metadata: { entityType: "sponsor", entityId: String(sponsor.id) },
+    }));
+    expect(res.status).toBe(200);
+
+    const [updated] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, sponsor.id));
+    expect(updated).toMatchObject({
+      status: "details_approved",
+      finalApprovedAt,
+      paymentFailureReason: "The bank account could not be verified.",
+    });
+    expect(updated?.paymentFailedAt).not.toBeNull();
   });
 });

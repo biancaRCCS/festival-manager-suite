@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 import { db, vendorsTable, sponsorsTable, contributionsTable, festivalYearsTable, festivalSettingsTable, activityLogTable } from "@workspace/db";
-import { eq, and, isNull, inArray } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { getUncachableStripeClient } from "../lib/stripeClient";
 import { sendContributionReceipt, sendSponsorPaymentReceiptEmail, sendNewApplicationNotification, TIER_LABELS } from "../lib/email";
 import { logger } from "../lib/logger";
@@ -418,20 +418,23 @@ export async function handleCheckoutComplete(session: Stripe.Checkout.Session): 
       }
       return;
     }
-    // Retain Stripe settlement evidence even when staff has subsequently
-    // recorded an offline payment; the state transition below intentionally
-    // refuses to overwrite an active manual payment.
-    await db.update(vendorsTable).set({
-      stripePaidAt: new Date(),
-      stripeSettledAmount: (session.amount_total / 100).toFixed(2),
-    }).where(and(eq(vendorsTable.id, id), eq(vendorsTable.stripeSessionId, session.id)));
+    const [current] = await db.select().from(vendorsTable).where(
+      and(eq(vendorsTable.id, id), eq(vendorsTable.stripeSessionId, session.id)),
+    ).limit(1);
+    if (!current) return;
 
+    const shouldAdvanceToPaid = ["payment_pending", "payment_processing"].includes(current.status);
+    if (current.stripePaidAt && !shouldAdvanceToPaid) return;
+    const settledAt = new Date();
+    const settledAmount = (session.amount_total / 100).toFixed(2);
     const [updated] = await db
       .update(vendorsTable)
       .set({
-        status: "paid",
-        paidAt: new Date(),
-        settledAmount: (session.amount_total / 100).toFixed(2),
+        status: shouldAdvanceToPaid ? "paid" : current.status,
+        paidAt: current.paidAt ?? settledAt,
+        stripePaidAt: current.stripePaidAt ?? settledAt,
+        stripeSettledAmount: settledAmount,
+        settledAmount: current.settledAmount ?? settledAmount,
         paymentFailedAt: null,
         paymentFailureReason: null,
       })
@@ -439,7 +442,8 @@ export async function handleCheckoutComplete(session: Stripe.Checkout.Session): 
         and(
           eq(vendorsTable.id, id),
           eq(vendorsTable.stripeSessionId, session.id),
-          inArray(vendorsTable.status, ["payment_pending", "payment_processing"]),
+          eq(vendorsTable.status, current.status),
+          ...(current.stripePaidAt ? [] : [isNull(vendorsTable.stripePaidAt)]),
         ),
       )
       .returning();
@@ -481,19 +485,30 @@ export async function handleCheckoutComplete(session: Stripe.Checkout.Session): 
       }
       return;
     }
-    await db.update(sponsorsTable).set({
-      stripePaidAt: new Date(),
-      stripeSettledAmount: (session.amount_total / 100).toFixed(2),
-    }).where(and(eq(sponsorsTable.id, id), eq(sponsorsTable.stripeSessionId, session.id)));
+    const [current] = await db.select().from(sponsorsTable).where(
+      and(eq(sponsorsTable.id, id), eq(sponsorsTable.stripeSessionId, session.id)),
+    ).limit(1);
+    if (!current) return;
 
+    const shouldAdvanceToPaid = ["pending_payment", "payment_processing"].includes(current.status);
+    if (current.stripePaidAt && !shouldAdvanceToPaid) return;
+    const settledAt = new Date();
     const [updated] = await db
       .update(sponsorsTable)
-      .set({ status: "paid", paidAt: new Date(), paymentFailedAt: null, paymentFailureReason: null })
+      .set({
+        status: shouldAdvanceToPaid ? "paid" : current.status,
+        paidAt: current.paidAt ?? settledAt,
+        stripePaidAt: current.stripePaidAt ?? settledAt,
+        stripeSettledAmount: (session.amount_total / 100).toFixed(2),
+        paymentFailedAt: null,
+        paymentFailureReason: null,
+      })
       .where(
         and(
           eq(sponsorsTable.id, id),
           eq(sponsorsTable.stripeSessionId, session.id),
-          inArray(sponsorsTable.status, ["pending_payment", "payment_processing"]),
+          eq(sponsorsTable.status, current.status),
+          ...(current.stripePaidAt ? [] : [isNull(sponsorsTable.stripePaidAt)]),
         ),
       )
       .returning();
@@ -563,14 +578,24 @@ export async function handleCheckoutAsyncPaymentFailed(session: Stripe.Checkout.
   if (isNaN(id)) return;
 
   if (entityType === "vendor") {
+    const [current] = await db.select().from(vendorsTable).where(
+      and(eq(vendorsTable.id, id), eq(vendorsTable.stripeSessionId, session.id)),
+    ).limit(1);
+    if (!current || current.paymentFailedAt) return;
+    const shouldRevertToApproved = ["payment_pending", "payment_processing"].includes(current.status);
     const [updated] = await db
       .update(vendorsTable)
-      .set({ status: "approved", paymentFailedAt: new Date(), paymentFailureReason: reason })
+      .set({
+        status: shouldRevertToApproved ? "approved" : current.status,
+        paymentFailedAt: new Date(),
+        paymentFailureReason: reason,
+      })
       .where(
         and(
           eq(vendorsTable.id, id),
           eq(vendorsTable.stripeSessionId, session.id),
-          inArray(vendorsTable.status, ["payment_pending", "payment_processing"]),
+          eq(vendorsTable.status, current.status),
+          isNull(vendorsTable.paymentFailedAt),
         ),
       )
       .returning();
@@ -585,14 +610,24 @@ export async function handleCheckoutAsyncPaymentFailed(session: Stripe.Checkout.
       });
     }
   } else if (entityType === "sponsor") {
+    const [current] = await db.select().from(sponsorsTable).where(
+      and(eq(sponsorsTable.id, id), eq(sponsorsTable.stripeSessionId, session.id)),
+    ).limit(1);
+    if (!current || current.paymentFailedAt) return;
+    const shouldRevertToPending = ["pending_payment", "payment_processing"].includes(current.status);
     const [updated] = await db
       .update(sponsorsTable)
-      .set({ status: "pending_payment", paymentFailedAt: new Date(), paymentFailureReason: reason })
+      .set({
+        status: shouldRevertToPending ? "pending_payment" : current.status,
+        paymentFailedAt: new Date(),
+        paymentFailureReason: reason,
+      })
       .where(
         and(
           eq(sponsorsTable.id, id),
           eq(sponsorsTable.stripeSessionId, session.id),
-          inArray(sponsorsTable.status, ["pending_payment", "payment_processing"]),
+          eq(sponsorsTable.status, current.status),
+          isNull(sponsorsTable.paymentFailedAt),
         ),
       )
       .returning();
