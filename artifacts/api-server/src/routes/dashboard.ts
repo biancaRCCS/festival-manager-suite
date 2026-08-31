@@ -122,7 +122,7 @@ router.get("/dashboard/summary", requireStaff, async (req, res): Promise<void> =
   const inKindSponsors = sponsors.filter(sp => sp.isInKind);
   const vendorRevenue  = paidVendors.reduce((sum, v) => sum + vendorReceivedAmount(v, vendorPriceMap), 0);
   const sponsorRevenue = paidSponsors.reduce((sum, sp) => sum + sponsorReceivedAmount(sp, sponsorPriceMap), 0);
-  const sponsorInKindValue = inKindSponsors.reduce((sum, sp) => sum + sponsorAmount(sp, sponsorPriceMap), 0);
+  const sponsorInKindValue = inKindSponsors.reduce((sum, sp) => sum + Number(sp.inKindValue ?? 0), 0);
   const totalRevenue = vendorRevenue + sponsorRevenue;
 
   const vendorStats    = statFor(vendors);
@@ -194,7 +194,7 @@ router.get("/dashboard/financials", requireStaff, async (req, res): Promise<void
 
   const vendorRevenue  = vendors.reduce((sum, v) => sum + vendorReceivedAmount(v, vendorPriceMap), 0);
   const sponsorRevenue = paidSponsors.reduce((sum, sp) => sum + sponsorReceivedAmount(sp, sponsorPriceMap), 0);
-  const sponsorInKindValue = inKindSponsors.reduce((sum, sp) => sum + sponsorAmount(sp, sponsorPriceMap), 0);
+  const sponsorInKindValue = inKindSponsors.reduce((sum, sp) => sum + Number(sp.inKindValue ?? 0), 0);
 
   const recentPayments = [
     ...vendors.filter(v => v.paidAt).map(v => ({

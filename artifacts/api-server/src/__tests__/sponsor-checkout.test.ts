@@ -382,16 +382,24 @@ describe("POST /api/sponsors/:id/resend-payment-link", () => {
 });
 
 describe("POST /api/sponsors/:id/mark-in-kind", () => {
+  it("requires a positive estimated value with cent precision", async () => {
+    const sponsor = await createSponsor();
+    expect((await request(app).post(`/api/sponsors/${sponsor.id}/mark-in-kind`).send({ description: "Donated goods" })).status).toBe(400);
+    expect((await request(app).post(`/api/sponsors/${sponsor.id}/mark-in-kind`).send({ description: "Donated goods", estimatedValue: 1.001 })).status).toBe(400);
+    const [unchanged] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, sponsor.id));
+    expect(unchanged).toMatchObject({ isInKind: false, sponsorshipAmount: "750.00", inKindValue: null });
+  });
+
   it("expires an open Checkout and fulfills without a cash payment record", async () => {
-    const sponsor = await createSponsor({ stripeSessionId: "cs_in_kind_open" });
+    const sponsor = await createSponsor({ tier: "diamond", sponsorshipAmount: "10000.00", stripeSessionId: "cs_in_kind_open" });
     checkoutSessionRetrieveSpy.mockResolvedValue({ id: "cs_in_kind_open", status: "open", payment_status: "unpaid" });
 
-    const res = await request(app).post(`/api/sponsors/${sponsor.id}/mark-in-kind`).send({ description: "  Donated event printing  " });
+    const res = await request(app).post(`/api/sponsors/${sponsor.id}/mark-in-kind`).send({ description: "  Donated event printing  ", estimatedValue: 1200.50 });
 
     expect(res.status).toBe(200);
     expect(checkoutSessionExpireSpy).toHaveBeenCalledWith("cs_in_kind_open");
     const [updated] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, sponsor.id));
-    expect(updated).toMatchObject({ status: "paid", isInKind: true, inKindDescription: "Donated event printing", stripeSessionId: null, paidAt: null });
+    expect(updated).toMatchObject({ status: "paid", tier: "diamond", isInKind: true, inKindDescription: "Donated event printing", sponsorshipAmount: "0.00", inKindValue: "1200.50", stripeSessionId: null, paidAt: null });
     expect(updated?.manualPaymentRecordedAt).toBeNull();
   });
 
@@ -399,7 +407,7 @@ describe("POST /api/sponsors/:id/mark-in-kind", () => {
     const sponsor = await createSponsor({ stripeSessionId: "cs_in_kind_paid" });
     checkoutSessionRetrieveSpy.mockResolvedValue({ id: "cs_in_kind_paid", status: "complete", payment_status: "paid" });
 
-    const res = await request(app).post(`/api/sponsors/${sponsor.id}/mark-in-kind`).send({ description: "Donated goods" });
+    const res = await request(app).post(`/api/sponsors/${sponsor.id}/mark-in-kind`).send({ description: "Donated goods", estimatedValue: 750 });
 
     expect(res.status).toBe(409);
     const [unchanged] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, sponsor.id));

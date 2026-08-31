@@ -31,6 +31,8 @@ export interface Sponsor {
   /** @nullable */
   sponsorshipAmount?: number | null;
   /** @nullable */
+  inKindValue?: number | null;
+  /** @nullable */
   spotNumber?: string | null;
   /** @nullable */
   location?: string | null;

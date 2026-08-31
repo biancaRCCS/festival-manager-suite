@@ -304,6 +304,11 @@ export interface MarkSponsorInKindInput {
      * @maxLength 2000
      */
   description: string;
+  /**
+     * @maximum 99999999.99
+     * @exclusiveMinimum 0
+     */
+  estimatedValue: number;
 }
 
 export type SponsorStatus = typeof SponsorStatus[keyof typeof SponsorStatus];
@@ -353,6 +358,8 @@ export interface Sponsor {
   agreementSignedName?: string | null;
   /** @nullable */
   sponsorshipAmount?: number | null;
+  /** @nullable */
+  inKindValue?: number | null;
   /** @nullable */
   spotNumber?: string | null;
   /** @nullable */
@@ -653,6 +660,8 @@ export interface PortalInfo {
   spacesRequested?: string | null;
   /** @nullable */
   sponsorshipAmount?: number | null;
+  /** @nullable */
+  inKindValue?: number | null;
   isInKind: boolean;
   /** @nullable */
   inKindDescription?: string | null;

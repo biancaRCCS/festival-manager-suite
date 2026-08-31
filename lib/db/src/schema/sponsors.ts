@@ -15,6 +15,7 @@ export const sponsorsTable = pgTable("sponsors", {
   inKindDescription: text("in_kind_description"),
   // Amount the sponsor actually chooses within the tier range
   sponsorshipAmount: numeric("sponsorship_amount", { precision: 10, scale: 2 }),
+  inKindValue: numeric("in_kind_value", { precision: 10, scale: 2 }),
   status: text("status").notNull().default("pending"),
   applicationData: jsonb("application_data").notNull().default({}),
   agreementSigned: boolean("agreement_signed").notNull().default(false),

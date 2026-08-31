@@ -168,7 +168,7 @@ describe("manual payments", () => {
     const inKindSponsor = await sponsor({
       orgName: "In Kind Sponsor Co",
       status: "paid", isInKind: true, inKindDescription: "Donated catering",
-      sponsorshipAmount: "750.00", paidAt: null,
+      sponsorshipAmount: "0.00", inKindValue: "750.00", paidAt: null,
     });
 
     const financials = await request(app).get("/api/dashboard/financials").query({ yearId });

@@ -59,6 +59,8 @@ export interface PortalInfo {
   spacesRequested?: string | null;
   /** @nullable */
   sponsorshipAmount?: number | null;
+  /** @nullable */
+  inKindValue?: number | null;
   isInKind: boolean;
   /** @nullable */
   inKindDescription?: string | null;

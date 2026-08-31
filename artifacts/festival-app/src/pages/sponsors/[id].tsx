@@ -127,6 +127,7 @@ export default function SponsorDetailPage() {
   const [isRemovePaymentOpen, setIsRemovePaymentOpen] = useState(false)
   const [isInKindOpen, setIsInKindOpen] = useState(false)
   const [inKindDescription, setInKindDescription] = useState("")
+  const [inKindValue, setInKindValue] = useState("")
 
   const reviewMutateFnRef = useRef(reviewMutation.mutate)
   reviewMutateFnRef.current = reviewMutation.mutate
@@ -277,8 +278,9 @@ export default function SponsorDetailPage() {
     }
   }
   const handleMarkInKind = () => {
-    if (!inKindDescription.trim()) return
-    inKindMutation.mutate({ id, data: { description: inKindDescription.trim() } }, { onSuccess: (updated) => {
+    const estimatedValue = Number(inKindValue)
+    if (!inKindDescription.trim() || !Number.isFinite(estimatedValue) || estimatedValue <= 0 || estimatedValue > 99_999_999.99 || Math.round(estimatedValue * 100) !== estimatedValue * 100) return
+    inKindMutation.mutate({ id, data: { description: inKindDescription.trim(), estimatedValue } }, { onSuccess: (updated) => {
       queryClient.setQueryData(getGetSponsorQueryKey(id), updated); queryClient.invalidateQueries({ queryKey: ["sponsors"] }); setIsInKindOpen(false); toast({ title: "In-kind contribution recorded" })
     }, onError: () => toast({ title: "Could not record in-kind contribution", variant: "destructive" }) })
   }
@@ -461,8 +463,8 @@ export default function SponsorDetailPage() {
               <Dialog open={isInKindOpen} onOpenChange={setIsInKindOpen}>
                 <DialogTrigger asChild><Button variant="outline" className="border-violet-300 text-violet-800 hover:bg-violet-50"><Gift className="w-4 h-4 mr-2" />Mark as in-kind</Button></DialogTrigger>
                 <DialogContent><DialogHeader><DialogTitle>Record in-kind sponsorship</DialogTitle><DialogDescription>This fulfils the sponsorship without recording a cash payment. Any open online payment link will be expired.</DialogDescription></DialogHeader>
-                  <div className="space-y-2 py-3"><Label htmlFor="in-kind-description">Contribution description</Label><Input id="in-kind-description" value={inKindDescription} onChange={e => setInKindDescription(e.target.value)} maxLength={2000} placeholder="e.g., catering, printing, donated services" /></div>
-                  <DialogFooter><Button variant="outline" onClick={() => setIsInKindOpen(false)}>Cancel</Button><Button onClick={handleMarkInKind} disabled={!inKindDescription.trim() || inKindMutation.isPending}>{inKindMutation.isPending ? "Recording…" : "Record in-kind contribution"}</Button></DialogFooter>
+                  <div className="space-y-4 py-3"><div className="space-y-2"><Label htmlFor="in-kind-description">Contribution description</Label><Input id="in-kind-description" value={inKindDescription} onChange={e => setInKindDescription(e.target.value)} maxLength={2000} placeholder="e.g., catering, printing, donated services" /></div><div className="space-y-2"><Label htmlFor="in-kind-value">Estimated value (USD)</Label><Input id="in-kind-value" type="number" min="0.01" max="99999999.99" step="0.01" value={inKindValue} onChange={e => setInKindValue(e.target.value)} placeholder="0.00" /></div></div>
+                  <DialogFooter><Button variant="outline" onClick={() => setIsInKindOpen(false)}>Cancel</Button><Button onClick={handleMarkInKind} disabled={!inKindDescription.trim() || !inKindValue || inKindMutation.isPending}>{inKindMutation.isPending ? "Recording…" : "Record in-kind contribution"}</Button></DialogFooter>
                 </DialogContent>
               </Dialog>
             )}
@@ -622,7 +624,7 @@ export default function SponsorDetailPage() {
                   </div>
                 </>
               )}
-              {sponsor.isInKind && <><SectionDivider title="In-kind Contribution" /><Field label="Description" value={sponsor.inKindDescription} wide /></>}
+              {sponsor.isInKind && <><SectionDivider title="In-kind Contribution" /><Field label={`In-kind — valued at ${sponsor.inKindValue != null ? `$${Number(sponsor.inKindValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}`} value={sponsor.inKindDescription} wide /></>}
 
               {/* ── Contact Information ── */}
               <SectionDivider title="Contact Information" />

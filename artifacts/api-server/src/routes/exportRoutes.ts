@@ -90,7 +90,7 @@ router.get("/export/sponsors", requireStaff, async (req, res): Promise<void> => 
     tier: s.tier,
     contributionType: s.isInKind ? "In-kind (not cash)" : "Cash sponsorship",
     inKindDescription: s.inKindDescription ?? "",
-    inKindValuation: s.isInKind && s.sponsorshipAmount != null ? Number(s.sponsorshipAmount) : "",
+    inKindValuation: s.isInKind && s.inKindValue != null ? Number(s.inKindValue) : "",
     status: s.isInKind ? `${s.status} — in-kind` : s.status,
     spotNumber: s.spotNumber ?? "",
     location: s.location ?? "",

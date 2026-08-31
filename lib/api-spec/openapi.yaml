@@ -1875,12 +1875,17 @@ components:
 
     MarkSponsorInKindInput:
       type: object
-      required: [description]
+      required: [description, estimatedValue]
       properties:
         description:
           type: string
           minLength: 1
           maxLength: 2000
+        estimatedValue:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 99999999.99
+          multipleOf: 0.01
 
     Sponsor:
       type: object
@@ -1919,6 +1924,8 @@ components:
         agreementSignedName:
           type: ["string", "null"]
         sponsorshipAmount:
+          type: ["number", "null"]
+        inKindValue:
           type: ["number", "null"]
         spotNumber:
           type: ["string", "null"]
@@ -2274,6 +2281,8 @@ components:
         spacesRequested:
           type: ["string", "null"]
         sponsorshipAmount:
+          type: ["number", "null"]
+        inKindValue:
           type: ["number", "null"]
         isInKind:
           type: boolean

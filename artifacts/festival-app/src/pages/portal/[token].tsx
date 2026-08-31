@@ -416,6 +416,7 @@ export default function PortalPage() {
   // ── Sponsor stage 2 helpers ──────────────────────────────────────────────
   const isBoothSponsor   = portal.boothOrNameOnly === "Booth"
   const sponsorshipAmount = (portal as any).sponsorshipAmount as number | undefined
+  const inKindValue = portal.inKindValue
   const tierLabel         = TIER_LABELS[portal.tier ?? ""] ?? portal.tier ?? ""
 
   return (
@@ -470,7 +471,7 @@ export default function PortalPage() {
                 {isInKindSponsor && (
                   <div>
                     <p className="text-muted-foreground text-xs uppercase tracking-wide mb-0.5">In-kind contribution</p>
-                    <p className="font-medium text-foreground">{portal.inKindDescription}</p>
+                    <p className="font-medium text-foreground">In-kind — valued at {inKindValue != null ? `$${inKindValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}{portal.inKindDescription ? `: ${portal.inKindDescription}` : ""}</p>
                   </div>
                 )}
                 <div>

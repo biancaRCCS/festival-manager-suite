@@ -12,4 +12,9 @@ export interface MarkSponsorInKindInput {
      * @maxLength 2000
      */
   description: string;
+  /**
+     * @maximum 99999999.99
+     * @exclusiveMinimum 0
+     */
+  estimatedValue: number;
 }

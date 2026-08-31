@@ -147,6 +147,7 @@ export const GetPortalInfoResponse = zod.object({
   "vendorPriceNonprofit": zod.number().nullish(),
   "spacesRequested": zod.string().nullish(),
   "sponsorshipAmount": zod.number().nullish(),
+  "inKindValue": zod.number().nullish(),
   "isInKind": zod.boolean(),
   "inKindDescription": zod.string().nullish(),
   "boothOrNameOnly": zod.string().nullish(),
@@ -203,6 +204,7 @@ export const SubmitSponsorDetailsResponse = zod.object({
   "vendorPriceNonprofit": zod.number().nullish(),
   "spacesRequested": zod.string().nullish(),
   "sponsorshipAmount": zod.number().nullish(),
+  "inKindValue": zod.number().nullish(),
   "isInKind": zod.boolean(),
   "inKindDescription": zod.string().nullish(),
   "boothOrNameOnly": zod.string().nullish(),
@@ -273,6 +275,7 @@ export const SignPortalAgreementResponse = zod.object({
   "vendorPriceNonprofit": zod.number().nullish(),
   "spacesRequested": zod.string().nullish(),
   "sponsorshipAmount": zod.number().nullish(),
+  "inKindValue": zod.number().nullish(),
   "isInKind": zod.boolean(),
   "inKindDescription": zod.string().nullish(),
   "boothOrNameOnly": zod.string().nullish(),
@@ -352,6 +355,7 @@ export const SubmitSpecialAgreementResponse = zod.object({
   "vendorPriceNonprofit": zod.number().nullish(),
   "spacesRequested": zod.string().nullish(),
   "sponsorshipAmount": zod.number().nullish(),
+  "inKindValue": zod.number().nullish(),
   "isInKind": zod.boolean(),
   "inKindDescription": zod.string().nullish(),
   "boothOrNameOnly": zod.string().nullish(),
@@ -2062,6 +2066,7 @@ export const ListSponsorsResponseItem = zod.object({
   "agreementSigned": zod.boolean().optional(),
   "agreementSignedName": zod.string().nullish(),
   "sponsorshipAmount": zod.number().nullish(),
+  "inKindValue": zod.number().nullish(),
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
@@ -2111,6 +2116,7 @@ export const GetSponsorResponse = zod.object({
   "agreementSigned": zod.boolean().optional(),
   "agreementSignedName": zod.string().nullish(),
   "sponsorshipAmount": zod.number().nullish(),
+  "inKindValue": zod.number().nullish(),
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
@@ -2174,6 +2180,7 @@ export const ReviewSponsorResponse = zod.object({
   "agreementSigned": zod.boolean().optional(),
   "agreementSignedName": zod.string().nullish(),
   "sponsorshipAmount": zod.number().nullish(),
+  "inKindValue": zod.number().nullish(),
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
@@ -2242,6 +2249,7 @@ export const RecordSponsorManualPaymentResponse = zod.object({
   "agreementSigned": zod.boolean().optional(),
   "agreementSignedName": zod.string().nullish(),
   "sponsorshipAmount": zod.number().nullish(),
+  "inKindValue": zod.number().nullish(),
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
@@ -2293,6 +2301,7 @@ export const RemoveSponsorManualPaymentResponse = zod.object({
   "agreementSigned": zod.boolean().optional(),
   "agreementSignedName": zod.string().nullish(),
   "sponsorshipAmount": zod.number().nullish(),
+  "inKindValue": zod.number().nullish(),
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
@@ -2329,10 +2338,15 @@ export const MarkSponsorInKindParams = zod.object({
 
 export const markSponsorInKindBodyDescriptionMax = 2000;
 
+export const markSponsorInKindBodyEstimatedValueExclusiveMin = 0;
+export const markSponsorInKindBodyEstimatedValueMax = 99999999.99;
+export const markSponsorInKindBodyEstimatedValueMultipleOf = 0.01;
+
 
 
 export const MarkSponsorInKindBody = zod.object({
-  "description": zod.string().min(1).max(markSponsorInKindBodyDescriptionMax)
+  "description": zod.string().min(1).max(markSponsorInKindBodyDescriptionMax),
+  "estimatedValue": zod.number().gt(markSponsorInKindBodyEstimatedValueExclusiveMin).max(markSponsorInKindBodyEstimatedValueMax).multipleOf(markSponsorInKindBodyEstimatedValueMultipleOf)
 })
 
 export const MarkSponsorInKindResponse = zod.object({
@@ -2352,6 +2366,7 @@ export const MarkSponsorInKindResponse = zod.object({
   "agreementSigned": zod.boolean().optional(),
   "agreementSignedName": zod.string().nullish(),
   "sponsorshipAmount": zod.number().nullish(),
+  "inKindValue": zod.number().nullish(),
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
@@ -2423,6 +2438,7 @@ export const UpdateSponsorDetailsResponse = zod.object({
   "agreementSigned": zod.boolean().optional(),
   "agreementSignedName": zod.string().nullish(),
   "sponsorshipAmount": zod.number().nullish(),
+  "inKindValue": zod.number().nullish(),
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
@@ -2471,6 +2487,7 @@ export const ReconcileSponsorStatusFromTimestampsResponse = zod.object({
   "agreementSigned": zod.boolean().optional(),
   "agreementSignedName": zod.string().nullish(),
   "sponsorshipAmount": zod.number().nullish(),
+  "inKindValue": zod.number().nullish(),
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
@@ -2519,6 +2536,7 @@ export const FinalApproveSponsorResponse = zod.object({
   "agreementSigned": zod.boolean().optional(),
   "agreementSignedName": zod.string().nullish(),
   "sponsorshipAmount": zod.number().nullish(),
+  "inKindValue": zod.number().nullish(),
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
@@ -2572,6 +2590,7 @@ export const AssignSponsorSpotResponse = zod.object({
   "agreementSigned": zod.boolean().optional(),
   "agreementSignedName": zod.string().nullish(),
   "sponsorshipAmount": zod.number().nullish(),
+  "inKindValue": zod.number().nullish(),
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),

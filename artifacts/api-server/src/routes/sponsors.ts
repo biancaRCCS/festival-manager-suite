@@ -84,6 +84,7 @@ function formatSponsor(s: typeof sponsorsTable.$inferSelect) {
     isInKind: s.isInKind,
     inKindDescription: s.inKindDescription ?? null,
     sponsorshipAmount: s.sponsorshipAmount != null ? parseFloat(s.sponsorshipAmount) : null,
+    inKindValue: s.inKindValue != null ? parseFloat(s.inKindValue) : null,
     status: s.status,
     statusNeedsRepair: sponsorNeedsStatusRepair(s),
     timestampImpliedStatus,
@@ -238,7 +239,8 @@ router.post("/sponsors/:id/mark-in-kind", requireStaff, async (req, res): Promis
   const params = MarkSponsorInKindParams.safeParse(req.params);
   const body = MarkSponsorInKindBody.safeParse(req.body);
   const description = body.success ? body.data.description.trim() : "";
-  if (!params.success || !description) { res.status(400).json({ error: "An in-kind contribution description is required." }); return; }
+  const estimatedValue = body.success ? body.data.estimatedValue : 0;
+  if (!params.success || !description || !validManualAmount(estimatedValue)) { res.status(400).json({ error: "An in-kind contribution description and a positive estimated value in whole cents are required." }); return; }
   const [sponsor] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, params.data.id)).limit(1);
   if (!sponsor) { res.status(404).json({ error: "Sponsor not found" }); return; }
   if (sponsor.isInKind || sponsor.status !== "pending_payment" || sponsor.paidAt || sponsor.stripePaidAt || sponsor.manualPaymentRecordedAt) {
@@ -252,10 +254,10 @@ router.post("/sponsors/:id/mark-in-kind", requireStaff, async (req, res): Promis
   const actor = (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null;
   const sessionCondition = sponsor.stripeSessionId ? eq(sponsorsTable.stripeSessionId, sponsor.stripeSessionId) : isNull(sponsorsTable.stripeSessionId);
   const [updated] = await db.update(sponsorsTable).set({
-    isInKind: true, inKindDescription: description, status: "paid", stripeSessionId: null,
+    isInKind: true, inKindDescription: description, inKindValue: estimatedValue.toFixed(2), sponsorshipAmount: "0.00", status: "paid", stripeSessionId: null,
   }).where(and(eq(sponsorsTable.id, sponsor.id), eq(sponsorsTable.status, "pending_payment"), eq(sponsorsTable.isInKind, false), sessionCondition)).returning();
   if (!updated) { res.status(409).json({ error: "This sponsor changed while being marked in-kind. Refresh and try again." }); return; }
-  await db.insert(activityLogTable).values({ type: "in_kind_recorded", message: `In-kind contribution recorded for sponsor ${updated.name} (${updated.orgName}): ${description}`, entityType: "sponsor", entityId: updated.id, performedBy: actor });
+  await db.insert(activityLogTable).values({ type: "in_kind_recorded", message: `In-kind contribution valued at $${estimatedValue.toFixed(2)} recorded for sponsor ${updated.name} (${updated.orgName}): ${description}`, entityType: "sponsor", entityId: updated.id, performedBy: actor });
   res.json(formatSponsor(updated));
 });
 

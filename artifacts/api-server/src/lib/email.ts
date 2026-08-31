@@ -616,11 +616,15 @@ export async function sendSponsorDetailsSubmittedNotification(params: {
   orgName: string;
   tier: string;
   sponsorshipAmount: number | null;
+  isInKind?: boolean;
+  inKindValue?: number | null;
   adminPath: string;
 }): Promise<void> {
-  const { notificationEmail, applicantName, orgName, tier, sponsorshipAmount, adminPath } = params;
+  const { notificationEmail, applicantName, orgName, tier, sponsorshipAmount, isInKind, inKindValue, adminPath } = params;
   const tierLabel = TIER_LABELS[tier] ?? tier;
-  const amountDisplay = sponsorshipAmount != null ? `$${sponsorshipAmount.toLocaleString()}` : null;
+  const amountDisplay = isInKind
+    ? (inKindValue != null ? `In-kind — valued at $${inKindValue.toLocaleString()}` : "In-kind contribution")
+    : (sponsorshipAmount != null ? `$${sponsorshipAmount.toLocaleString()}` : null);
   const adminUrl = `${getAppBaseUrl()}${adminPath}`;
   const adminLinkHtml = `<a href="${adminUrl}" style="display: inline-block; background: #1a2744; color: white; padding: 10px 20px; text-decoration: none; font-size: 14px; margin-top: 4px;">
        Review Details in Admin
