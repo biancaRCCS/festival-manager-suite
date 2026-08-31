@@ -444,8 +444,8 @@ router.patch("/vendors/:id/details", requireStaff, async (req, res): Promise<voi
     productsDescription: normalizeOptionalText(body.data.productsDescription),
     businessDescription: normalizeOptionalText(body.data.businessDescription),
   };
-  if (!input.name || !input.businessName || !isValidEmail(input.email)) {
-    res.status(400).json({ error: "Enter a name, business name, and valid email address." });
+  if (!input.name || !input.businessName || !input.phone || !isValidEmail(input.email)) {
+    res.status(400).json({ error: "Enter a name, business name, valid email address, and phone number." });
     return;
   }
 

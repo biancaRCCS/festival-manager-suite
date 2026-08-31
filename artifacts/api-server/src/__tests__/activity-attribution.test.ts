@@ -44,6 +44,7 @@ const { requireStaffSpy, mockStaffBase } = vi.hoisted(() => {
 vi.mock("../lib/auth", () => ({
   requireAuth: (_req: any, _res: any, next: any) => next(),
   requireStaff: requireStaffSpy,
+  requireAdmin: (_req: any, _res: any, next: any) => next(),
 }));
 
 // Import app after mocks are in place.

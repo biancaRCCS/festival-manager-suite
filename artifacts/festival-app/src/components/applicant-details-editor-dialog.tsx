@@ -1,14 +1,22 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
 
 export type ApplicantDetailsField = {
   key: string
   label: string
   multiline?: boolean
+  required?: boolean | ((values: Record<string, string>) => boolean)
+  type?: "text" | "email" | "number" | "checkbox"
+  min?: number
+  max?: number
+  step?: number
+  showWhen?: (values: Record<string, string>) => boolean
+  checkedUpdates?: Record<string, string>
 }
 
 type ApplicantDetailsEditorDialogProps = {
@@ -31,6 +39,15 @@ export function ApplicantDetailsEditorDialog({
   isSaving,
 }: ApplicantDetailsEditorDialogProps) {
   const [values, setValues] = useState<Record<string, string>>({})
+  useEffect(() => {
+    if (open) setValues(initialValues)
+  }, [open])
+
+  const visibleFields = fields.filter((field) => !field.showWhen || field.showWhen(values))
+  const hasMissingRequired = visibleFields.some((field) => {
+    const required = typeof field.required === "function" ? field.required(values) : field.required
+    return required && (field.type === "checkbox" ? values[field.key] !== "true" : !(values[field.key] ?? "").trim())
+  })
 
   function handleOpenChange(nextOpen: boolean) {
     if (nextOpen) setValues(initialValues)
@@ -47,10 +64,20 @@ export function ApplicantDetailsEditorDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-2">
-          {fields.map((field) => (
+          {visibleFields.map((field) => (
             <div key={field.key} className="space-y-2">
-              <Label htmlFor={`detail-${field.key}`}>{field.label}</Label>
-              {field.multiline ? (
+              <Label htmlFor={`detail-${field.key}`}>{field.label}{(typeof field.required === "function" ? field.required(values) : field.required) && " *"}</Label>
+              {field.type === "checkbox" ? (
+                <Checkbox
+                  id={`detail-${field.key}`}
+                  checked={values[field.key] === "true"}
+                  onCheckedChange={(checked) => setValues((current) => ({
+                    ...current,
+                    ...(checked === true ? field.checkedUpdates : {}),
+                    [field.key]: checked === true ? "true" : "false",
+                  }))}
+                />
+              ) : field.multiline ? (
                 <Textarea
                   id={`detail-${field.key}`}
                   value={values[field.key] ?? ""}
@@ -62,7 +89,10 @@ export function ApplicantDetailsEditorDialog({
                   id={`detail-${field.key}`}
                   value={values[field.key] ?? ""}
                   onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))}
-                  type={field.key === "email" ? "email" : "text"}
+                  type={field.type ?? (field.key === "email" ? "email" : "text")}
+                  min={field.min}
+                  max={field.max}
+                  step={field.step}
                 />
               )}
             </div>
@@ -70,7 +100,7 @@ export function ApplicantDetailsEditorDialog({
         </div>
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isSaving}>Cancel</Button>
-          <Button onClick={() => onSave(values)} disabled={isSaving}>
+          <Button onClick={() => onSave(values)} disabled={isSaving || hasMissingRequired}>
             {isSaving ? "Saving…" : "Save details"}
           </Button>
         </DialogFooter>

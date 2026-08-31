@@ -2410,6 +2410,16 @@ export const updateSponsorDetailsBodyWebsiteMax = 500;
 
 export const updateSponsorDetailsBodySocialMax = 500;
 
+export const updateSponsorDetailsBodySponsorshipAmountMin = 0;
+export const updateSponsorDetailsBodySponsorshipAmountMax = 99999999.99;
+export const updateSponsorDetailsBodySponsorshipAmountMultipleOf = 0.01;
+
+export const updateSponsorDetailsBodyInKindDescriptionMax = 2000;
+
+export const updateSponsorDetailsBodyInKindValueExclusiveMin = 0;
+export const updateSponsorDetailsBodyInKindValueMax = 99999999.99;
+export const updateSponsorDetailsBodyInKindValueMultipleOf = 0.01;
+
 
 
 export const UpdateSponsorDetailsBody = zod.object({
@@ -2418,7 +2428,11 @@ export const UpdateSponsorDetailsBody = zod.object({
   "email": zod.string().max(updateSponsorDetailsBodyEmailMax),
   "phone": zod.string().max(updateSponsorDetailsBodyPhoneMax),
   "website": zod.string().max(updateSponsorDetailsBodyWebsiteMax).nullable(),
-  "social": zod.string().max(updateSponsorDetailsBodySocialMax).nullable()
+  "social": zod.string().max(updateSponsorDetailsBodySocialMax).nullable(),
+  "sponsorshipAmount": zod.number().min(updateSponsorDetailsBodySponsorshipAmountMin).max(updateSponsorDetailsBodySponsorshipAmountMax).multipleOf(updateSponsorDetailsBodySponsorshipAmountMultipleOf),
+  "isInKind": zod.boolean(),
+  "inKindDescription": zod.string().max(updateSponsorDetailsBodyInKindDescriptionMax).nullable(),
+  "inKindValue": zod.number().gt(updateSponsorDetailsBodyInKindValueExclusiveMin).max(updateSponsorDetailsBodyInKindValueMax).multipleOf(updateSponsorDetailsBodyInKindValueMultipleOf).nullable()
 })
 
 export const UpdateSponsorDetailsResponse = zod.object({

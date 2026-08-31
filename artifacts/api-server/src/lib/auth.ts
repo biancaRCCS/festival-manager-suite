@@ -94,3 +94,11 @@ export async function requireStaff(req: Request, res: Response, next: NextFuncti
   (req as any).staffMember = staffMembers[0];
   next();
 }
+
+export function requireAdmin(req: Request, res: Response, next: NextFunction): void {
+  if ((req as any).staffMember?.role !== "admin") {
+    res.status(403).json({ error: "Only admins can perform this action" });
+    return;
+  }
+  next();
+}

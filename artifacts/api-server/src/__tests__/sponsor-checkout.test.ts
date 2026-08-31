@@ -77,9 +77,10 @@ vi.mock("../lib/email", async (importOriginal) => {
 vi.mock("../lib/auth", () => ({
   requireStaff: (req: any, _res: any, next: () => void) => {
     req.clerkUserId = "test-staff";
-    req.staffMember = { name: "Test Staff" };
+    req.staffMember = { name: "Test Staff", role: "admin" };
     next();
   },
+  requireAdmin: (_req: any, _res: any, next: () => void) => next(),
 }));
 
 // Import after mocks so they take effect.

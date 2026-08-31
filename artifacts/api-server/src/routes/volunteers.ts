@@ -93,8 +93,8 @@ router.patch("/volunteers/:id/details", requireStaff, async (req, res): Promise<
     website: normalizeOptionalText(body.data.website),
     social: normalizeOptionalText(body.data.social),
   };
-  if (!input.name || !isValidEmail(input.email)) {
-    res.status(400).json({ error: "Enter a name and valid email address." });
+  if (!input.name || !input.phone || !isValidEmail(input.email)) {
+    res.status(400).json({ error: "Enter a name, valid email address, and phone number." });
     return;
   }
 

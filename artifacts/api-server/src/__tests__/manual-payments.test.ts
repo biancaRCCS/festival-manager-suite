@@ -8,9 +8,10 @@ const { manualEmailSpy } = vi.hoisted(() => ({ manualEmailSpy: vi.fn().mockResol
 vi.mock("../lib/auth", () => ({
   requireStaff: (req: any, _res: any, next: () => void) => {
     req.clerkUserId = "manual-test-clerk";
-    req.staffMember = { name: "Manual Payment Staff" };
+    req.staffMember = { name: "Manual Payment Staff", role: "admin" };
     next();
   },
+  requireAdmin: (_req: any, _res: any, next: () => void) => next(),
 }));
 vi.mock("../lib/email", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../lib/email")>()),

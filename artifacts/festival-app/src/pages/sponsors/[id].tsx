@@ -1,6 +1,7 @@
 import { useState, useRef } from "react"
+import { useUser } from "@clerk/react"
 import { useLocation, useParams } from "wouter"
-import { useGetSponsor, useReviewSponsor, useFinalApproveSponsor, useAssignSponsorSpot, getGetSponsorQueryKey, useDeleteSponsor, useResendSponsorConfirmation, useResendSponsorPaymentLink, useUpdateSponsorDetails, useRecordSponsorManualPayment, useRemoveSponsorManualPayment, useReconcileSponsorStatusFromTimestamps, useMarkSponsorInKind } from "@workspace/api-client-react"
+import { useGetSponsor, useReviewSponsor, useFinalApproveSponsor, useAssignSponsorSpot, getGetSponsorQueryKey, useDeleteSponsor, useResendSponsorConfirmation, useResendSponsorPaymentLink, useUpdateSponsorDetails, useRecordSponsorManualPayment, useRemoveSponsorManualPayment, useReconcileSponsorStatusFromTimestamps, useListStaff } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { ArrowLeft, CheckCircle2, MapPin, Clock, Trash2, Check, Mail, Pencil, DollarSign, Gift } from "lucide-react"
+import { ArrowLeft, CheckCircle2, MapPin, Clock, Trash2, Check, Mail, Pencil, DollarSign } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { ApplicantDetailsEditorDialog, type ApplicantDetailsField } from "@/components/applicant-details-editor-dialog"
 import { ManualPaymentDialog } from "@/components/manual-payment-dialog"
@@ -36,12 +37,16 @@ const TIER_RANGES: Record<string, string> = {
   diamond:  "$10,000 and above",
 }
 const SPONSOR_DETAIL_FIELDS: ApplicantDetailsField[] = [
-  { key: "name", label: "Contact name" },
-  { key: "orgName", label: "Organization / business name" },
-  { key: "email", label: "Email" },
-  { key: "phone", label: "Phone" },
+  { key: "name", label: "Contact name", required: true },
+  { key: "orgName", label: "Organization / business name", required: true },
+  { key: "email", label: "Email", type: "email", required: true },
+  { key: "phone", label: "Phone", required: true },
   { key: "website", label: "Website" },
   { key: "social", label: "Facebook / Instagram" },
+  { key: "sponsorshipAmount", label: "Sponsorship Amount ($)", type: "number", min: 0, max: 99999999.99, step: 0.01, required: true },
+  { key: "isInKind", label: "This is an in-kind sponsorship", type: "checkbox", checkedUpdates: { sponsorshipAmount: "0" } },
+  { key: "inKindDescription", label: "In-kind contribution description", multiline: true, required: values => values.isInKind === "true", showWhen: values => values.isInKind === "true" },
+  { key: "inKindValue", label: "Estimated in-kind value ($)", type: "number", min: 0.01, max: 99999999.99, step: 0.01, required: values => values.isInKind === "true", showWhen: values => values.isInKind === "true" },
 ]
 
 const STATUS_META: Record<string, { label: string; color: string; step: number }> = {
@@ -101,8 +106,11 @@ export default function SponsorDetailPage() {
   const [, setLocation] = useLocation()
   const queryClient = useQueryClient()
   const { toast } = useToast()
+  const { user } = useUser()
 
   const { data: sponsor, isLoading } = useGetSponsor(id, { query: { enabled: !!id, queryKey: getGetSponsorQueryKey(id) } })
+  const { data: staffMembers } = useListStaff()
+  const isAdmin = staffMembers?.some(member => member.clerkUserId === user?.id && member.role === "admin") ?? false
   const reviewMutation       = useReviewSponsor({ mutation: { mutationKey: ["reviewSponsor", id] } })
   const finalApproveMutation = useFinalApproveSponsor({ mutation: { mutationKey: ["finalApproveSponsor", id] } })
   const assignSpotMutation   = useAssignSponsorSpot({ mutation: { mutationKey: ["assignSpotSponsor", id] } })
@@ -113,7 +121,6 @@ export default function SponsorDetailPage() {
   const recordPaymentMutation = useRecordSponsorManualPayment({ mutation: { mutationKey: ["recordSponsorManualPayment", id] } })
   const removePaymentMutation = useRemoveSponsorManualPayment({ mutation: { mutationKey: ["removeSponsorManualPayment", id] } })
   const repairStatusMutation = useReconcileSponsorStatusFromTimestamps({ mutation: { mutationKey: ["reconcileSponsorStatusFromTimestamps", id] } })
-  const inKindMutation = useMarkSponsorInKind()
 
   const [reviewNote, setReviewNote]             = useState("")
   const [spotNumber, setSpotNumber]             = useState("")
@@ -125,9 +132,6 @@ export default function SponsorDetailPage() {
   const [isDetailsOpen, setIsDetailsOpen]       = useState(false)
   const [isManualPaymentOpen, setIsManualPaymentOpen] = useState(false)
   const [isRemovePaymentOpen, setIsRemovePaymentOpen] = useState(false)
-  const [isInKindOpen, setIsInKindOpen] = useState(false)
-  const [inKindDescription, setInKindDescription] = useState("")
-  const [inKindValue, setInKindValue] = useState("")
 
   const reviewMutateFnRef = useRef(reviewMutation.mutate)
   reviewMutateFnRef.current = reviewMutation.mutate
@@ -220,6 +224,10 @@ export default function SponsorDetailPage() {
           phone: values.phone ?? "",
           website: values.website?.trim() || null,
           social: values.social?.trim() || null,
+          sponsorshipAmount: Number(values.sponsorshipAmount),
+          isInKind: values.isInKind === "true",
+          inKindDescription: values.isInKind === "true" ? values.inKindDescription?.trim() || null : null,
+          inKindValue: values.isInKind === "true" ? Number(values.inKindValue) : null,
         },
       },
       {
@@ -277,14 +285,6 @@ export default function SponsorDetailPage() {
       throw error
     }
   }
-  const handleMarkInKind = () => {
-    const estimatedValue = Number(inKindValue)
-    if (!inKindDescription.trim() || !Number.isFinite(estimatedValue) || estimatedValue <= 0 || estimatedValue > 99_999_999.99 || Math.round(estimatedValue * 100) !== estimatedValue * 100) return
-    inKindMutation.mutate({ id, data: { description: inKindDescription.trim(), estimatedValue } }, { onSuccess: (updated) => {
-      queryClient.setQueryData(getGetSponsorQueryKey(id), updated); queryClient.invalidateQueries({ queryKey: ["sponsors"] }); setIsInKindOpen(false); toast({ title: "In-kind contribution recorded" })
-    }, onError: () => toast({ title: "Could not record in-kind contribution", variant: "destructive" }) })
-  }
-
   if (isLoading) return <AdminLayout><div className="p-8">Loading…</div></AdminLayout>
   if (!sponsor)  return <AdminLayout><div className="p-8">Sponsor not found.</div></AdminLayout>
 
@@ -328,15 +328,17 @@ export default function SponsorDetailPage() {
             <div className="flex flex-wrap items-center gap-3">
               <p className="text-muted-foreground">{sponsor.name}</p>
               <StatusBadge status={sponsor.status} />
-              {sponsor.isInKind && <Badge className="bg-violet-700 hover:bg-violet-700">In-kind contribution</Badge>}
+              {sponsor.isInKind && <Badge className="bg-violet-700 hover:bg-violet-700">In-kind</Badge>}
             </div>
           </div>
           <div className="flex gap-3 items-center flex-wrap">
 
             {/* Stage 1 review — pending only */}
-            <Button variant="outline" className="border-primary/20 hover:bg-primary/5 text-primary" onClick={() => setIsDetailsOpen(true)}>
-              <Pencil className="w-4 h-4 mr-2" /> Edit details
-            </Button>
+            {isAdmin && (
+              <Button variant="outline" className="border-primary/20 hover:bg-primary/5 text-primary" onClick={() => setIsDetailsOpen(true)}>
+                <Pencil className="w-4 h-4 mr-2" /> Edit details
+              </Button>
+            )}
             {sponsor.statusNeedsRepair && sponsor.timestampImpliedStatus && (
               <StatusRepairDialog
                 entityLabel="sponsor"
@@ -356,6 +358,10 @@ export default function SponsorDetailPage() {
                 phone: sponsor.phone,
                 website: str("website") ?? "",
                 social: str("social") ?? "",
+                sponsorshipAmount: String(sponsor.sponsorshipAmount ?? 0),
+                isInKind: sponsor.isInKind ? "true" : "false",
+                inKindDescription: sponsor.inKindDescription ?? "",
+                inKindValue: sponsor.inKindValue == null ? "" : String(sponsor.inKindValue),
               }}
               open={isDetailsOpen}
               onOpenChange={setIsDetailsOpen}
@@ -439,7 +445,7 @@ export default function SponsorDetailPage() {
               </Dialog>
             )}
 
-            {sponsor.status === "pending_payment" && !sponsor.isInKind && !sponsor.manualPaymentRecordedAt && !sponsor.hasStripePayment && (
+            {isAdmin && sponsor.status === "pending_payment" && !sponsor.isInKind && !sponsor.manualPaymentRecordedAt && !sponsor.hasStripePayment && (
               <Button
                 variant="outline"
                 className="border-primary/20 hover:bg-primary/5 text-primary"
@@ -459,15 +465,6 @@ export default function SponsorDetailPage() {
               isPending={recordPaymentMutation.isPending}
               onSubmit={handleRecordPayment}
             />
-            {sponsor.status === "pending_payment" && !sponsor.isInKind && (
-              <Dialog open={isInKindOpen} onOpenChange={setIsInKindOpen}>
-                <DialogTrigger asChild><Button variant="outline" className="border-violet-300 text-violet-800 hover:bg-violet-50"><Gift className="w-4 h-4 mr-2" />Mark as in-kind</Button></DialogTrigger>
-                <DialogContent><DialogHeader><DialogTitle>Record in-kind sponsorship</DialogTitle><DialogDescription>This fulfils the sponsorship without recording a cash payment. Any open online payment link will be expired.</DialogDescription></DialogHeader>
-                  <div className="space-y-4 py-3"><div className="space-y-2"><Label htmlFor="in-kind-description">Contribution description</Label><Input id="in-kind-description" value={inKindDescription} onChange={e => setInKindDescription(e.target.value)} maxLength={2000} placeholder="e.g., catering, printing, donated services" /></div><div className="space-y-2"><Label htmlFor="in-kind-value">Estimated value (USD)</Label><Input id="in-kind-value" type="number" min="0.01" max="99999999.99" step="0.01" value={inKindValue} onChange={e => setInKindValue(e.target.value)} placeholder="0.00" /></div></div>
-                  <DialogFooter><Button variant="outline" onClick={() => setIsInKindOpen(false)}>Cancel</Button><Button onClick={handleMarkInKind} disabled={!inKindDescription.trim() || !inKindValue || inKindMutation.isPending}>{inKindMutation.isPending ? "Recording…" : "Record in-kind contribution"}</Button></DialogFooter>
-                </DialogContent>
-              </Dialog>
-            )}
             <Dialog open={isRemovePaymentOpen} onOpenChange={setIsRemovePaymentOpen}>
               <DialogContent>
                 <DialogHeader>
@@ -610,14 +607,14 @@ export default function SponsorDetailPage() {
                         <Field label="Reference" value={sponsor.manualPaymentReference} />
                         <div>
                           <p className="text-xs font-medium text-muted-foreground mb-0.5">Actions</p>
-                          <Button
+                          {isAdmin && <Button
                             variant="destructive"
                             size="sm"
                             className="mt-1 h-7 text-xs"
                             onClick={() => setIsRemovePaymentOpen(true)}
                           >
                             Remove Manual Payment
-                          </Button>
+                          </Button>}
                         </div>
                       </>
                     )}

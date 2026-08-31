@@ -1018,6 +1018,23 @@ export interface SponsorDetailsUpdate {
      * @nullable
      */
   social: string | null;
+  /**
+     * @minimum 0
+     * @maximum 99999999.99
+     */
+  sponsorshipAmount: number;
+  isInKind: boolean;
+  /**
+     * @maxLength 2000
+     * @nullable
+     */
+  inKindDescription: string | null;
+  /**
+     * @maximum 99999999.99
+     * @exclusiveMinimum 0
+     * @nullable
+     */
+  inKindValue: number | null;
 }
 
 export interface VolunteerDetailsUpdate {

@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, sponsorsTable, festivalYearsTable, festivalSettingsTable, activityLogTable } from "@workspace/db";
 import { eq, and, desc, isNull, isNotNull } from "drizzle-orm";
-import { requireStaff } from "../lib/auth";
+import { requireAdmin, requireStaff } from "../lib/auth";
 import {
   GetSponsorParams,
   ListSponsorsQueryParams,
@@ -35,6 +35,13 @@ import {
 
 const router: IRouter = Router();
 const paymentLabels: Record<string, string> = { cash: "Cash", check: "Check", bank_transfer: "Bank transfer", other: "Other" };
+const SPONSOR_TIER_MIN_FIELDS = {
+  bronze: "sponsorPriceBronze",
+  silver: "sponsorPriceSilver",
+  gold: "sponsorPriceGold",
+  platinum: "sponsorPricePlatinum",
+  diamond: "sponsorPriceDiamond",
+} as const;
 const SPONSOR_STATUS_RANK: Record<string, number> = {
   pending_payment: 0,
   payment_processing: 0,
@@ -191,7 +198,7 @@ router.patch("/sponsors/:id/reconcile-status-from-timestamps", requireStaff, asy
   res.json(formatSponsor(updated));
 });
 
-router.post("/sponsors/:id/manual-payment", requireStaff, async (req, res): Promise<void> => {
+router.post("/sponsors/:id/manual-payment", requireStaff, requireAdmin, async (req, res): Promise<void> => {
   const params = RecordSponsorManualPaymentParams.safeParse(req.params), body = RecordSponsorManualPaymentBody.safeParse(req.body);
   if (!params.success || !body.success || !validManualAmount(body.success ? body.data.amount : 0)) { res.status(400).json({ error: "Enter a positive amount in whole cents and a valid manual payment." }); return; }
   const receivedDate = validReceivedDate(body.data.receivedDate);
@@ -235,7 +242,7 @@ router.post("/sponsors/:id/manual-payment", requireStaff, async (req, res): Prom
   res.json(formatSponsor(updated));
 });
 
-router.post("/sponsors/:id/mark-in-kind", requireStaff, async (req, res): Promise<void> => {
+router.post("/sponsors/:id/mark-in-kind", requireStaff, requireAdmin, async (req, res): Promise<void> => {
   const params = MarkSponsorInKindParams.safeParse(req.params);
   const body = MarkSponsorInKindBody.safeParse(req.body);
   const description = body.success ? body.data.description.trim() : "";
@@ -261,7 +268,7 @@ router.post("/sponsors/:id/mark-in-kind", requireStaff, async (req, res): Promis
   res.json(formatSponsor(updated));
 });
 
-router.delete("/sponsors/:id/manual-payment", requireStaff, async (req, res): Promise<void> => {
+router.delete("/sponsors/:id/manual-payment", requireStaff, requireAdmin, async (req, res): Promise<void> => {
   const params = RemoveSponsorManualPaymentParams.safeParse(req.params); if (!params.success) { res.status(400).json({ error: "Invalid ID" }); return; }
   const [sponsor] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, params.data.id)).limit(1);
   if (!sponsor) { res.status(404).json({ error: "Sponsor not found" }); return; }
@@ -302,8 +309,8 @@ router.delete("/sponsors/:id/manual-payment", requireStaff, async (req, res): Pr
   res.json(formatSponsor(updated));
 });
 
-router.patch("/sponsors/:id/details", requireStaff, async (req, res): Promise<void> => {
-  const allowedKeys = ["name", "orgName", "email", "phone", "website", "social"] as const;
+router.patch("/sponsors/:id/details", requireStaff, requireAdmin, async (req, res): Promise<void> => {
+  const allowedKeys = ["name", "orgName", "email", "phone", "website", "social", "sponsorshipAmount", "isInKind", "inKindDescription", "inKindValue"] as const;
   if (!isExactObjectWithKeys(req.body, allowedKeys)) {
     res.status(400).json({ error: "Only staff-editable sponsor detail fields may be updated." });
     return;
@@ -323,12 +330,52 @@ router.patch("/sponsors/:id/details", requireStaff, async (req, res): Promise<vo
     phone: normalizeRequiredText(body.data.phone),
     website: normalizeOptionalText(body.data.website),
     social: normalizeOptionalText(body.data.social),
+    sponsorshipAmount: body.data.sponsorshipAmount,
+    isInKind: body.data.isInKind,
+    inKindDescription: normalizeOptionalText(body.data.inKindDescription),
+    inKindValue: body.data.inKindValue,
   };
-  if (!input.name || !input.orgName || !isValidEmail(input.email)) {
-    res.status(400).json({ error: "Enter a name, organization name, and valid email address." });
+  if (!input.name || !input.orgName || !input.phone || !isValidEmail(input.email)) {
+    res.status(400).json({ error: "Enter a name, organization name, valid email address, and phone number." });
+    return;
+  }
+  if (!Number.isFinite(input.sponsorshipAmount) || input.sponsorshipAmount < 0 || Math.abs(input.sponsorshipAmount * 100 - Math.round(input.sponsorshipAmount * 100)) > 0.0000001) {
+    res.status(400).json({ error: "Enter a non-negative sponsorship amount in whole cents." });
+    return;
+  }
+  if (input.isInKind && (!input.inKindDescription || input.inKindValue == null || !validManualAmount(input.inKindValue))) {
+    res.status(400).json({ error: "In-kind sponsorships require a description and positive estimated value in whole cents." });
     return;
   }
 
+  const [current] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, params.data.id));
+  if (!current) {
+    res.status(404).json({ error: "Sponsor not found" });
+    return;
+  }
+  if (input.isInKind && (current.paidAt || current.stripePaidAt || current.manualPaymentRecordedAt)) {
+    res.status(409).json({ error: "A sponsor with a recorded cash payment cannot be changed to in-kind." });
+    return;
+  }
+  if (!input.isInKind) {
+    const [settings] = await db.select().from(festivalSettingsTable).where(eq(festivalSettingsTable.yearId, current.yearId)).limit(1);
+    const minimumField = SPONSOR_TIER_MIN_FIELDS[current.tier as keyof typeof SPONSOR_TIER_MIN_FIELDS];
+    const minimum = minimumField && settings ? Number(settings[minimumField]) : 0;
+    if (input.sponsorshipAmount < minimum) {
+      res.status(400).json({ error: `Sponsorship amount must be at least $${minimum.toFixed(2)} for this tier.` });
+      return;
+    }
+  }
+  if (!current.isInKind && input.isInKind) {
+    try {
+      await invalidateSponsorCheckoutForInKind(current);
+    } catch (err) {
+      res.status(409).json({ error: err instanceof Error ? err.message : "Unable to safely invalidate payment." });
+      return;
+    }
+  }
+
+  const actor = (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null;
   const updated = await db.transaction(async (tx) => {
     const [sponsor] = await tx.select().from(sponsorsTable).where(eq(sponsorsTable.id, params.data.id));
     if (!sponsor) return null;
@@ -346,24 +393,54 @@ router.patch("/sponsors/:id/details", requireStaff, async (req, res): Promise<vo
       const oldValue = applicationText(nextApplicationData[key]);
       if (addDetailChange(changes, label, oldValue, value)) nextApplicationData[key] = value;
     }
+    addDetailChange(changes, "Sponsorship amount", sponsor.sponsorshipAmount, input.isInKind ? "0.00" : input.sponsorshipAmount.toFixed(2));
 
-    if (changes.length === 0) return sponsor;
+    const designationChanged = sponsor.isInKind !== input.isInKind;
+    if (input.isInKind) {
+      addDetailChange(changes, "In-kind description", sponsor.inKindDescription, input.inKindDescription);
+      addDetailChange(changes, "Estimated in-kind value", sponsor.inKindValue, input.inKindValue!.toFixed(2));
+    }
+    const inKindChanged = designationChanged
+      || sponsor.inKindDescription !== (input.isInKind ? input.inKindDescription : null)
+      || Number(sponsor.inKindValue ?? 0) !== (input.isInKind ? input.inKindValue : 0);
+    if (changes.length === 0 && !inKindChanged) return sponsor;
     const [saved] = await tx.update(sponsorsTable).set({
       name: input.name,
       orgName: input.orgName,
       email: input.email,
       phone: input.phone,
       applicationData: nextApplicationData,
+      sponsorshipAmount: input.isInKind ? "0.00" : input.sponsorshipAmount.toFixed(2),
+      isInKind: input.isInKind,
+      inKindDescription: input.isInKind ? input.inKindDescription : null,
+      inKindValue: input.isInKind ? input.inKindValue!.toFixed(2) : null,
+      stripeSessionId: input.isInKind ? null : sponsor.stripeSessionId,
+      status: sponsor.isInKind !== input.isInKind
+        ? (input.isInKind ? "paid" : "pending_payment")
+        : sponsor.status,
     }).where(eq(sponsorsTable.id, sponsor.id)).returning();
 
-    await tx.insert(activityLogTable).values(changes.map((change) => ({
-      type: "details_updated",
-      message: `Sponsor details updated: ${change.fieldName}`,
-      entityType: "sponsor",
-      entityId: sponsor.id,
-      performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
-      ...change,
-    })));
+    if (changes.length > 0) {
+      await tx.insert(activityLogTable).values(changes.map((change) => ({
+        type: "details_updated",
+        message: `Sponsor details updated: ${change.fieldName}`,
+        entityType: "sponsor",
+        entityId: sponsor.id,
+        performedBy: actor,
+        ...change,
+      })));
+    }
+    if (designationChanged) {
+      await tx.insert(activityLogTable).values({
+        type: input.isInKind ? "in_kind_recorded" : "in_kind_removed",
+        message: input.isInKind
+          ? `In-kind sponsorship valued at $${input.inKindValue!.toFixed(2)} recorded for sponsor ${saved.name}: ${input.inKindDescription}`
+          : `In-kind designation removed from sponsor ${saved.name}`,
+        entityType: "sponsor",
+        entityId: sponsor.id,
+        performedBy: actor,
+      });
+    }
     return saved;
   });
 

@@ -63,10 +63,10 @@ const ACK_LABELS: Record<string, string> = {
 
 const FOOD_KEYS = new Set(["major_food", "specialty_food"])
 const VENDOR_DETAIL_FIELDS: ApplicantDetailsField[] = [
-  { key: "name", label: "Contact name" },
-  { key: "businessName", label: "Business / organization name" },
-  { key: "email", label: "Email" },
-  { key: "phone", label: "Phone" },
+  { key: "name", label: "Contact name", required: true },
+  { key: "businessName", label: "Business / organization name", required: true },
+  { key: "email", label: "Email", type: "email", required: true },
+  { key: "phone", label: "Phone", required: true },
   { key: "website", label: "Website" },
   { key: "social", label: "Facebook / Instagram" },
   { key: "productsDescription", label: "Products / services", multiline: true },

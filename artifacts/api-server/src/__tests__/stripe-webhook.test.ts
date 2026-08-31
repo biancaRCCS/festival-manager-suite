@@ -100,6 +100,7 @@ vi.mock("../lib/auth", () => ({
     req.staffMember = { name: "Test Staff" };
     next();
   },
+  requireAdmin: (_req: any, _res: any, next: () => void) => next(),
 }));
 
 // Import the Express app *after* vi.mock so the mocks are in place.

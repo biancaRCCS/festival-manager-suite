@@ -14,10 +14,10 @@ import { useToast } from "@/hooks/use-toast"
 import { ApplicantDetailsEditorDialog, type ApplicantDetailsField } from "@/components/applicant-details-editor-dialog"
 
 const VOLUNTEER_DETAIL_FIELDS: ApplicantDetailsField[] = [
-  { key: "name", label: "Contact name" },
+  { key: "name", label: "Contact name", required: true },
   { key: "organizationName", label: "Organization / business name" },
-  { key: "email", label: "Email" },
-  { key: "phone", label: "Phone" },
+  { key: "email", label: "Email", type: "email", required: true },
+  { key: "phone", label: "Phone", required: true },
   { key: "website", label: "Website" },
   { key: "social", label: "Facebook / Instagram" },
 ]
