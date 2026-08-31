@@ -209,7 +209,9 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex justify-between items-center text-sm pt-2 border-t mt-1">
                       <span className="text-muted-foreground flex items-center gap-1.5"><DollarSign className="w-4 h-4 text-green-600" /> Cash revenue collected</span>
-                      <span className="font-semibold text-green-700">${(summary.sponsorRevenue ?? 0).toLocaleString()}</span>
+                      <span className="font-semibold text-green-700">
+                        ${(summary.sponsorRevenue ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground">In-kind sponsorship value</span>
