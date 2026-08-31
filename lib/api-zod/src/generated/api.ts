@@ -147,6 +147,8 @@ export const GetPortalInfoResponse = zod.object({
   "vendorPriceNonprofit": zod.number().nullish(),
   "spacesRequested": zod.string().nullish(),
   "sponsorshipAmount": zod.number().nullish(),
+  "isInKind": zod.boolean(),
+  "inKindDescription": zod.string().nullish(),
   "boothOrNameOnly": zod.string().nullish(),
   "paymentDeadline": zod.string().nullish(),
   "specialAgreementOperationType": zod.string().nullish(),
@@ -201,6 +203,8 @@ export const SubmitSponsorDetailsResponse = zod.object({
   "vendorPriceNonprofit": zod.number().nullish(),
   "spacesRequested": zod.string().nullish(),
   "sponsorshipAmount": zod.number().nullish(),
+  "isInKind": zod.boolean(),
+  "inKindDescription": zod.string().nullish(),
   "boothOrNameOnly": zod.string().nullish(),
   "paymentDeadline": zod.string().nullish(),
   "specialAgreementOperationType": zod.string().nullish(),
@@ -269,6 +273,8 @@ export const SignPortalAgreementResponse = zod.object({
   "vendorPriceNonprofit": zod.number().nullish(),
   "spacesRequested": zod.string().nullish(),
   "sponsorshipAmount": zod.number().nullish(),
+  "isInKind": zod.boolean(),
+  "inKindDescription": zod.string().nullish(),
   "boothOrNameOnly": zod.string().nullish(),
   "paymentDeadline": zod.string().nullish(),
   "specialAgreementOperationType": zod.string().nullish(),
@@ -346,6 +352,8 @@ export const SubmitSpecialAgreementResponse = zod.object({
   "vendorPriceNonprofit": zod.number().nullish(),
   "spacesRequested": zod.string().nullish(),
   "sponsorshipAmount": zod.number().nullish(),
+  "isInKind": zod.boolean(),
+  "inKindDescription": zod.string().nullish(),
   "boothOrNameOnly": zod.string().nullish(),
   "paymentDeadline": zod.string().nullish(),
   "specialAgreementOperationType": zod.string().nullish(),
@@ -401,6 +409,7 @@ export const GetDashboardSummaryResponse = zod.object({
   "festivalDate": zod.string().nullish(),
   "vendorRevenue": zod.number().optional(),
   "sponsorRevenue": zod.number().optional(),
+  "sponsorInKindValue": zod.number(),
   "totalRevenue": zod.number(),
   "pendingActions": zod.number().describe('Total applications needing attention')
 })
@@ -416,6 +425,7 @@ export const GetDashboardFinancialsQueryParams = zod.object({
 export const GetDashboardFinancialsResponse = zod.object({
   "vendorRevenue": zod.number(),
   "sponsorRevenue": zod.number(),
+  "sponsorInKindValue": zod.number(),
   "totalRevenue": zod.number(),
   "vendorCount": zod.number(),
   "sponsorCount": zod.number(),
@@ -2043,6 +2053,8 @@ export const ListSponsorsResponseItem = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "tier": zod.string(),
+  "isInKind": zod.boolean(),
+  "inKindDescription": zod.string().nullish(),
   "status": zod.enum(['pending_payment', 'payment_processing', 'paid', 'approved', 'rejected', 'details_submitted', 'details_approved']),
   "statusNeedsRepair": zod.boolean().optional(),
   "timestampImpliedStatus": zod.string().nullish(),
@@ -2090,6 +2102,8 @@ export const GetSponsorResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "tier": zod.string(),
+  "isInKind": zod.boolean(),
+  "inKindDescription": zod.string().nullish(),
   "status": zod.enum(['pending_payment', 'payment_processing', 'paid', 'approved', 'rejected', 'details_submitted', 'details_approved']),
   "statusNeedsRepair": zod.boolean().optional(),
   "timestampImpliedStatus": zod.string().nullish(),
@@ -2151,6 +2165,8 @@ export const ReviewSponsorResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "tier": zod.string(),
+  "isInKind": zod.boolean(),
+  "inKindDescription": zod.string().nullish(),
   "status": zod.enum(['pending_payment', 'payment_processing', 'paid', 'approved', 'rejected', 'details_submitted', 'details_approved']),
   "statusNeedsRepair": zod.boolean().optional(),
   "timestampImpliedStatus": zod.string().nullish(),
@@ -2217,6 +2233,8 @@ export const RecordSponsorManualPaymentResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "tier": zod.string(),
+  "isInKind": zod.boolean(),
+  "inKindDescription": zod.string().nullish(),
   "status": zod.enum(['pending_payment', 'payment_processing', 'paid', 'approved', 'rejected', 'details_submitted', 'details_approved']),
   "statusNeedsRepair": zod.boolean().optional(),
   "timestampImpliedStatus": zod.string().nullish(),
@@ -2266,6 +2284,67 @@ export const RemoveSponsorManualPaymentResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "tier": zod.string(),
+  "isInKind": zod.boolean(),
+  "inKindDescription": zod.string().nullish(),
+  "status": zod.enum(['pending_payment', 'payment_processing', 'paid', 'approved', 'rejected', 'details_submitted', 'details_approved']),
+  "statusNeedsRepair": zod.boolean().optional(),
+  "timestampImpliedStatus": zod.string().nullish(),
+  "applicationData": zod.record(zod.string(), zod.unknown()),
+  "agreementSigned": zod.boolean().optional(),
+  "agreementSignedName": zod.string().nullish(),
+  "sponsorshipAmount": zod.number().nullish(),
+  "spotNumber": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "reviewNote": zod.string().nullish(),
+  "paidAt": zod.string().nullish(),
+  "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "hasStripePayment": zod.boolean().optional(),
+  "stripePaymentAmount": zod.number().nullish(),
+  "stripePaidAt": zod.string().nullish(),
+  "manualPaymentAmount": zod.number().nullish(),
+  "manualPaymentReceivedDate": zod.string().nullish(),
+  "manualPaymentReference": zod.string().nullish(),
+  "manualPaymentRecordedAt": zod.string().nullish(),
+  "manualPaymentRecordedBy": zod.string().nullish(),
+  "manualPaymentPreviousStatus": zod.string().nullish(),
+  "paymentFailedAt": zod.string().nullish(),
+  "paymentFailureReason": zod.string().nullish(),
+  "approvedAt": zod.string().nullish(),
+  "detailsSubmittedAt": zod.string().nullish(),
+  "finalApprovedAt": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Record an unpaid sponsor contribution as in-kind
+ */
+
+
+
+export const MarkSponsorInKindParams = zod.object({
+  "id": zod.coerce.number().min(1)
+})
+
+export const markSponsorInKindBodyDescriptionMax = 2000;
+
+
+
+export const MarkSponsorInKindBody = zod.object({
+  "description": zod.string().min(1).max(markSponsorInKindBodyDescriptionMax)
+})
+
+export const MarkSponsorInKindResponse = zod.object({
+  "id": zod.number(),
+  "yearId": zod.number(),
+  "name": zod.string(),
+  "orgName": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string(),
+  "tier": zod.string(),
+  "isInKind": zod.boolean(),
+  "inKindDescription": zod.string().nullish(),
   "status": zod.enum(['pending_payment', 'payment_processing', 'paid', 'approved', 'rejected', 'details_submitted', 'details_approved']),
   "statusNeedsRepair": zod.boolean().optional(),
   "timestampImpliedStatus": zod.string().nullish(),
@@ -2335,6 +2414,8 @@ export const UpdateSponsorDetailsResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "tier": zod.string(),
+  "isInKind": zod.boolean(),
+  "inKindDescription": zod.string().nullish(),
   "status": zod.enum(['pending_payment', 'payment_processing', 'paid', 'approved', 'rejected', 'details_submitted', 'details_approved']),
   "statusNeedsRepair": zod.boolean().optional(),
   "timestampImpliedStatus": zod.string().nullish(),
@@ -2381,6 +2462,8 @@ export const ReconcileSponsorStatusFromTimestampsResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "tier": zod.string(),
+  "isInKind": zod.boolean(),
+  "inKindDescription": zod.string().nullish(),
   "status": zod.enum(['pending_payment', 'payment_processing', 'paid', 'approved', 'rejected', 'details_submitted', 'details_approved']),
   "statusNeedsRepair": zod.boolean().optional(),
   "timestampImpliedStatus": zod.string().nullish(),
@@ -2427,6 +2510,8 @@ export const FinalApproveSponsorResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "tier": zod.string(),
+  "isInKind": zod.boolean(),
+  "inKindDescription": zod.string().nullish(),
   "status": zod.enum(['pending_payment', 'payment_processing', 'paid', 'approved', 'rejected', 'details_submitted', 'details_approved']),
   "statusNeedsRepair": zod.boolean().optional(),
   "timestampImpliedStatus": zod.string().nullish(),
@@ -2478,6 +2563,8 @@ export const AssignSponsorSpotResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "tier": zod.string(),
+  "isInKind": zod.boolean(),
+  "inKindDescription": zod.string().nullish(),
   "status": zod.enum(['pending_payment', 'payment_processing', 'paid', 'approved', 'rejected', 'details_submitted', 'details_approved']),
   "statusNeedsRepair": zod.boolean().optional(),
   "timestampImpliedStatus": zod.string().nullish(),

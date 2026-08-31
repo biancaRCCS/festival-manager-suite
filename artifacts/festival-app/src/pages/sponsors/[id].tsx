@@ -1,6 +1,6 @@
 import { useState, useRef } from "react"
 import { useLocation, useParams } from "wouter"
-import { useGetSponsor, useReviewSponsor, useFinalApproveSponsor, useAssignSponsorSpot, getGetSponsorQueryKey, useDeleteSponsor, useResendSponsorConfirmation, useResendSponsorPaymentLink, useUpdateSponsorDetails, useRecordSponsorManualPayment, useRemoveSponsorManualPayment, useReconcileSponsorStatusFromTimestamps } from "@workspace/api-client-react"
+import { useGetSponsor, useReviewSponsor, useFinalApproveSponsor, useAssignSponsorSpot, getGetSponsorQueryKey, useDeleteSponsor, useResendSponsorConfirmation, useResendSponsorPaymentLink, useUpdateSponsorDetails, useRecordSponsorManualPayment, useRemoveSponsorManualPayment, useReconcileSponsorStatusFromTimestamps, useMarkSponsorInKind } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { ArrowLeft, CheckCircle2, MapPin, Clock, Trash2, Check, Mail, Pencil, DollarSign } from "lucide-react"
+import { ArrowLeft, CheckCircle2, MapPin, Clock, Trash2, Check, Mail, Pencil, DollarSign, Gift } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { ApplicantDetailsEditorDialog, type ApplicantDetailsField } from "@/components/applicant-details-editor-dialog"
 import { ManualPaymentDialog } from "@/components/manual-payment-dialog"
@@ -113,6 +113,7 @@ export default function SponsorDetailPage() {
   const recordPaymentMutation = useRecordSponsorManualPayment({ mutation: { mutationKey: ["recordSponsorManualPayment", id] } })
   const removePaymentMutation = useRemoveSponsorManualPayment({ mutation: { mutationKey: ["removeSponsorManualPayment", id] } })
   const repairStatusMutation = useReconcileSponsorStatusFromTimestamps({ mutation: { mutationKey: ["reconcileSponsorStatusFromTimestamps", id] } })
+  const inKindMutation = useMarkSponsorInKind()
 
   const [reviewNote, setReviewNote]             = useState("")
   const [spotNumber, setSpotNumber]             = useState("")
@@ -124,6 +125,8 @@ export default function SponsorDetailPage() {
   const [isDetailsOpen, setIsDetailsOpen]       = useState(false)
   const [isManualPaymentOpen, setIsManualPaymentOpen] = useState(false)
   const [isRemovePaymentOpen, setIsRemovePaymentOpen] = useState(false)
+  const [isInKindOpen, setIsInKindOpen] = useState(false)
+  const [inKindDescription, setInKindDescription] = useState("")
 
   const reviewMutateFnRef = useRef(reviewMutation.mutate)
   reviewMutateFnRef.current = reviewMutation.mutate
@@ -273,6 +276,12 @@ export default function SponsorDetailPage() {
       throw error
     }
   }
+  const handleMarkInKind = () => {
+    if (!inKindDescription.trim()) return
+    inKindMutation.mutate({ id, data: { description: inKindDescription.trim() } }, { onSuccess: (updated) => {
+      queryClient.setQueryData(getGetSponsorQueryKey(id), updated); queryClient.invalidateQueries({ queryKey: ["sponsors"] }); setIsInKindOpen(false); toast({ title: "In-kind contribution recorded" })
+    }, onError: () => toast({ title: "Could not record in-kind contribution", variant: "destructive" }) })
+  }
 
   if (isLoading) return <AdminLayout><div className="p-8">Loading…</div></AdminLayout>
   if (!sponsor)  return <AdminLayout><div className="p-8">Sponsor not found.</div></AdminLayout>
@@ -317,6 +326,7 @@ export default function SponsorDetailPage() {
             <div className="flex flex-wrap items-center gap-3">
               <p className="text-muted-foreground">{sponsor.name}</p>
               <StatusBadge status={sponsor.status} />
+              {sponsor.isInKind && <Badge className="bg-violet-700 hover:bg-violet-700">In-kind contribution</Badge>}
             </div>
           </div>
           <div className="flex gap-3 items-center flex-wrap">
@@ -350,7 +360,7 @@ export default function SponsorDetailPage() {
               onSave={handleSaveDetails}
               isSaving={detailsMutation.isPending}
             />
-            {sponsor.status === 'pending_payment' && (
+            {sponsor.status === 'pending_payment' && !sponsor.isInKind && (
               <Button
                 variant="outline"
                 className="border-primary/20 hover:bg-primary/5 text-primary"
@@ -427,7 +437,7 @@ export default function SponsorDetailPage() {
               </Dialog>
             )}
 
-            {!sponsor.manualPaymentRecordedAt && !sponsor.hasStripePayment && (
+            {sponsor.status === "pending_payment" && !sponsor.isInKind && !sponsor.manualPaymentRecordedAt && !sponsor.hasStripePayment && (
               <Button
                 variant="outline"
                 className="border-primary/20 hover:bg-primary/5 text-primary"
@@ -447,6 +457,15 @@ export default function SponsorDetailPage() {
               isPending={recordPaymentMutation.isPending}
               onSubmit={handleRecordPayment}
             />
+            {sponsor.status === "pending_payment" && !sponsor.isInKind && (
+              <Dialog open={isInKindOpen} onOpenChange={setIsInKindOpen}>
+                <DialogTrigger asChild><Button variant="outline" className="border-violet-300 text-violet-800 hover:bg-violet-50"><Gift className="w-4 h-4 mr-2" />Mark as in-kind</Button></DialogTrigger>
+                <DialogContent><DialogHeader><DialogTitle>Record in-kind sponsorship</DialogTitle><DialogDescription>This fulfils the sponsorship without recording a cash payment. Any open online payment link will be expired.</DialogDescription></DialogHeader>
+                  <div className="space-y-2 py-3"><Label htmlFor="in-kind-description">Contribution description</Label><Input id="in-kind-description" value={inKindDescription} onChange={e => setInKindDescription(e.target.value)} maxLength={2000} placeholder="e.g., catering, printing, donated services" /></div>
+                  <DialogFooter><Button variant="outline" onClick={() => setIsInKindOpen(false)}>Cancel</Button><Button onClick={handleMarkInKind} disabled={!inKindDescription.trim() || inKindMutation.isPending}>{inKindMutation.isPending ? "Recording…" : "Record in-kind contribution"}</Button></DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
             <Dialog open={isRemovePaymentOpen} onOpenChange={setIsRemovePaymentOpen}>
               <DialogContent>
                 <DialogHeader>
@@ -554,6 +573,7 @@ export default function SponsorDetailPage() {
                 {sponsor.paidAt && (
                   <span>Paid {new Date(sponsor.paidAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
                 )}
+                {sponsor.isInKind && <span>In-kind contribution recorded</span>}
               </div>
 
               {sponsor.status === 'payment_processing' && (
@@ -602,6 +622,7 @@ export default function SponsorDetailPage() {
                   </div>
                 </>
               )}
+              {sponsor.isInKind && <><SectionDivider title="In-kind Contribution" /><Field label="Description" value={sponsor.inKindDescription} wide /></>}
 
               {/* ── Contact Information ── */}
               <SectionDivider title="Contact Information" />

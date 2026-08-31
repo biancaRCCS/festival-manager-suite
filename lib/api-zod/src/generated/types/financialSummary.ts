@@ -10,6 +10,7 @@ import type { PaymentRecord } from './paymentRecord';
 export interface FinancialSummary {
   vendorRevenue: number;
   sponsorRevenue: number;
+  sponsorInKindValue: number;
   totalRevenue: number;
   vendorCount: number;
   sponsorCount: number;

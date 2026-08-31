@@ -44,6 +44,19 @@ async function sponsor(values: Partial<typeof sponsorsTable.$inferInsert> = {}) 
 }
 
 describe("manual payments", () => {
+  it("returns required in-kind fields for vendor and special-agreement portal responses", async () => {
+    const standardVendor = await vendor({ portalToken: "portal-contract-vendor" });
+    const specialVendor = await vendor({ portalToken: "portal-contract-special", vendorType: "special_agreement" });
+
+    const standardResponse = await request(app).get(`/api/portal/${standardVendor.portalToken}`);
+    const specialResponse = await request(app).get(`/api/portal/${specialVendor.portalToken}`);
+
+    expect(standardResponse.status).toBe(200);
+    expect(standardResponse.body).toMatchObject({ type: "vendor", isInKind: false, inKindDescription: null });
+    expect(specialResponse.status).toBe(200);
+    expect(specialResponse.body).toMatchObject({ type: "special_agreement", isInKind: false, inKindDescription: null });
+  });
+
   it("records vendor payments, validates input, audits staff, and defaults email off", async () => {
     const row = await vendor();
     expect((await request(app).post(`/api/vendors/${row.id}/manual-payment`).send({ ...payment, amount: 1.001 })).status).toBe(400);
@@ -144,6 +157,49 @@ describe("manual payments", () => {
       expect.objectContaining({ name: `${combinedVendor.name} — ${combinedVendor.businessName}`, amount: 255 }),
       expect.objectContaining({ name: `${manualSponsor.name} — ${manualSponsor.orgName}`, amount: 444 }),
     ]));
+  });
+
+  it("separates in-kind sponsorship value from cash revenue and recent payments", async () => {
+    const cashSponsor = await sponsor({
+      orgName: "Cash Sponsor Co",
+      status: "paid", paidAt: new Date("2025-06-01T12:00:00.000Z"),
+      manualPaymentAmount: "400.00", manualPaymentRecordedAt: new Date("2025-06-01T12:00:00.000Z"),
+    });
+    const inKindSponsor = await sponsor({
+      orgName: "In Kind Sponsor Co",
+      status: "paid", isInKind: true, inKindDescription: "Donated catering",
+      sponsorshipAmount: "750.00", paidAt: null,
+    });
+
+    const financials = await request(app).get("/api/dashboard/financials").query({ yearId });
+    expect(financials.status).toBe(200);
+    expect(financials.body.sponsorRevenue).toBeGreaterThanOrEqual(400);
+    expect(financials.body.sponsorInKindValue).toBeGreaterThanOrEqual(750);
+    expect(financials.body.totalRevenue).toBe(financials.body.vendorRevenue + financials.body.sponsorRevenue);
+    expect(financials.body.recentPayments).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: `${cashSponsor.name} — ${cashSponsor.orgName}`, amount: 400 }),
+    ]));
+    expect(financials.body.recentPayments).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: `${inKindSponsor.name} — ${inKindSponsor.orgName}` }),
+    ]));
+
+    // The summary always uses the active year, so temporarily make this
+    // isolated test year active and restore the prior active-year selection.
+    const activeYears = await db.select({ id: festivalYearsTable.id }).from(festivalYearsTable).where(eq(festivalYearsTable.isActive, true));
+    await db.update(festivalYearsTable).set({ isActive: false }).where(eq(festivalYearsTable.isActive, true));
+    try {
+      await db.update(festivalYearsTable).set({ isActive: true }).where(eq(festivalYearsTable.id, yearId));
+      const summary = await request(app).get("/api/dashboard/summary");
+      expect(summary.status).toBe(200);
+      expect(summary.body.sponsorRevenue).toBeGreaterThanOrEqual(400);
+      expect(summary.body.sponsorInKindValue).toBeGreaterThanOrEqual(750);
+      expect(summary.body.totalRevenue).toBe(summary.body.vendorRevenue + summary.body.sponsorRevenue);
+    } finally {
+      await db.update(festivalYearsTable).set({ isActive: false }).where(eq(festivalYearsTable.id, yearId));
+      for (const activeYear of activeYears) {
+        await db.update(festivalYearsTable).set({ isActive: true }).where(eq(festivalYearsTable.id, activeYear.id));
+      }
+    }
   });
 
   it("recognizes and restores legacy vendor Stripe evidence without the new Stripe settlement columns", async () => {

@@ -298,6 +298,14 @@ export interface Vendor {
   createdAt: string;
 }
 
+export interface MarkSponsorInKindInput {
+  /**
+     * @minLength 1
+     * @maxLength 2000
+     */
+  description: string;
+}
+
 export type SponsorStatus = typeof SponsorStatus[keyof typeof SponsorStatus];
 
 
@@ -332,6 +340,9 @@ export interface Sponsor {
   email: string;
   phone: string;
   tier: string;
+  isInKind: boolean;
+  /** @nullable */
+  inKindDescription?: string | null;
   status: SponsorStatus;
   statusNeedsRepair?: boolean;
   /** @nullable */
@@ -450,6 +461,7 @@ export interface DashboardSummary {
   festivalDate?: string | null;
   vendorRevenue?: number;
   sponsorRevenue?: number;
+  sponsorInKindValue: number;
   totalRevenue: number;
   /** Total applications needing attention */
   pendingActions: number;
@@ -473,6 +485,7 @@ export interface PaymentRecord {
 export interface FinancialSummary {
   vendorRevenue: number;
   sponsorRevenue: number;
+  sponsorInKindValue: number;
   totalRevenue: number;
   vendorCount: number;
   sponsorCount: number;
@@ -640,6 +653,9 @@ export interface PortalInfo {
   spacesRequested?: string | null;
   /** @nullable */
   sponsorshipAmount?: number | null;
+  isInKind: boolean;
+  /** @nullable */
+  inKindDescription?: string | null;
   /** @nullable */
   boothOrNameOnly?: string | null;
   /** @nullable */

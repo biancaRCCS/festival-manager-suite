@@ -181,6 +181,9 @@ export async function getOrCreateSponsorCheckoutUrl(sponsorId: number): Promise<
   if (!sponsor) {
     throw new Error(`[stripe] Sponsor ${sponsorId} not found`);
   }
+  if (sponsor.isInKind) {
+    throw new Error(`[stripe] Cannot create checkout for in-kind sponsor ${sponsorId}`);
+  }
   if (sponsor.status !== "pending_payment") {
     throw new Error(
       `[stripe] Cannot create checkout for sponsor ${sponsorId}: status is '${sponsor.status}', expected 'pending_payment'`,
@@ -301,6 +304,32 @@ export async function getOrCreateSponsorCheckoutUrl(sponsorId: number): Promise<
   }
 
   return session.url ?? cancelUrl;
+}
+
+/** Invalidates a payable sponsor Checkout before staff records an in-kind gift. */
+export async function invalidateSponsorCheckoutForInKind(sponsor: typeof sponsorsTable.$inferSelect): Promise<void> {
+  if (!sponsor.stripeSessionId) return;
+  const stripe = await getUncachableStripeClient();
+  let session: Stripe.Checkout.Session;
+  try {
+    session = await stripe.checkout.sessions.retrieve(sponsor.stripeSessionId);
+  } catch (err: any) {
+    // A deleted/missing session cannot be paid and is safe to detach.
+    if (err?.code === "resource_missing" || err?.statusCode === 404) return;
+    throw new Error("Unable to verify the existing Stripe Checkout session; the sponsor was not marked in-kind.");
+  }
+  if (session.payment_status === "paid" || session.status === "complete" || sponsor.status === "payment_processing" || sponsor.stripePaidAt || sponsor.paidAt) {
+    throw new Error("This sponsor has a paid or processing payment and cannot be marked in-kind.");
+  }
+  if (session.status === "open") {
+    try {
+      await stripe.checkout.sessions.expire(session.id);
+    } catch {
+      throw new Error("Unable to expire the open Stripe Checkout session; the sponsor was not marked in-kind.");
+    }
+  } else if (session.status !== "expired") {
+    throw new Error("The existing Stripe Checkout session cannot be safely invalidated; the sponsor was not marked in-kind.");
+  }
 }
 
 /**
@@ -474,6 +503,7 @@ export async function handleCheckoutComplete(
             eq(sponsorsTable.id, id),
             eq(sponsorsTable.stripeSessionId, session.id),
             eq(sponsorsTable.status, "pending_payment"),
+            eq(sponsorsTable.isInKind, false),
           ),
         )
         .returning();
@@ -492,6 +522,7 @@ export async function handleCheckoutComplete(
       and(eq(sponsorsTable.id, id), eq(sponsorsTable.stripeSessionId, session.id)),
     ).limit(1);
     if (!current) return;
+    if (current.isInKind) return;
 
     const shouldAdvanceToPaid = ["pending_payment", "payment_processing"].includes(current.status);
     if (current.stripePaidAt && !shouldAdvanceToPaid) return;
@@ -511,6 +542,7 @@ export async function handleCheckoutComplete(
           eq(sponsorsTable.id, id),
           eq(sponsorsTable.stripeSessionId, session.id),
           eq(sponsorsTable.status, current.status),
+          eq(sponsorsTable.isInKind, false),
           ...(current.stripePaidAt ? [] : [isNull(sponsorsTable.stripePaidAt)]),
         ),
       )
@@ -616,7 +648,7 @@ export async function handleCheckoutAsyncPaymentFailed(session: Stripe.Checkout.
     const [current] = await db.select().from(sponsorsTable).where(
       and(eq(sponsorsTable.id, id), eq(sponsorsTable.stripeSessionId, session.id)),
     ).limit(1);
-    if (!current || current.paymentFailedAt) return;
+    if (!current || current.isInKind || current.paymentFailedAt) return;
     const shouldRevertToPending = ["pending_payment", "payment_processing"].includes(current.status);
     const [updated] = await db
       .update(sponsorsTable)
@@ -630,6 +662,7 @@ export async function handleCheckoutAsyncPaymentFailed(session: Stripe.Checkout.
           eq(sponsorsTable.id, id),
           eq(sponsorsTable.stripeSessionId, session.id),
           eq(sponsorsTable.status, current.status),
+          eq(sponsorsTable.isInKind, false),
           isNull(sponsorsTable.paymentFailedAt),
         ),
       )

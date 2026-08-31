@@ -28,6 +28,8 @@ function buildSponsorPortalInfo(
     festivalYear: year?.eventName ?? "",
     eventDate: s?.festivalDate ?? year?.eventDate ?? "",
     tier: sponsor.tier,
+    isInKind: sponsor.isInKind,
+    inKindDescription: sponsor.inKindDescription ?? null,
     vendorType: null,
     spacesRequested: null,
     sponsorshipAmount: sponsor.sponsorshipAmount != null ? parseFloat(sponsor.sponsorshipAmount) : null,
@@ -64,6 +66,8 @@ function buildSpecialAgreementPortalInfo(
     festivalYear: year?.eventName ?? "",
     eventDate: settings?.festivalDate ?? year?.eventDate ?? "",
     tier: null,
+    isInKind: false,
+    inKindDescription: null,
     vendorType: vendor.vendorType,
     spacesRequested: null,
     sponsorshipAmount: null,
@@ -110,6 +114,8 @@ router.get("/portal/:token", async (req, res): Promise<void> => {
       festivalYear: years[0]?.eventName ?? "",
       eventDate: settingsRows[0]?.festivalDate ?? years[0]?.eventDate ?? "",
       tier: null,
+      isInKind: false,
+      inKindDescription: null,
       vendorType: vendor.vendorType,
       spacesRequested,
       boothOrNameOnly: null,
@@ -321,6 +327,8 @@ router.post("/portal/:token/sign-agreement", async (req, res): Promise<void> => 
       festivalYear: years[0]?.eventName ?? "",
       eventDate: settingsRows[0]?.festivalDate ?? years[0]?.eventDate ?? "",
       tier: null,
+      isInKind: false,
+      inKindDescription: null,
       vendorType: updated.vendorType,
       spacesRequested: updatedSpacesRequested,
       boothOrNameOnly: null,
@@ -375,9 +383,9 @@ router.post("/portal/:token/checkout", async (req, res): Promise<void> => {
 
   if (!entity) {
     // Sponsors pay at the time of their public application, not via the portal.
-    const sponsorRows = await db.select({ id: sponsorsTable.id }).from(sponsorsTable).where(eq(sponsorsTable.portalToken, token)).limit(1);
+    const sponsorRows = await db.select({ id: sponsorsTable.id, isInKind: sponsorsTable.isInKind }).from(sponsorsTable).where(eq(sponsorsTable.portalToken, token)).limit(1);
     if (sponsorRows.length > 0) {
-      res.status(409).json({ error: "Sponsors complete payment during application, not through the portal." });
+      res.status(409).json({ error: sponsorRows[0].isInKind ? "This sponsorship is recorded as an in-kind contribution and has no online payment." : "Sponsors complete payment during application, not through the portal." });
       return;
     }
     res.status(404).json({ error: "Portal not found" });

@@ -48,6 +48,7 @@ import type {
   ListVolunteersParams,
   ManualContributionInput,
   ManualPaymentInput,
+  MarkSponsorInKindInput,
   PaginatedActivityResponse,
   PortalInfo,
   ReviewDecision,
@@ -3451,6 +3452,78 @@ export const useRemoveSponsorManualPayment = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getRemoveSponsorManualPaymentMutationOptions(options));
+    }
+
+export const getMarkSponsorInKindUrl = (id: number,) => {
+
+
+
+
+  return `/api/sponsors/${id}/mark-in-kind`
+}
+
+/**
+ * @summary Record an unpaid sponsor contribution as in-kind
+ */
+export const markSponsorInKind = async (id: number,
+    markSponsorInKindInput: MarkSponsorInKindInput, options?: RequestInit): Promise<Sponsor> => {
+
+  return customFetch<Sponsor>(getMarkSponsorInKindUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(markSponsorInKindInput)
+  }
+);}
+
+
+
+
+
+export const getMarkSponsorInKindMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markSponsorInKind>>, TError,{id: number;data: BodyType<MarkSponsorInKindInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof markSponsorInKind>>, TError,{id: number;data: BodyType<MarkSponsorInKindInput>}, TContext> => {
+
+const mutationKey = ['markSponsorInKind'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markSponsorInKind>>, {id: number;data: BodyType<MarkSponsorInKindInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  markSponsorInKind(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarkSponsorInKindMutationResult = NonNullable<Awaited<ReturnType<typeof markSponsorInKind>>>
+    export type MarkSponsorInKindMutationBody = BodyType<MarkSponsorInKindInput>
+    export type MarkSponsorInKindMutationError = ErrorType<void>
+
+    /**
+ * @summary Record an unpaid sponsor contribution as in-kind
+ */
+export const useMarkSponsorInKind = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markSponsorInKind>>, TError,{id: number;data: BodyType<MarkSponsorInKindInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof markSponsorInKind>>,
+        TError,
+        {id: number;data: BodyType<MarkSponsorInKindInput>},
+        TContext
+      > => {
+      return useMutation(getMarkSponsorInKindMutationOptions(options));
     }
 
 export const getUpdateSponsorDetailsUrl = (id: number,) => {

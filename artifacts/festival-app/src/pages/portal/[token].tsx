@@ -377,6 +377,7 @@ export default function PortalPage() {
 
   // ── Status helpers ───────────────────────────────────────────────────────
   const isSponsor = portal.type === "sponsor"
+  const isInKindSponsor = isSponsor && portal.isInKind
 
   const sponsorNeedsDetails = isSponsor && portal.status === "approved"
   const sponsorDetailsUnder = isSponsor && portal.status === "details_submitted"
@@ -441,7 +442,7 @@ export default function PortalPage() {
           <div className="text-muted-foreground text-lg">
             Application Status:{" "}
             <Badge className="ml-2 capitalize">
-              {portal.status.replace(/_/g, " ")}
+              {isInKindSponsor ? "In-kind contribution recorded" : portal.status.replace(/_/g, " ")}
             </Badge>
           </div>
         </div>
@@ -455,7 +456,7 @@ export default function PortalPage() {
                 Complete Your Sponsorship Details
               </CardTitle>
               <CardDescription>
-                Your application and payment have been accepted. Please complete the details below so we can
+                Your application and {isInKindSponsor ? "in-kind contribution" : "payment"} have been accepted. Please complete the details below so we can
                 finalise your participation. Once our team reviews your information, you will receive
                 a confirmation email with next steps for the festival.
               </CardDescription>
@@ -466,6 +467,12 @@ export default function PortalPage() {
                   <p className="text-muted-foreground text-xs uppercase tracking-wide mb-0.5">Organisation</p>
                   <p className="font-medium text-foreground">{portal.orgName || portal.businessName || portal.name}</p>
                 </div>
+                {isInKindSponsor && (
+                  <div>
+                    <p className="text-muted-foreground text-xs uppercase tracking-wide mb-0.5">In-kind contribution</p>
+                    <p className="font-medium text-foreground">{portal.inKindDescription}</p>
+                  </div>
+                )}
                 <div>
                   <p className="text-muted-foreground text-xs uppercase tracking-wide mb-0.5">Tier</p>
                   <p className="font-medium text-foreground">{tierLabel}</p>
@@ -826,10 +833,11 @@ export default function PortalPage() {
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
                   <CheckCircle2 className="w-8 h-8 text-green-600" />
                 </div>
-                <h3 className="text-2xl font-serif text-green-900 mb-2">Payment Confirmed</h3>
+                <h3 className="text-2xl font-serif text-green-900 mb-2">{isInKindSponsor ? "In-kind Contribution Confirmed" : "Payment Confirmed"}</h3>
                 <p className="text-green-800">
-                  Your payment of ${(amount as number).toLocaleString()} was successful. We have received
-                  your application and agreement.
+                  {isInKindSponsor
+                    ? <>Your in-kind contribution{portal.inKindDescription ? ` (${portal.inKindDescription})` : ""} has been recorded. We have received your application and agreement.</>
+                    : <>Your payment of ${(amount as number).toLocaleString()} was successful. We have received your application and agreement.</>}
                 </p>
               </CardContent>
             </Card>

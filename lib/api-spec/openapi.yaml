@@ -1038,6 +1038,29 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Sponsor" }
 
+  /sponsors/{id}/mark-in-kind:
+    post:
+      operationId: markSponsorInKind
+      tags: [sponsors]
+      summary: Record an unpaid sponsor contribution as in-kind
+      security:
+        - clerkAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarkSponsorInKindInput"
+      responses:
+        "200":
+          description: In-kind sponsor recorded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Sponsor" }
+        "409": { description: Sponsor cannot be marked in-kind }
+
   /sponsors/{id}/details:
     patch:
       operationId: updateSponsorDetails
@@ -1850,9 +1873,18 @@ components:
         createdAt:
           type: string
 
+    MarkSponsorInKindInput:
+      type: object
+      required: [description]
+      properties:
+        description:
+          type: string
+          minLength: 1
+          maxLength: 2000
+
     Sponsor:
       type: object
-      required: [id, yearId, name, orgName, email, phone, tier, status, applicationData, createdAt]
+      required: [id, yearId, name, orgName, email, phone, tier, status, isInKind, applicationData, createdAt]
       properties:
         id:
           type: integer
@@ -1868,6 +1900,10 @@ components:
           type: string
         tier:
           type: string
+        isInKind:
+          type: boolean
+        inKindDescription:
+          type: ["string", "null"]
         status:
           type: string
           enum: [pending_payment, payment_processing, paid, approved, rejected, details_submitted, details_approved]
@@ -1977,7 +2013,7 @@ components:
 
     DashboardSummary:
       type: object
-      required: [festivalYear, countdown, vendorStats, sponsorStats, volunteerStats, totalRevenue, pendingActions]
+      required: [festivalYear, countdown, vendorStats, sponsorStats, volunteerStats, totalRevenue, sponsorInKindValue, pendingActions]
       properties:
         festivalYear:
           $ref: "#/components/schemas/FestivalYear"
@@ -1995,6 +2031,8 @@ components:
         vendorRevenue:
           type: number
         sponsorRevenue:
+          type: number
+        sponsorInKindValue:
           type: number
         totalRevenue:
           type: number
@@ -2021,11 +2059,13 @@ components:
 
     FinancialSummary:
       type: object
-      required: [vendorRevenue, sponsorRevenue, totalRevenue, vendorCount, sponsorCount]
+      required: [vendorRevenue, sponsorRevenue, sponsorInKindValue, totalRevenue, vendorCount, sponsorCount]
       properties:
         vendorRevenue:
           type: number
         sponsorRevenue:
+          type: number
+        sponsorInKindValue:
           type: number
         totalRevenue:
           type: number
@@ -2174,7 +2214,7 @@ components:
 
     PortalInfo:
       type: object
-      required: [type, name, status, agreementSigned, festivalYear, eventDate]
+      required: [type, name, status, agreementSigned, festivalYear, eventDate, isInKind]
       properties:
         type:
           type: string
@@ -2235,6 +2275,10 @@ components:
           type: ["string", "null"]
         sponsorshipAmount:
           type: ["number", "null"]
+        isInKind:
+          type: boolean
+        inKindDescription:
+          type: ["string", "null"]
         boothOrNameOnly:
           type: ["string", "null"]
         paymentDeadline:

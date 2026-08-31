@@ -346,6 +346,17 @@ describe("sponsor pay-first Checkout", () => {
 });
 
 describe("POST /api/sponsors/:id/resend-payment-link", () => {
+  it("refuses all cash-payment paths for an in-kind sponsor", async () => {
+    const sponsor = await createSponsor({ isInKind: true, status: "paid" });
+    const resend = await request(app).post(`/api/sponsors/${sponsor.id}/resend-payment-link`);
+    const manual = await request(app).post(`/api/sponsors/${sponsor.id}/manual-payment`).send({
+      method: "cash", amount: 750, receivedDate: "2026-01-01",
+    });
+    await expect(getOrCreateSponsorCheckoutUrl(sponsor.id)).rejects.toThrow("in-kind");
+    expect(resend.status).toBe(409);
+    expect(manual.status).toBe(409);
+    expect(checkoutSessionCreateSpy).not.toHaveBeenCalled();
+  });
   it("creates a Checkout session, emails the link, and logs the resend", async () => {
     const sponsor = await createSponsor();
     checkoutSessionCreateSpy.mockResolvedValue({ id: "cs_test_resend", url: "https://checkout.example.test/resend" });
@@ -370,7 +381,46 @@ describe("POST /api/sponsors/:id/resend-payment-link", () => {
   });
 });
 
+describe("POST /api/sponsors/:id/mark-in-kind", () => {
+  it("expires an open Checkout and fulfills without a cash payment record", async () => {
+    const sponsor = await createSponsor({ stripeSessionId: "cs_in_kind_open" });
+    checkoutSessionRetrieveSpy.mockResolvedValue({ id: "cs_in_kind_open", status: "open", payment_status: "unpaid" });
+
+    const res = await request(app).post(`/api/sponsors/${sponsor.id}/mark-in-kind`).send({ description: "  Donated event printing  " });
+
+    expect(res.status).toBe(200);
+    expect(checkoutSessionExpireSpy).toHaveBeenCalledWith("cs_in_kind_open");
+    const [updated] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, sponsor.id));
+    expect(updated).toMatchObject({ status: "paid", isInKind: true, inKindDescription: "Donated event printing", stripeSessionId: null, paidAt: null });
+    expect(updated?.manualPaymentRecordedAt).toBeNull();
+  });
+
+  it("does not mark a paid or processing Checkout in-kind", async () => {
+    const sponsor = await createSponsor({ stripeSessionId: "cs_in_kind_paid" });
+    checkoutSessionRetrieveSpy.mockResolvedValue({ id: "cs_in_kind_paid", status: "complete", payment_status: "paid" });
+
+    const res = await request(app).post(`/api/sponsors/${sponsor.id}/mark-in-kind`).send({ description: "Donated goods" });
+
+    expect(res.status).toBe(409);
+    const [unchanged] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, sponsor.id));
+    expect(unchanged?.isInKind).toBe(false);
+    expect(unchanged?.status).toBe("pending_payment");
+  });
+});
+
 describe("checkout.session.completed webhook for sponsors", () => {
+  it("ignores stale cash-payment webhooks for an in-kind sponsor", async () => {
+    const sponsor = await createSponsor({ isInKind: true, status: "paid", stripeSessionId: "cs_in_kind_stale" });
+    const res = await postWebhook(makeEvent("checkout.session.completed", {
+      id: "cs_in_kind_stale", object: "checkout.session", payment_status: "paid", amount_total: 75000,
+      metadata: { entityType: "sponsor", entityId: String(sponsor.id) },
+    }));
+    expect(res.status).toBe(200);
+    const [unchanged] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, sponsor.id));
+    expect(unchanged?.paidAt).toBeNull();
+    expect(unchanged?.stripePaidAt).toBeNull();
+    expect(paymentReceiptSpy).not.toHaveBeenCalled();
+  });
   it("restores a timestamp-proven sponsor status without sending email", async () => {
     const sponsor = await createSponsor({
       status: "paid",

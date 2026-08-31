@@ -409,8 +409,10 @@ export async function sendSponsorDetailsInviteEmail(params: {
   tier: string;
   portalUrl: string;
   festivalName: string;
+  isInKind?: boolean;
+  inKindDescription?: string | null;
 }) {
-  const { to, name, orgName, tier, portalUrl, festivalName } = params;
+  const { to, name, orgName, tier, portalUrl, festivalName, isInKind, inKindDescription } = params;
   const tierLabel = TIER_LABELS[tier] ?? tier;
   const subject = `Your Sponsorship Application for ${festivalName} — Complete Your Details`;
   const html = `
@@ -418,7 +420,7 @@ export async function sendSponsorDetailsInviteEmail(params: {
       <h2 style="color: #8b1a1a;">Congratulations, ${name}!</h2>
       <p>We are delighted to confirm that <strong>${orgName}</strong>'s application to sponsor <strong>${festivalName}</strong> has been <strong>approved</strong>.</p>
       ${field("Sponsorship Tier", tierLabel)}
-      <p>We've received your sponsorship payment — thank you! The next step is to complete your remaining sponsorship details, including your organization's booth and operational information and your logo, so we can finalise your participation.</p>
+      <p>${isInKind ? `We've recorded your in-kind contribution${inKindDescription ? ` (${escapeHtml(inKindDescription)})` : ""} — thank you!` : "We've received your sponsorship payment — thank you!"} The next step is to complete your remaining sponsorship details, including your organization's booth and operational information and your logo, so we can finalise your participation.</p>
       <p>
         <a href="${portalUrl}" style="display: inline-block; background: #8b1a1a; color: white; padding: 12px 24px; text-decoration: none; font-size: 16px;">
           Complete Your Sponsorship Details

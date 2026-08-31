@@ -207,7 +207,7 @@ export default function SponsorsPage() {
                               <AlertCircle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" aria-label="Needs your review" />
                             )}
                             <div>
-                              {sponsor.orgName}
+                              <div className="flex items-center gap-2">{sponsor.orgName}{sponsor.isInKind && <Badge className="bg-violet-700 hover:bg-violet-700">In-kind</Badge>}</div>
                               <div className="text-xs text-muted-foreground font-normal">{sponsor.name}</div>
                             </div>
                           </div>
@@ -230,7 +230,8 @@ export default function SponsorsPage() {
                         </TableCell>
                         <TableCell>
                           <div className="text-sm text-foreground">
-                            {sponsor.hasStripePayment && sponsor.manualPaymentRecordedAt
+                            {sponsor.isInKind ? "In-kind contribution"
+                              : sponsor.hasStripePayment && sponsor.manualPaymentRecordedAt
                               ? `Stripe + ${sponsor.paymentMethod ?? "Manual"}`
                               : sponsor.hasStripePayment
                                 ? "Stripe"

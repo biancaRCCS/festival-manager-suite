@@ -16,10 +16,12 @@ import {
   RecordSponsorManualPaymentParams,
   RecordSponsorManualPaymentBody,
   RemoveSponsorManualPaymentParams,
+  MarkSponsorInKindParams,
+  MarkSponsorInKindBody,
 } from "@workspace/api-zod";
 import { randomBytes } from "crypto";
 import { sendSponsorDetailsInviteEmail, sendSponsorFinalConfirmationEmail, sendSponsorPaymentLinkEmail, sendApplicantConfirmation, sendManualPaymentConfirmationEmail, TIER_LABELS } from "../lib/email";
-import { getOrCreateSponsorCheckoutUrl } from "./stripe";
+import { getOrCreateSponsorCheckoutUrl, invalidateSponsorCheckoutForInKind } from "./stripe";
 import {
   addDetailChange,
   applicationText,
@@ -79,6 +81,8 @@ function formatSponsor(s: typeof sponsorsTable.$inferSelect) {
     email: s.email,
     phone: s.phone,
     tier: s.tier,
+    isInKind: s.isInKind,
+    inKindDescription: s.inKindDescription ?? null,
     sponsorshipAmount: s.sponsorshipAmount != null ? parseFloat(s.sponsorshipAmount) : null,
     status: s.status,
     statusNeedsRepair: sponsorNeedsStatusRepair(s),
@@ -193,6 +197,7 @@ router.post("/sponsors/:id/manual-payment", requireStaff, async (req, res): Prom
   if (!receivedDate) { res.status(400).json({ error: "Received date cannot be unreasonably in the future." }); return; }
   const [sponsor] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, params.data.id)).limit(1);
   if (!sponsor) { res.status(404).json({ error: "Sponsor not found" }); return; }
+  if (sponsor.isInKind) { res.status(409).json({ error: "In-kind sponsors cannot have a manual payment recorded." }); return; }
   if (sponsor.manualPaymentRecordedAt) { res.status(409).json({ error: "Remove the active manual payment before recording another." }); return; }
   const hasStripe = Boolean(sponsor.stripePaidAt || (sponsor.stripeSessionId && sponsor.paidAt));
   if (hasStripe && !body.data.confirmStripeOverlap) { res.status(409).json({ error: "This sponsor already has a Stripe payment. Confirm the overlap to record a manual payment." }); return; }
@@ -226,6 +231,31 @@ router.post("/sponsors/:id/manual-payment", requireStaff, async (req, res): Prom
   });
   if (!updated) { res.status(409).json({ error: "This sponsor changed while recording payment. Refresh and try again." }); return; }
   if (body.data.sendConfirmationEmail) void sendManualPaymentConfirmationEmail({ to: updated.email, name: updated.name, entityType: "sponsor", amount: body.data.amount, method: body.data.method, reference, receivedDate });
+  res.json(formatSponsor(updated));
+});
+
+router.post("/sponsors/:id/mark-in-kind", requireStaff, async (req, res): Promise<void> => {
+  const params = MarkSponsorInKindParams.safeParse(req.params);
+  const body = MarkSponsorInKindBody.safeParse(req.body);
+  const description = body.success ? body.data.description.trim() : "";
+  if (!params.success || !description) { res.status(400).json({ error: "An in-kind contribution description is required." }); return; }
+  const [sponsor] = await db.select().from(sponsorsTable).where(eq(sponsorsTable.id, params.data.id)).limit(1);
+  if (!sponsor) { res.status(404).json({ error: "Sponsor not found" }); return; }
+  if (sponsor.isInKind || sponsor.status !== "pending_payment" || sponsor.paidAt || sponsor.stripePaidAt || sponsor.manualPaymentRecordedAt) {
+    res.status(409).json({ error: "Only an unpaid sponsor awaiting payment can be marked in-kind." }); return;
+  }
+  try {
+    await invalidateSponsorCheckoutForInKind(sponsor);
+  } catch (err) {
+    res.status(409).json({ error: err instanceof Error ? err.message : "Unable to safely invalidate payment." }); return;
+  }
+  const actor = (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null;
+  const sessionCondition = sponsor.stripeSessionId ? eq(sponsorsTable.stripeSessionId, sponsor.stripeSessionId) : isNull(sponsorsTable.stripeSessionId);
+  const [updated] = await db.update(sponsorsTable).set({
+    isInKind: true, inKindDescription: description, status: "paid", stripeSessionId: null,
+  }).where(and(eq(sponsorsTable.id, sponsor.id), eq(sponsorsTable.status, "pending_payment"), eq(sponsorsTable.isInKind, false), sessionCondition)).returning();
+  if (!updated) { res.status(409).json({ error: "This sponsor changed while being marked in-kind. Refresh and try again." }); return; }
+  await db.insert(activityLogTable).values({ type: "in_kind_recorded", message: `In-kind contribution recorded for sponsor ${updated.name} (${updated.orgName}): ${description}`, entityType: "sponsor", entityId: updated.id, performedBy: actor });
   res.json(formatSponsor(updated));
 });
 
@@ -400,6 +430,8 @@ router.patch("/sponsors/:id/review", requireStaff, async (req, res): Promise<voi
       tier: updated.tier,
       portalUrl,
       festivalName: years[0]?.eventName ?? "Romanian Festival",
+      isInKind: updated.isInKind,
+      inKindDescription: updated.inKindDescription,
     });
   }
 
@@ -538,6 +570,10 @@ router.post("/sponsors/:id/resend-payment-link", requireStaff, async (req, res):
   }
   if (sponsor.status !== "pending_payment") {
     res.status(409).json({ error: `Cannot resend payment link: sponsor is currently '${sponsor.status}', expected 'pending_payment'` });
+    return;
+  }
+  if (sponsor.isInKind) {
+    res.status(409).json({ error: "In-kind sponsors do not receive payment links." });
     return;
   }
 

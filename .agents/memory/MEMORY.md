@@ -8,3 +8,4 @@
 - [Deployment startup readiness](deployment-startup-readiness.md) — bind the API listener before non-fatal external-service setup so rollout health probes do not see avoidable downtime.
 - [Stripe webhook environment isolation](stripe-webhook-environment-isolation.md) — development and production must not manage the same Stripe webhook endpoint.
 - [Overlapping payment ledgers](overlapping-payment-ledgers.md) — manual and Stripe payments coexist; reversals must preserve late settlements, exact prior workflow state, and actual cash totals.
+- [In-kind sponsor accounting](in-kind-sponsor-accounting.md) — in-kind sponsorships fulfill participation without becoming cash payments; invalidate checkout and report value separately.

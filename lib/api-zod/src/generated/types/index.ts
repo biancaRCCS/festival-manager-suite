@@ -45,6 +45,7 @@ export * from './listVolunteersParams';
 export * from './manualContributionInput';
 export * from './manualPaymentInput';
 export * from './manualPaymentInputMethod';
+export * from './markSponsorInKindInput';
 export * from './paginatedActivityResponse';
 export * from './paymentRecord';
 export * from './paymentRecordType';

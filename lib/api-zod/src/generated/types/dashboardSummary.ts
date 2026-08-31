@@ -19,6 +19,7 @@ export interface DashboardSummary {
   festivalDate?: string | null;
   vendorRevenue?: number;
   sponsorRevenue?: number;
+  sponsorInKindValue: number;
   totalRevenue: number;
   /** Total applications needing attention */
   pendingActions: number;

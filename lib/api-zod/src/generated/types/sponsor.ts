@@ -17,6 +17,9 @@ export interface Sponsor {
   email: string;
   phone: string;
   tier: string;
+  isInKind: boolean;
+  /** @nullable */
+  inKindDescription?: string | null;
   status: SponsorStatus;
   statusNeedsRepair?: boolean;
   /** @nullable */

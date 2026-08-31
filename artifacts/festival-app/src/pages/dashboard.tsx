@@ -208,8 +208,12 @@ export default function DashboardPage() {
                       <span className="font-semibold text-green-600">{summary.sponsorStats.finalApproved}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm pt-2 border-t mt-1">
-                      <span className="text-muted-foreground flex items-center gap-1.5"><DollarSign className="w-4 h-4 text-green-600" /> Revenue collected</span>
+                      <span className="text-muted-foreground flex items-center gap-1.5"><DollarSign className="w-4 h-4 text-green-600" /> Cash revenue collected</span>
                       <span className="font-semibold text-green-700">${(summary.sponsorRevenue ?? 0).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">In-kind sponsorship value</span>
+                      <span className="font-semibold text-violet-700">${(summary.sponsorInKindValue ?? 0).toLocaleString()}</span>
                     </div>
                   </div>
                   <div className="mt-6">
