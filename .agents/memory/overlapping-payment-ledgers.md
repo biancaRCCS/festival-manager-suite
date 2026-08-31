@@ -9,6 +9,12 @@ Keep manual and Stripe settlement evidence in separate fields. Recording an offl
 
 **How to apply:** Use conditional transactional updates for staff payment actions, store the exact prior workflow status, and restore it only when no later Stripe settlement requires the record to remain paid. Show both sources when both exist.
 
+A stored Stripe Checkout session ID is not settlement evidence when an active manual payment owns the shared paid timestamp. Count Stripe only from explicit settlement fields in that case; otherwise an abandoned session can double-count the configured amount as cash.
+
+**Why:** Older records may retain an unpaid Checkout session after staff record an offline payment. Combining that stale ID with the manual payment's generic paid timestamp creates a phantom Stripe payment.
+
+**How to apply:** Preserve legacy session-plus-paid-time inference only when no manual payment is active. When staff intentionally add a manual payment on top of a verified legacy Stripe payment, materialize explicit Stripe settlement fields first.
+
 Application-flow completion must be evidence-driven, never inferred from status order. A payment step is complete only when Stripe settlement evidence or an active manual-payment record exists, and its displayed date must come from that payment evidence.
 
 **Why:** Workflow statuses can advance independently or contain legacy inconsistencies; position-based steppers can falsely claim that money was received.

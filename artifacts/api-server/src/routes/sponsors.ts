@@ -77,8 +77,16 @@ function validReceivedDate(value: Date): string | null {
 }
 function validManualAmount(value: number) { return Number.isFinite(value) && value > 0 && value <= 99_999_999.99 && Math.abs(value * 100 - Math.round(value * 100)) < 0.0000001; }
 
+function hasSponsorStripePayment(sponsor: typeof sponsorsTable.$inferSelect): boolean {
+  return Boolean(
+    sponsor.stripePaidAt
+    || sponsor.stripeSettledAmount != null
+    || (sponsor.stripeSessionId && sponsor.paidAt && !sponsor.manualPaymentRecordedAt),
+  );
+}
+
 function formatSponsor(s: typeof sponsorsTable.$inferSelect) {
-  const hasStripePayment = Boolean(s.stripePaidAt || (s.stripeSessionId && s.paidAt));
+  const hasStripePayment = hasSponsorStripePayment(s);
   const timestampImpliedStatus = getSponsorTimestampImpliedStatus(s);
   return {
     id: s.id,
@@ -105,10 +113,12 @@ function formatSponsor(s: typeof sponsorsTable.$inferSelect) {
     paymentSource: s.manualPaymentRecordedAt ? "manual" : (hasStripePayment ? "stripe" : null),
     paymentMethod: s.manualPaymentRecordedAt ? (paymentLabels[s.manualPaymentMethod ?? ""] ?? null) : (hasStripePayment ? "Stripe" : null),
     hasStripePayment,
-    stripePaymentAmount: s.stripeSettledAmount === null
-      ? (s.stripeSessionId && s.paidAt && s.sponsorshipAmount !== null ? Number(s.sponsorshipAmount) : null)
-      : Number(s.stripeSettledAmount),
-    stripePaidAt: s.stripePaidAt?.toISOString() ?? (s.stripeSessionId && s.paidAt ? s.paidAt.toISOString() : null),
+    stripePaymentAmount: hasStripePayment
+      ? (s.stripeSettledAmount === null
+        ? (s.sponsorshipAmount !== null ? Number(s.sponsorshipAmount) : null)
+        : Number(s.stripeSettledAmount))
+      : null,
+    stripePaidAt: hasStripePayment ? (s.stripePaidAt ?? s.paidAt)?.toISOString() ?? null : null,
     manualPaymentAmount: s.manualPaymentAmount === null ? null : Number(s.manualPaymentAmount),
     manualPaymentReceivedDate: s.manualPaymentReceivedDate ?? null,
     manualPaymentReference: s.manualPaymentReference ?? null,
@@ -207,7 +217,7 @@ router.post("/sponsors/:id/manual-payment", requireStaff, requireAdmin, async (r
   if (!sponsor) { res.status(404).json({ error: "Sponsor not found" }); return; }
   if (sponsor.isInKind) { res.status(409).json({ error: "In-kind sponsors cannot have a manual payment recorded." }); return; }
   if (sponsor.manualPaymentRecordedAt) { res.status(409).json({ error: "Remove the active manual payment before recording another." }); return; }
-  const hasStripe = Boolean(sponsor.stripePaidAt || (sponsor.stripeSessionId && sponsor.paidAt));
+  const hasStripe = hasSponsorStripePayment(sponsor);
   if (hasStripe && !body.data.confirmStripeOverlap) { res.status(409).json({ error: "This sponsor already has a Stripe payment. Confirm the overlap to record a manual payment." }); return; }
   const actor = (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null, reference = body.data.reference?.trim() || null;
   const shouldAdvanceToPaid = ["pending_payment", "payment_processing"].includes(sponsor.status);
@@ -215,6 +225,8 @@ router.post("/sponsors/:id/manual-payment", requireStaff, requireAdmin, async (r
     const [saved] = await tx.update(sponsorsTable).set({
       status: hasStripe || !shouldAdvanceToPaid ? sponsor.status : "paid",
       paidAt: hasStripe ? sponsor.paidAt : sponsor.paidAt ?? new Date(`${receivedDate}T00:00:00.000Z`),
+      stripePaidAt: hasStripe ? sponsor.stripePaidAt ?? sponsor.paidAt : sponsor.stripePaidAt,
+      stripeSettledAmount: hasStripe ? sponsor.stripeSettledAmount ?? sponsor.sponsorshipAmount : sponsor.stripeSettledAmount,
       manualPaymentMethod: body.data.method,
       manualPaymentAmount: body.data.amount.toFixed(2),
       manualPaymentReceivedDate: receivedDate,
@@ -274,8 +286,8 @@ router.delete("/sponsors/:id/manual-payment", requireStaff, requireAdmin, async 
   if (!sponsor) { res.status(404).json({ error: "Sponsor not found" }); return; }
   if (!sponsor.manualPaymentRecordedAt) { res.status(409).json({ error: "There is no active manual payment to remove." }); return; }
   const actor = (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null;
-  const stripeSettled = Boolean(sponsor.stripePaidAt || (sponsor.stripeSessionId && sponsor.paidAt));
-  const stripePaidAt = sponsor.stripePaidAt ?? (sponsor.stripeSessionId ? sponsor.paidAt : null);
+  const stripeSettled = hasSponsorStripePayment(sponsor);
+  const stripePaidAt = stripeSettled ? sponsor.stripePaidAt ?? sponsor.paidAt : null;
   const restoredStatus = stripeSettled && ["pending_payment", "payment_processing"].includes(sponsor.manualPaymentPreviousStatus ?? "")
     ? "paid"
     : sponsor.manualPaymentPreviousStatus ?? (stripeSettled ? "paid" : "pending_payment");

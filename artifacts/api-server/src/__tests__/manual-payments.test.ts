@@ -160,6 +160,35 @@ describe("manual payments", () => {
     ]));
   });
 
+  it("does not count an old unpaid Stripe session as a second sponsor payment", async () => {
+    const before = await request(app).get("/api/dashboard/financials").query({ yearId });
+    const row = await sponsor({
+      status: "details_approved",
+      sponsorshipAmount: "3000.00",
+      stripeSessionId: "cs_unpaid_legacy_sponsor",
+      paidAt: new Date("2025-06-01T12:00:00.000Z"),
+      stripePaidAt: null,
+      stripeSettledAmount: null,
+      manualPaymentAmount: "3000.00",
+      manualPaymentRecordedAt: new Date("2025-06-01T12:00:00.000Z"),
+    });
+
+    const detail = await request(app).get(`/api/sponsors/${row.id}`);
+    expect(detail.body).toMatchObject({
+      hasStripePayment: false,
+      paymentSource: "manual",
+      manualPaymentAmount: 3000,
+      stripePaymentAmount: null,
+      stripePaidAt: null,
+    });
+
+    const after = await request(app).get("/api/dashboard/financials").query({ yearId });
+    expect(after.body.sponsorRevenue - before.body.sponsorRevenue).toBe(3000);
+    expect(after.body.recentPayments).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: `${row.name} — ${row.orgName}`, amount: 3000 }),
+    ]));
+  });
+
   it("separates in-kind sponsorship value from cash revenue and recent payments", async () => {
     const cashSponsor = await sponsor({
       orgName: "Cash Sponsor Co",

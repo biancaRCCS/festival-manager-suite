@@ -93,9 +93,14 @@ function sponsorReceivedAmount(
 ): number {
   if (sponsor.isInKind) return 0;
   const manual = Number(sponsor.manualPaymentAmount ?? 0);
+  const hasStripePayment = Boolean(
+    sponsor.stripePaidAt
+    || sponsor.stripeSettledAmount != null
+    || (sponsor.stripeSessionId && sponsor.paidAt && !sponsor.manualPaymentRecordedAt),
+  );
   const stripe = sponsor.stripeSettledAmount != null
     ? Number(sponsor.stripeSettledAmount)
-    : sponsor.stripeSessionId && sponsor.paidAt
+    : hasStripePayment
       ? sponsorAmount(sponsor, tierMap)
       : 0;
   if (manual > 0 || stripe > 0) return manual + stripe;
