@@ -605,6 +605,26 @@ router.patch("/vendors/:id/review", requireStaff, async (req, res): Promise<void
   const { id } = paramsParsed.data;
   const { status, note } = bodyParsed.data;
 
+  const [vendor] = await db.select().from(vendorsTable).where(eq(vendorsTable.id, id)).limit(1);
+  if (!vendor) {
+    res.status(404).json({ error: "Vendor not found" });
+    return;
+  }
+
+  const hasRecordedPayment = Boolean(
+    vendor.manualPaymentRecordedAt
+      || vendor.stripePaidAt
+      || (vendor.stripeSessionId && vendor.paidAt),
+  );
+  if (status === "rejected" && !["pending", "approved"].includes(vendor.status)) {
+    res.status(409).json({ error: "Only pending or unpaid approved vendors can be rejected." });
+    return;
+  }
+  if (status === "rejected" && hasRecordedPayment) {
+    res.status(409).json({ error: "Paid vendors cannot be rejected. Reverse or reconcile the payment first." });
+    return;
+  }
+
   const updates: Record<string, unknown> = {
     status,
     reviewNote: note ?? null,
@@ -616,16 +636,18 @@ router.patch("/vendors/:id/review", requireStaff, async (req, res): Promise<void
     const portalToken = randomBytes(32).toString("hex");
     updates.portalToken = portalToken;
   }
+  if (status === "rejected") {
+    // Rejection of a previously approved vendor must invalidate the approval
+    // and its portal invite; otherwise the old portal link would remain usable.
+    updates.approvedAt = null;
+    updates.finalApprovedAt = null;
+    updates.portalToken = null;
+  }
 
   const [updated] = await db.update(vendorsTable)
     .set(updates)
     .where(eq(vendorsTable.id, id))
     .returning();
-
-  if (!updated) {
-    res.status(404).json({ error: "Vendor not found" });
-    return;
-  }
 
   await db.insert(activityLogTable).values({
     type: status === "approved" ? "approved" : "rejected",

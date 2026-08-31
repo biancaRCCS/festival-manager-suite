@@ -148,6 +148,7 @@ export default function VendorDetailPage() {
   const [spotNumber, setSpotNumber] = useState("")
   const [locationName, setLocationName] = useState("")
   const [isReviewOpen, setIsReviewOpen] = useState(false)
+  const [isRejectOpen, setIsRejectOpen] = useState(false)
   const [isCategoryOpen, setIsCategoryOpen] = useState(false)
   const [isSpotOpen, setIsSpotOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -206,6 +207,8 @@ export default function VendorDetailPage() {
         onSuccess: (data) => {
           toast({ title: `Vendor ${status} successfully` })
           setIsReviewOpen(false)
+          setIsRejectOpen(false)
+          setReviewNote("")
           queryClient.setQueryData(getGetVendorQueryKey(id), data)
         },
         onError: () => toast({ title: "Failed to review vendor", variant: "destructive" })
@@ -430,6 +433,10 @@ export default function VendorDetailPage() {
   const canRecordManualPayment = !isSpecialAgreement && !hasManualPayment && (
     hasStripePayment || ["approved", "payment_pending", "payment_processing"].includes(vendor.status)
   )
+  const canRejectVendor = !isSpecialAgreement
+    && vendor.status === "approved"
+    && !hasStripePayment
+    && !hasManualPayment
   const categoryLabel = isSpecialAgreement ? "Special Agreement Vendor" : (VENDOR_TYPE_LABELS[vendor.vendorType] ?? vendor.vendorType)
   const feeForCategory = (type: string) => {
     const settingKey = {
@@ -525,6 +532,47 @@ export default function VendorDetailPage() {
                   <DialogFooter className="gap-2 sm:gap-0">
                     <Button variant="destructive" onClick={() => handleReview('rejected')}>Reject</Button>
                     <Button onClick={() => handleReview('approved')}>Approve Vendor</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+            {canRejectVendor && (
+              <Dialog
+                open={isRejectOpen}
+                onOpenChange={(open) => {
+                  setIsRejectOpen(open)
+                  if (!open) setReviewNote("")
+                }}
+              >
+                <DialogTrigger asChild>
+                  <Button variant="destructive" className="bg-destructive text-destructive-foreground">
+                    <XCircle className="w-4 h-4 mr-2" /> Reject Vendor
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Reject this approved vendor?</DialogTitle>
+                    <DialogDescription>
+                      This will revoke the approval, invalidate the vendor portal invite, and mark the application as rejected. This action is only available before payment is received.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-2 py-4">
+                    <Label>Reason from RCCS (optional)</Label>
+                    <Input
+                      value={reviewNote}
+                      onChange={e => setReviewNote(e.target.value)}
+                      placeholder="Explain why this approval is being revoked"
+                    />
+                  </div>
+                  <DialogFooter className="gap-2 sm:gap-0">
+                    <Button variant="outline" onClick={() => setIsRejectOpen(false)}>Cancel</Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => handleReview("rejected")}
+                      disabled={reviewMutation.isPending}
+                    >
+                      {reviewMutation.isPending ? "Rejecting…" : "Reject Vendor"}
+                    </Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>

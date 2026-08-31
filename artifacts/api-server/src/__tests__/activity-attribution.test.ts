@@ -149,6 +149,48 @@ describe("Activity attribution", () => {
     expect(log!.performedBy).toBe(mockStaffBase.clerkUserId);
   });
 
+  it("rejects an unpaid approved vendor and invalidates its approval portal state", async () => {
+    const [created] = await db
+      .insert(vendorsTable)
+      .values({
+        yearId: testYearId,
+        name: "Previously Approved Vendor",
+        businessName: "Previously Approved Co.",
+        email: "approved@test.com",
+        phone: "555-0000",
+        status: "approved",
+        approvedAt: new Date("2097-07-01T12:00:00.000Z"),
+        portalToken: "approved-portal-token",
+        applicationData: {},
+      })
+      .returning({ id: vendorsTable.id });
+    const vendorId = created!.id;
+    createdVendorIds.push(vendorId);
+
+    const res = await request(app)
+      .patch(`/api/vendors/${vendorId}/review`)
+      .send({ status: "rejected", note: "approved in error" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe("rejected");
+
+    const [saved] = await db
+      .select({
+        status: vendorsTable.status,
+        approvedAt: vendorsTable.approvedAt,
+        finalApprovedAt: vendorsTable.finalApprovedAt,
+        portalToken: vendorsTable.portalToken,
+      })
+      .from(vendorsTable)
+      .where(eq(vendorsTable.id, vendorId));
+    expect(saved).toEqual({
+      status: "rejected",
+      approvedAt: null,
+      finalApprovedAt: null,
+      portalToken: null,
+    });
+  });
+
   it("dashboard activity endpoint includes performedBy key on every item", async () => {
     const res = await request(app)
       .get("/api/dashboard/activity")
