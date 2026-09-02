@@ -52,8 +52,15 @@ function getEmailImageUrls(): { rccsLogo: string; festivalLogo: string } {
  * Shared RCCS email shell. Individual messages provide only their existing
  * body markup; this function owns the header, body container, and footer.
  */
-function wrapEmail(bodyHtml: string): string {
+type EmailFooter = "supporter" | "organization";
+
+function wrapEmail(bodyHtml: string, footer: EmailFooter = "supporter"): string {
   const { rccsLogo, festivalLogo } = getEmailImageUrls();
+  const supporterClosing = footer === "supporter"
+    ? `Thank you for your continued support.<br>
+                     We look forward to celebrating with you on September 26.<br>
+                     Ne bucurăm să vă avem alături de noi și vă așteptăm cu drag la Festivalul Românesc!`
+    : "";
   return `
     <div style="margin: 0; padding: 0; width: 100%; background: #ffffff; color: #1a2744;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width: 100%; border-collapse: collapse; background: #ffffff;">
@@ -87,11 +94,9 @@ function wrapEmail(bodyHtml: string): string {
               <tr>
                 <td align="center" style="background: #ffffff; padding: 12px 24px 36px; text-align: center;">
                   <img src="${festivalLogo}" width="480" alt="Romanian Festival 2026" style="display: block; width: 100%; max-width: 480px; height: auto; margin: 0 auto 24px; border: 0;">
-                  <p style="font-family: Georgia, 'Times New Roman', serif; font-size: 14px; line-height: 23px; color: #1a2744; margin: 0 0 18px;">
-                    Thank you for your continued support.<br>
-                    We look forward to celebrating with you soon.<br>
-                    Vă așteptăm cu drag la următorul eveniment!
-                  </p>
+                  ${supporterClosing ? `<p style="font-family: Georgia, 'Times New Roman', serif; font-size: 14px; line-height: 23px; color: #1a2744; margin: 0 0 18px;">
+                    ${supporterClosing}
+                  </p>` : ""}
                   <p style="font-family: Arial, Helvetica, sans-serif; font-size: 13px; line-height: 21px; color: #1a2744; margin: 0;">
                     <strong>Romanian Community Center of Sacramento</strong><br>
                     <a href="https://romaniancenter.org" style="color: #1a2744; text-decoration: underline;">RomanianCenter.org</a>
@@ -111,7 +116,7 @@ function wrapEmail(bodyHtml: string): string {
 // Shared send helper — fire-and-forget, never throws.
 // On failure the error is written to activity_log so admins can see it.
 // ---------------------------------------------------------------------------
-async function send(to: string, subject: string, html: string): Promise<void> {
+async function send(to: string, subject: string, html: string, footer: EmailFooter = "supporter"): Promise<void> {
   try {
     const resend = getResendClient();
     if (!resend) {
@@ -124,7 +129,7 @@ async function send(to: string, subject: string, html: string): Promise<void> {
       to,
       ...(replyTo ? { replyTo } : {}),
       subject,
-      html: wrapEmail(html),
+      html: wrapEmail(html, footer),
     });
     if (error) throw new Error(error.message);
     logger.info({ to, subject }, "Email sent");
@@ -243,7 +248,7 @@ export async function sendTestEmail(to: string): Promise<void> {
     to,
     ...(replyTo ? { replyTo } : {}),
     subject,
-    html: wrapEmail(html),
+    html: wrapEmail(html, "organization"),
   });
   if (error) throw new Error(error.message);
   logger.info({ to, subject }, "Test email sent");
@@ -341,7 +346,7 @@ export async function sendSpecialAgreementCreatedNotification(params: {
       ${field("RCCS revenue share", `${revenueSharePercentage}% of net profit`)}
       <p><a href="${baseUrl}${adminPath}">Open this vendor record</a></p>
     </div>`;
-  await send(notificationEmail, `Special Agreement Vendor created — ${businessName}`, html);
+  await send(notificationEmail, `Special Agreement Vendor created — ${businessName}`, html, "organization");
 }
 
 export async function sendSpecialAgreementSignedNotification(params: {
@@ -360,7 +365,7 @@ export async function sendSpecialAgreementSignedNotification(params: {
       ${field("Electronic signature", escapeHtml(signedName))}
       <p><a href="${getAppBaseUrl()}${adminPath}">Review the signed agreement</a></p>
     </div>`;
-  await send(notificationEmail, `Special Agreement signed — ${businessName}`, html);
+  await send(notificationEmail, `Special Agreement signed — ${businessName}`, html, "organization");
 }
 
 // ---------------------------------------------------------------------------
@@ -604,7 +609,7 @@ export async function sendNewApplicationNotification(params: {
       ${adminLinkHtml}
     </div>`;
 
-  await send(notificationEmail, subject, html);
+  await send(notificationEmail, subject, html, "organization");
 }
 
 // ---------------------------------------------------------------------------
@@ -645,7 +650,7 @@ export async function sendSponsorDetailsSubmittedNotification(params: {
       ${adminLinkHtml}
     </div>`;
 
-  await send(notificationEmail, subject, html);
+  await send(notificationEmail, subject, html, "organization");
 }
 
 // ---------------------------------------------------------------------------
@@ -731,5 +736,5 @@ export async function sendContributionReceipt(params: {
   if (notificationEmail && notificationEmail.trim().toLowerCase() !== to.trim().toLowerCase()) {
     recipients.push(notificationEmail);
   }
-  await Promise.all(recipients.map((recipient) => send(recipient, subject, html)));
+  await Promise.all(recipients.map((recipient) => send(recipient, subject, html, "organization")));
 }

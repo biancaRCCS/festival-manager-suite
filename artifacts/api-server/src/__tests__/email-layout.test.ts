@@ -44,7 +44,17 @@ function expectSharedLayout(html: string): void {
   expect(html).toContain('src="https://festival.example.test/festival-logo-light-900.png"');
   expect(html).toContain('alt="Romanian Festival 2026"');
   expect(html).toContain("Thank you for your continued support.");
-  expect(html).toContain("Vă așteptăm cu drag la următorul eveniment!");
+  expect(html).toContain("We look forward to celebrating with you on September 26.");
+  expect(html).toContain("Ne bucurăm să vă avem alături de noi și vă așteptăm cu drag la Festivalul Românesc!");
+  expect(html).toContain('href="https://romaniancenter.org"');
+  expect(html).toContain('href="https://romanianfestival.org"');
+}
+
+function expectOrganizationOnlyFooter(html: string): void {
+  expect(html).not.toContain("Thank you for your continued support.");
+  expect(html).not.toContain("We look forward to celebrating with you on September 26.");
+  expect(html).not.toContain("Ne bucurăm să vă avem alături de noi și vă așteptăm cu drag la Festivalul Românesc!");
+  expect(html).toContain("<strong>Romanian Community Center of Sacramento</strong>");
   expect(html).toContain('href="https://romaniancenter.org"');
   expect(html).toContain('href="https://romanianfestival.org"');
 }
@@ -80,7 +90,11 @@ describe("shared email layout", () => {
     for (const [email] of resendSendSpy.mock.calls as Array<[{ subject: string; html: string }]>) {
       expect(email.subject).toBe("Thank you for supporting the Romanian Community Center of Sacramento");
       expect(email.html).toContain("Thank you for your contribution");
-      expectSharedLayout(email.html);
+      expectOrganizationOnlyFooter(email.html);
+      expect(email.html).toContain("With sincere appreciation,<br>");
+      expect(email.html).toContain("The Romanian Community Center of Sacramento Board of Directors");
+      expect(email.html).toContain("romaniancenter.org");
+      expect(email.html).toContain("info@romaniancenter.org");
     }
   });
 
@@ -91,7 +105,7 @@ describe("shared email layout", () => {
     const email = resendSendSpy.mock.calls[0][0] as { subject: string; html: string };
     expect(email.subject).toBe("Romanian Festival — Test Email");
     expect(email.html).toContain("Email is working ✓");
-    expectSharedLayout(email.html);
+    expectOrganizationOnlyFooter(email.html);
   });
 
   it("includes an approved vendor's review note under the RCCS heading", async () => {
