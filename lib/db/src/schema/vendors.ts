@@ -42,8 +42,11 @@ export const vendorsTable = pgTable("vendors", {
   manualPaymentPreviousStatus: text("manual_payment_previous_status"),
   pendingManualAdjustment: numeric("pending_manual_adjustment", { precision: 10, scale: 2 }),
   pendingAdjustmentTargetAmount: numeric("pending_adjustment_target_amount", { precision: 10, scale: 2 }),
+  discountPercent: integer("discount_percent").notNull().default(0),
+  discountReason: text("discount_reason"),
   // Incremented whenever a category recalculates a vendor's amount due. A
-  // Checkout is attached only if this remains unchanged while Stripe creates it.
+  // category or discount change. A Checkout is attached only if this remains
+  // unchanged while Stripe creates it.
   pricingRevision: integer("pricing_revision").notNull().default(0),
   // Special Agreement Vendors are created by staff, do not pay a booth fee,
   // and use a signed revenue-share agreement instead of Stripe Checkout.

@@ -32,6 +32,17 @@ export interface Vendor {
   location?: string | null;
   /** @nullable */
   reviewNote?: string | null;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  discountPercent: number;
+  /** @nullable */
+  discountReason: string | null;
+  /** @nullable */
+  originalAmount: number | null;
+  /** @nullable */
+  amountDue: number | null;
   /** @nullable */
   paidAt?: string | null;
   /** @nullable */

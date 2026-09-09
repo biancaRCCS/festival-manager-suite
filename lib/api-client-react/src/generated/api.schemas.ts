@@ -219,6 +219,17 @@ export interface Vendor {
   location?: string | null;
   /** @nullable */
   reviewNote?: string | null;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  discountPercent: number;
+  /** @nullable */
+  discountReason: string | null;
+  /** @nullable */
+  originalAmount: number | null;
+  /** @nullable */
+  amountDue: number | null;
   /** @nullable */
   paidAt?: string | null;
   /** @nullable */
@@ -510,6 +521,7 @@ export const ActivityItemType = {
   final_approved: 'final_approved',
   assigned: 'assigned',
   category_changed: 'category_changed',
+  discount_changed: 'discount_changed',
   category_adjustment_settled: 'category_adjustment_settled',
   details_updated: 'details_updated',
   special_agreement_created: 'special_agreement_created',
@@ -658,6 +670,15 @@ export interface PortalInfo {
   vendorPriceNonprofit?: number | null;
   /** @nullable */
   spacesRequested?: string | null;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  discountPercent?: number;
+  /** @nullable */
+  originalAmount?: number | null;
+  /** @nullable */
+  amountDue?: number | null;
   /** @nullable */
   sponsorshipAmount?: number | null;
   /** @nullable */
@@ -956,6 +977,19 @@ export interface VendorCategoryUpdate {
   reason: string;
 }
 
+export interface VendorDiscountUpdate {
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  discountPercent: number;
+  /**
+     * @maxLength 2000
+     * @nullable
+     */
+  discountReason?: string | null;
+}
+
 export interface VendorDetailsUpdate {
   /**
      * @minLength 1
@@ -1177,6 +1211,7 @@ export const GetRecentActivityType = {
   final_approved: 'final_approved',
   assigned: 'assigned',
   category_changed: 'category_changed',
+  discount_changed: 'discount_changed',
   category_adjustment_settled: 'category_adjustment_settled',
   details_updated: 'details_updated',
   special_agreement_created: 'special_agreement_created',

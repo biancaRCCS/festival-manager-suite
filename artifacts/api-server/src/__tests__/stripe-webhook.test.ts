@@ -34,6 +34,7 @@ const {
   vendorCategoryAdjustedEmailSpy,
   vendorWorkflowEmailSpy,
   paymentIntentRetrieveSpy,
+  authState,
 } = vi.hoisted(() => ({
   processWebhookSpy: vi.fn().mockResolvedValue(undefined),
   contributionReceiptSpy: vi.fn().mockResolvedValue(undefined),
@@ -43,6 +44,7 @@ const {
   vendorCategoryAdjustedEmailSpy: vi.fn().mockResolvedValue(undefined),
   vendorWorkflowEmailSpy: vi.fn().mockResolvedValue(undefined),
   paymentIntentRetrieveSpy: vi.fn().mockResolvedValue({ last_payment_error: null }),
+  authState: { isAdmin: true },
 }));
 
 vi.mock("../lib/stripeClient", () => {
@@ -97,10 +99,16 @@ vi.mock("../lib/email", async (importOriginal) => {
 vi.mock("../lib/auth", () => ({
   requireStaff: (req: any, _res: any, next: () => void) => {
     req.clerkUserId = "test-staff";
-    req.staffMember = { name: "Test Staff" };
+    req.staffMember = { name: "Test Staff", role: authState.isAdmin ? "admin" : "staff" };
     next();
   },
-  requireAdmin: (_req: any, _res: any, next: () => void) => next(),
+  requireAdmin: (req: any, res: any, next: () => void) => {
+    if (req.staffMember?.role !== "admin") {
+      res.status(403).json({ error: "Only admins can perform this action" });
+      return;
+    }
+    next();
+  },
 }));
 
 // Import the Express app *after* vi.mock so the mocks are in place.
@@ -184,6 +192,7 @@ afterAll(async () => {
 });
 
 beforeEach(() => {
+  authState.isAdmin = true;
   processWebhookSpy.mockClear();
   contributionReceiptSpy.mockClear();
   createCheckoutSessionSpy.mockClear();
@@ -428,6 +437,240 @@ describe("POST /api/stripe/webhook", () => {
     expect(updated?.stripeSessionId).toBeNull();
   });
 
+  it("lets an Admin discount an unpaid vendor, expires the old Checkout, and attributes the activity", async () => {
+    const vendor = await createVendor({
+      status: "payment_pending",
+      stripeSessionId: "cs_open_before_discount_change",
+    });
+    checkoutSessionRetrieveSpy.mockResolvedValue({
+      id: vendor.stripeSessionId,
+      status: "open",
+      payment_status: "unpaid",
+      amount_total: 30000,
+    });
+    checkoutSessionExpireSpy.mockResolvedValue({
+      id: vendor.stripeSessionId,
+      status: "expired",
+      payment_status: "unpaid",
+      amount_total: 30000,
+    });
+
+    const res = await request(app)
+      .patch(`/api/vendors/${vendor.id}/discount`)
+      .send({ discountPercent: 25, discountReason: "Community partner rate" });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      discountPercent: 25,
+      discountReason: "Community partner rate",
+      originalAmount: 300,
+      amountDue: 225,
+      status: "approved",
+    });
+    expect(checkoutSessionExpireSpy).toHaveBeenCalledWith(vendor.stripeSessionId);
+
+    const [updated] = await db.select().from(vendorsTable).where(eq(vendorsTable.id, vendor.id));
+    expect(updated).toMatchObject({
+      discountPercent: 25,
+      discountReason: "Community partner rate",
+      pricingRevision: 1,
+      stripeSessionId: null,
+      status: "approved",
+    });
+    const logs = await db.select().from(activityLogTable).where(eq(activityLogTable.entityId, vendor.id));
+    const discountLog = logs.find((log) => log.type === "discount_changed");
+    expect(discountLog).toMatchObject({ performedBy: "Test Staff" });
+    expect(discountLog?.message).toContain("from 0% to 25%");
+    expect(discountLog?.message).toContain("Community partner rate");
+  });
+
+  it("rejects vendor discount changes from Staff", async () => {
+    authState.isAdmin = false;
+    const vendor = await createVendor();
+
+    const res = await request(app)
+      .patch(`/api/vendors/${vendor.id}/discount`)
+      .send({ discountPercent: 10, discountReason: null });
+
+    expect(res.status).toBe(403);
+    const [unchanged] = await db.select().from(vendorsTable).where(eq(vendorsTable.id, vendor.id));
+    expect(unchanged?.discountPercent).toBe(0);
+  });
+
+  it("accepts an omitted optional discount reason", async () => {
+    const vendor = await createVendor();
+
+    const res = await request(app)
+      .patch(`/api/vendors/${vendor.id}/discount`)
+      .send({ discountPercent: 10 });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ discountPercent: 10, discountReason: null, amountDue: 270 });
+  });
+
+  it.each([
+    { status: "paid", paidAt: new Date(), expected: "payment has already been received" },
+    { status: "final_approved", paidAt: null, expected: "payment has already been received" },
+    { status: "payment_processing", paidAt: null, expected: "payment is processing" },
+  ])("rejects a discount change when vendor payment state is $status", async ({ status, paidAt, expected }) => {
+    const vendor = await createVendor({ status, paidAt });
+
+    const res = await request(app)
+      .patch(`/api/vendors/${vendor.id}/discount`)
+      .send({ discountPercent: 10, discountReason: "Too late" });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toContain(expected);
+  });
+
+  it("passes the exact discounted double-space amount to Stripe", async () => {
+    const vendor = await createVendor({
+      applicationData: { spacesRequested: "double" },
+      discountPercent: 25,
+      discountReason: "Community partner rate",
+    });
+    createCheckoutSessionSpy.mockResolvedValue({
+      id: "cs_discounted_double",
+      url: "https://checkout.example.test/discounted-double",
+    });
+
+    await createCheckoutSession({
+      token: vendor.portalToken!,
+      entity: { id: vendor.id, name: vendor.name, yearId: vendor.yearId },
+      entityType: "vendor",
+    });
+
+    expect(createCheckoutSessionSpy).toHaveBeenCalledWith(expect.objectContaining({
+      line_items: [expect.objectContaining({
+        price_data: expect.objectContaining({ unit_amount: 45000 }),
+      })],
+      metadata: expect.objectContaining({
+        discountPercent: "25",
+        originalAmountCents: "60000",
+        amountDueCents: "45000",
+      }),
+    }));
+    const [updated] = await db.select().from(vendorsTable).where(eq(vendorsTable.id, vendor.id));
+    expect(updated?.stripeSessionId).toBe("cs_discounted_double");
+  });
+
+  it("expires an open Checkout whose recorded amount no longer matches current pricing", async () => {
+    const vendor = await createVendor({
+      status: "payment_pending",
+      stripeSessionId: "cs_stale_discount_price",
+      applicationData: { spacesRequested: "double" },
+      discountPercent: 25,
+    });
+    checkoutSessionRetrieveSpy.mockResolvedValue({
+      id: vendor.stripeSessionId,
+      status: "open",
+      payment_status: "unpaid",
+      url: "https://checkout.example.test/stale",
+      currency: "usd",
+      amount_total: 60000,
+      metadata: { pricingRevision: "0", amountDueCents: "45000" },
+    });
+    checkoutSessionExpireSpy.mockResolvedValue({
+      id: vendor.stripeSessionId,
+      status: "expired",
+      payment_status: "unpaid",
+    });
+    createCheckoutSessionSpy.mockResolvedValue({
+      id: "cs_current_discount_price",
+      url: "https://checkout.example.test/current",
+    });
+
+    const checkoutUrl = await createCheckoutSession({
+      token: vendor.portalToken!,
+      entity: { id: vendor.id, name: vendor.name, yearId: vendor.yearId },
+      entityType: "vendor",
+    });
+
+    expect(checkoutUrl).toBe("https://checkout.example.test/current");
+    expect(checkoutSessionExpireSpy).toHaveBeenCalledWith("cs_stale_discount_price");
+    expect(createCheckoutSessionSpy).toHaveBeenCalledWith(expect.objectContaining({
+      line_items: [expect.objectContaining({
+        price_data: expect.objectContaining({ unit_amount: 45000 }),
+      })],
+    }));
+  });
+
+  it("keeps canonical vendor pricing in the response after agreement signing", async () => {
+    const vendor = await createVendor({
+      agreementSigned: false,
+      applicationData: { spacesRequested: "double" },
+      discountPercent: 20,
+      discountReason: "Community partner rate",
+    });
+
+    const res = await request(app)
+      .post(`/api/portal/${vendor.portalToken}/sign-agreement`)
+      .send({ signedName: "Test Vendor" });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      type: "vendor",
+      agreementSigned: true,
+      discountPercent: 20,
+      originalAmount: 600,
+      amountDue: 480,
+    });
+  });
+
+  it("fulfills a fully discounted zero-dollar Checkout without waiting for payment", async () => {
+    const vendor = await createVendor({
+      status: "payment_pending",
+      stripeSessionId: "cs_fully_discounted",
+      discountPercent: 100,
+    });
+    const event = makeEvent("checkout.session.completed", {
+      id: vendor.stripeSessionId,
+      object: "checkout.session",
+      payment_status: "no_payment_required",
+      amount_total: 0,
+      metadata: { entityType: "vendor", entityId: String(vendor.id) },
+    });
+
+    const res = await postWebhook(event);
+    expect(res.status).toBe(200);
+    const [updated] = await db.select().from(vendorsTable).where(eq(vendorsTable.id, vendor.id));
+    expect(updated).toMatchObject({ status: "paid", settledAmount: "0.00" });
+    expect(updated?.paidAt).not.toBeNull();
+  });
+
+  it("rejects a category update if a concurrent discount changes the pricing revision", async () => {
+    const vendor = await createVendor({
+      status: "payment_pending",
+      stripeSessionId: "cs_category_discount_race",
+    });
+    checkoutSessionRetrieveSpy.mockResolvedValue({
+      id: vendor.stripeSessionId,
+      status: "open",
+      payment_status: "unpaid",
+      amount_total: 30000,
+    });
+    checkoutSessionExpireSpy.mockImplementation(async () => {
+      await db.update(vendorsTable)
+        .set({ discountPercent: 25, pricingRevision: 1 })
+        .where(eq(vendorsTable.id, vendor.id));
+      return {
+        id: vendor.stripeSessionId,
+        status: "expired",
+        payment_status: "unpaid",
+        amount_total: 30000,
+      };
+    });
+
+    const res = await request(app)
+      .patch(`/api/vendors/${vendor.id}/category`)
+      .send({ vendorType: "specialty_food", reason: "Products are prepared off site." });
+
+    expect(res.status).toBe(409);
+    expect(vendorCategoryAdjustedEmailSpy).not.toHaveBeenCalled();
+    const [unchanged] = await db.select().from(vendorsTable).where(eq(vendorsTable.id, vendor.id));
+    expect(unchanged).toMatchObject({ vendorType: "retail", discountPercent: 25, pricingRevision: 1 });
+  });
+
   it("treats a Checkout paid before its webhook as paid and requires a recorded manual adjustment", async () => {
     const vendor = await createVendor({
       status: "payment_pending",
@@ -536,7 +779,7 @@ describe("POST /api/stripe/webhook", () => {
       token: vendor.portalToken!,
       entity: { id: vendor.id, name: vendor.name, yearId: vendor.yearId },
       entityType: "vendor",
-    })).rejects.toThrow("changed category or payment state");
+    })).rejects.toThrow("changed category, discount, or payment state");
 
     expect(checkoutSessionExpireSpy).toHaveBeenCalledWith("cs_pricing_race");
     const [unchanged] = await db.select().from(vendorsTable).where(eq(vendorsTable.id, vendor.id));

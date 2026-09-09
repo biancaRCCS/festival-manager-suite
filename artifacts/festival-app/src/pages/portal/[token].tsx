@@ -391,12 +391,6 @@ export default function PortalPage() {
   const isFinal = isSponsor ? portal.status === "details_approved" : portal.status === "final_approved"
 
   // ── Amount ───────────────────────────────────────────────────────────────
-  const vendorTypePrice: Record<string, number | null | undefined> = {
-    major_food:     portal.vendorPriceMajorFood,
-    specialty_food: portal.vendorPriceSpecialtyFood,
-    retail:         portal.vendorPriceRetail,
-    nonprofit:      portal.vendorPriceNonprofit,
-  }
   const sponsorTierPrice: Record<string, number | null | undefined> = {
     bronze:   portal.sponsorPriceBronze,
     silver:   portal.sponsorPriceSilver,
@@ -406,10 +400,10 @@ export default function PortalPage() {
   }
   const tierMinAmount = sponsorTierPrice[portal.tier ?? "bronze"] ?? portal.sponsorPriceBronze ?? 0
   const baseAmount    = portal.type === "vendor"
-    ? (vendorTypePrice[portal.vendorType ?? "retail"] ?? portal.vendorPriceRetail ?? 0)
+    ? (portal.originalAmount ?? 0)
     : ((portal as any).sponsorshipAmount ?? tierMinAmount)
   const isDoubleSpace = portal.type === "vendor" && (portal as any).spacesRequested === "double"
-  const amount        = isDoubleSpace ? (baseAmount as number) * 2 : baseAmount
+  const amount        = portal.type === "vendor" ? (portal.amountDue ?? 0) : baseAmount
 
   const paymentDeadline = portal.paymentDeadline
 
@@ -797,9 +791,17 @@ export default function PortalPage() {
                   <div className="flex flex-col md:flex-row items-center justify-between p-6 bg-muted/30 rounded-lg border">
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Total Amount Due</p>
-                      <p className="text-4xl font-serif text-foreground">${(amount as number).toLocaleString()}</p>
-                      {isDoubleSpace && (
-                        <p className="text-xs text-muted-foreground mt-1">Double space — 2 × ${(baseAmount as number).toLocaleString()}</p>
+                      <p className="text-4xl font-serif text-foreground">
+                        {(amount as number).toLocaleString("en-US", { style: "currency", currency: "USD" })}
+                      </p>
+                      {portal.type === "vendor" && (portal.discountPercent ?? 0) > 0 ? (
+                        <p className="text-sm text-emerald-700 mt-1">
+                          {portal.discountPercent}% discount applied, original {(portal.originalAmount ?? 0).toLocaleString("en-US", { style: "currency", currency: "USD" })}
+                        </p>
+                      ) : isDoubleSpace && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Double space — 2 × {((baseAmount as number) / 2).toLocaleString("en-US", { style: "currency", currency: "USD" })}
+                        </p>
                       )}
                       {paymentDeadline && (
                         <p className="text-xs text-muted-foreground mt-2">
@@ -817,7 +819,7 @@ export default function PortalPage() {
                       disabled={checkoutMutation.isPending}
                       className="mt-4 md:mt-0 w-full md:w-auto"
                     >
-                      {checkoutMutation.isPending ? "Redirecting..." : "Pay Securely via Stripe"}
+                      {checkoutMutation.isPending ? "Redirecting..." : amount === 0 ? "Complete Registration" : "Pay Securely via Stripe"}
                     </Button>
                   </div>
                 </CardContent>
@@ -838,7 +840,7 @@ export default function PortalPage() {
                 <p className="text-green-800">
                   {isInKindSponsor
                     ? <>Your in-kind contribution{portal.inKindDescription ? ` (${portal.inKindDescription})` : ""} has been recorded. We have received your application and agreement.</>
-                    : <>Your payment of ${(amount as number).toLocaleString()} was successful. We have received your application and agreement.</>}
+                    : <>Your payment obligation of {(amount as number).toLocaleString("en-US", { style: "currency", currency: "USD" })} was completed. We have received your application and agreement.</>}
                 </p>
               </CardContent>
             </Card>

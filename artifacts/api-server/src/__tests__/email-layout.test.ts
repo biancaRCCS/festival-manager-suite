@@ -130,7 +130,9 @@ describe("shared email layout", () => {
       to: "vendor@example.com",
       name: "Maria Ionescu",
       vendorType: "specialty_food",
-      amountDue: 1200,
+      amountDue: 900,
+      originalAmount: 1200,
+      discountPercent: 25,
       boothDimensions: "10′×20′",
       reason: "The submitted menu is a specialty food booth.",
       festivalName: "2026 Romanian Festival",
@@ -141,7 +143,7 @@ describe("shared email layout", () => {
     expect(email.subject).toBe("Vendor Category Updated — 2026 Romanian Festival");
     expect(email.html).toContain("Vendor Category Updated");
     expect(email.html).toContain("Specialty Food &amp; Beverage Vendor");
-    expect(email.html).toContain("$1,200.00");
+    expect(email.html).toContain("$900.00 — 25% discount applied, original $1,200.00");
     expect(email.html).toContain("The submitted menu is a specialty food booth.");
     expectSharedLayout(email.html);
   });

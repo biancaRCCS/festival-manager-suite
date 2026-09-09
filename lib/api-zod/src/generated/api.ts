@@ -117,6 +117,11 @@ export const GetPortalInfoParams = zod.object({
   "token": zod.coerce.string()
 })
 
+export const getPortalInfoResponseDiscountPercentMin = 0;
+export const getPortalInfoResponseDiscountPercentMax = 100;
+
+
+
 export const GetPortalInfoResponse = zod.object({
   "type": zod.enum(['vendor', 'sponsor', 'special_agreement']),
   "id": zod.number().optional(),
@@ -146,6 +151,9 @@ export const GetPortalInfoResponse = zod.object({
   "vendorPriceRetail": zod.number().nullish(),
   "vendorPriceNonprofit": zod.number().nullish(),
   "spacesRequested": zod.string().nullish(),
+  "discountPercent": zod.number().min(getPortalInfoResponseDiscountPercentMin).max(getPortalInfoResponseDiscountPercentMax).optional(),
+  "originalAmount": zod.number().nullish(),
+  "amountDue": zod.number().nullish(),
   "sponsorshipAmount": zod.number().nullish(),
   "inKindValue": zod.number().nullish(),
   "isInKind": zod.boolean(),
@@ -173,6 +181,11 @@ export const SubmitSponsorDetailsParams = zod.object({
 })
 
 export const SubmitSponsorDetailsBody = zod.record(zod.string(), zod.unknown()).describe('Stage-2 sponsorship detail fields submitted via the portal. All fields are optional; the full object is merged into applicationData.')
+
+export const submitSponsorDetailsResponseDiscountPercentMin = 0;
+export const submitSponsorDetailsResponseDiscountPercentMax = 100;
+
+
 
 export const SubmitSponsorDetailsResponse = zod.object({
   "type": zod.enum(['vendor', 'sponsor', 'special_agreement']),
@@ -203,6 +216,9 @@ export const SubmitSponsorDetailsResponse = zod.object({
   "vendorPriceRetail": zod.number().nullish(),
   "vendorPriceNonprofit": zod.number().nullish(),
   "spacesRequested": zod.string().nullish(),
+  "discountPercent": zod.number().min(submitSponsorDetailsResponseDiscountPercentMin).max(submitSponsorDetailsResponseDiscountPercentMax).optional(),
+  "originalAmount": zod.number().nullish(),
+  "amountDue": zod.number().nullish(),
   "sponsorshipAmount": zod.number().nullish(),
   "inKindValue": zod.number().nullish(),
   "isInKind": zod.boolean(),
@@ -245,6 +261,11 @@ export const SignPortalAgreementBody = zod.object({
   "signedName": zod.string()
 })
 
+export const signPortalAgreementResponseDiscountPercentMin = 0;
+export const signPortalAgreementResponseDiscountPercentMax = 100;
+
+
+
 export const SignPortalAgreementResponse = zod.object({
   "type": zod.enum(['vendor', 'sponsor', 'special_agreement']),
   "id": zod.number().optional(),
@@ -274,6 +295,9 @@ export const SignPortalAgreementResponse = zod.object({
   "vendorPriceRetail": zod.number().nullish(),
   "vendorPriceNonprofit": zod.number().nullish(),
   "spacesRequested": zod.string().nullish(),
+  "discountPercent": zod.number().min(signPortalAgreementResponseDiscountPercentMin).max(signPortalAgreementResponseDiscountPercentMax).optional(),
+  "originalAmount": zod.number().nullish(),
+  "amountDue": zod.number().nullish(),
   "sponsorshipAmount": zod.number().nullish(),
   "inKindValue": zod.number().nullish(),
   "isInKind": zod.boolean(),
@@ -325,6 +349,11 @@ export const SubmitSpecialAgreementBody = zod.object({
   "signedDate": zod.coerce.date()
 })
 
+export const submitSpecialAgreementResponseDiscountPercentMin = 0;
+export const submitSpecialAgreementResponseDiscountPercentMax = 100;
+
+
+
 export const SubmitSpecialAgreementResponse = zod.object({
   "type": zod.enum(['vendor', 'sponsor', 'special_agreement']),
   "id": zod.number().optional(),
@@ -354,6 +383,9 @@ export const SubmitSpecialAgreementResponse = zod.object({
   "vendorPriceRetail": zod.number().nullish(),
   "vendorPriceNonprofit": zod.number().nullish(),
   "spacesRequested": zod.string().nullish(),
+  "discountPercent": zod.number().min(submitSpecialAgreementResponseDiscountPercentMin).max(submitSpecialAgreementResponseDiscountPercentMax).optional(),
+  "originalAmount": zod.number().nullish(),
+  "amountDue": zod.number().nullish(),
   "sponsorshipAmount": zod.number().nullish(),
   "inKindValue": zod.number().nullish(),
   "isInKind": zod.boolean(),
@@ -572,14 +604,14 @@ export const getRecentActivityQueryLimitMax = 100;
 export const GetRecentActivityQueryParams = zod.object({
   "page": zod.coerce.number().min(1).default(getRecentActivityQueryPageDefault),
   "limit": zod.coerce.number().min(1).max(getRecentActivityQueryLimitMax).default(getRecentActivityQueryLimitDefault),
-  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'category_changed', 'category_adjustment_settled', 'details_updated', 'special_agreement_created', 'special_agreement_signed', 'special_agreement_settlement_updated', 'manual_payment_recorded', 'manual_payment_removed', 'deleted']).optional(),
+  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'category_changed', 'discount_changed', 'category_adjustment_settled', 'details_updated', 'special_agreement_created', 'special_agreement_signed', 'special_agreement_settlement_updated', 'manual_payment_recorded', 'manual_payment_removed', 'deleted']).optional(),
   "entityType": zod.enum(['vendor', 'sponsor', 'volunteer', 'contribution']).optional()
 })
 
 export const GetRecentActivityResponse = zod.object({
   "items": zod.array(zod.object({
   "id": zod.number(),
-  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'category_changed', 'category_adjustment_settled', 'details_updated', 'special_agreement_created', 'special_agreement_signed', 'manual_payment_recorded', 'manual_payment_removed', 'deleted']),
+  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'category_changed', 'discount_changed', 'category_adjustment_settled', 'details_updated', 'special_agreement_created', 'special_agreement_signed', 'manual_payment_recorded', 'manual_payment_removed', 'deleted']),
   "message": zod.string(),
   "entityType": zod.enum(['vendor', 'sponsor', 'volunteer', 'contribution']),
   "entityId": zod.number().optional(),
@@ -872,6 +904,9 @@ export const ListVendorsQueryParams = zod.object({
   "status": zod.coerce.string().optional()
 })
 
+export const listVendorsResponseDiscountPercentMin = 0;
+export const listVendorsResponseDiscountPercentMax = 100;
+
 export const listVendorsResponseSpecialAgreementSettlementVersionMin = 0;
 
 
@@ -893,6 +928,10 @@ export const ListVendorsResponseItem = zod.object({
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
+  "discountPercent": zod.number().min(listVendorsResponseDiscountPercentMin).max(listVendorsResponseDiscountPercentMax),
+  "discountReason": zod.string().nullable(),
+  "originalAmount": zod.number().nullable(),
+  "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
   "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
   "paymentMethod": zod.string().nullish(),
@@ -944,6 +983,9 @@ export const ListSpecialAgreementVendorsQueryParams = zod.object({
   "yearId": zod.coerce.number().optional()
 })
 
+export const listSpecialAgreementVendorsResponseDiscountPercentMin = 0;
+export const listSpecialAgreementVendorsResponseDiscountPercentMax = 100;
+
 export const listSpecialAgreementVendorsResponseSpecialAgreementSettlementVersionMin = 0;
 
 
@@ -965,6 +1007,10 @@ export const ListSpecialAgreementVendorsResponseItem = zod.object({
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
+  "discountPercent": zod.number().min(listSpecialAgreementVendorsResponseDiscountPercentMin).max(listSpecialAgreementVendorsResponseDiscountPercentMax),
+  "discountReason": zod.string().nullable(),
+  "originalAmount": zod.number().nullable(),
+  "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
   "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
   "paymentMethod": zod.string().nullish(),
@@ -1032,6 +1078,9 @@ export const CreateSpecialAgreementVendorBody = zod.object({
   "internalNotes": zod.string().nullish()
 })
 
+export const createSpecialAgreementVendorResponseDiscountPercentMin = 0;
+export const createSpecialAgreementVendorResponseDiscountPercentMax = 100;
+
 export const createSpecialAgreementVendorResponseSpecialAgreementSettlementVersionMin = 0;
 
 
@@ -1053,6 +1102,10 @@ export const CreateSpecialAgreementVendorResponse = zod.object({
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
+  "discountPercent": zod.number().min(createSpecialAgreementVendorResponseDiscountPercentMin).max(createSpecialAgreementVendorResponseDiscountPercentMax),
+  "discountReason": zod.string().nullable(),
+  "originalAmount": zod.number().nullable(),
+  "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
   "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
   "paymentMethod": zod.string().nullish(),
@@ -1139,6 +1192,9 @@ export const GetVendorParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const getVendorResponseDiscountPercentMin = 0;
+export const getVendorResponseDiscountPercentMax = 100;
+
 export const getVendorResponseSpecialAgreementSettlementVersionMin = 0;
 
 
@@ -1160,6 +1216,10 @@ export const GetVendorResponse = zod.object({
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
+  "discountPercent": zod.number().min(getVendorResponseDiscountPercentMin).max(getVendorResponseDiscountPercentMax),
+  "discountReason": zod.string().nullable(),
+  "originalAmount": zod.number().nullable(),
+  "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
   "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
   "paymentMethod": zod.string().nullish(),
@@ -1244,6 +1304,9 @@ export const UpdateSpecialAgreementSettlementBody = zod.object({
   "expectedSettlementVersion": zod.number().min(updateSpecialAgreementSettlementBodyExpectedSettlementVersionMin)
 })
 
+export const updateSpecialAgreementSettlementResponseDiscountPercentMin = 0;
+export const updateSpecialAgreementSettlementResponseDiscountPercentMax = 100;
+
 export const updateSpecialAgreementSettlementResponseSpecialAgreementSettlementVersionMin = 0;
 
 
@@ -1265,6 +1328,10 @@ export const UpdateSpecialAgreementSettlementResponse = zod.object({
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
+  "discountPercent": zod.number().min(updateSpecialAgreementSettlementResponseDiscountPercentMin).max(updateSpecialAgreementSettlementResponseDiscountPercentMax),
+  "discountReason": zod.string().nullable(),
+  "originalAmount": zod.number().nullable(),
+  "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
   "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
   "paymentMethod": zod.string().nullish(),
@@ -1320,6 +1387,9 @@ export const ReviewVendorBody = zod.object({
   "note": zod.string().nullish()
 })
 
+export const reviewVendorResponseDiscountPercentMin = 0;
+export const reviewVendorResponseDiscountPercentMax = 100;
+
 export const reviewVendorResponseSpecialAgreementSettlementVersionMin = 0;
 
 
@@ -1341,6 +1411,10 @@ export const ReviewVendorResponse = zod.object({
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
+  "discountPercent": zod.number().min(reviewVendorResponseDiscountPercentMin).max(reviewVendorResponseDiscountPercentMax),
+  "discountReason": zod.string().nullable(),
+  "originalAmount": zod.number().nullable(),
+  "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
   "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
   "paymentMethod": zod.string().nullish(),
@@ -1411,6 +1485,9 @@ export const RecordVendorManualPaymentBody = zod.object({
   "sendConfirmationEmail": zod.boolean().default(recordVendorManualPaymentBodySendConfirmationEmailDefault)
 })
 
+export const recordVendorManualPaymentResponseDiscountPercentMin = 0;
+export const recordVendorManualPaymentResponseDiscountPercentMax = 100;
+
 export const recordVendorManualPaymentResponseSpecialAgreementSettlementVersionMin = 0;
 
 
@@ -1432,6 +1509,10 @@ export const RecordVendorManualPaymentResponse = zod.object({
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
+  "discountPercent": zod.number().min(recordVendorManualPaymentResponseDiscountPercentMin).max(recordVendorManualPaymentResponseDiscountPercentMax),
+  "discountReason": zod.string().nullable(),
+  "originalAmount": zod.number().nullable(),
+  "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
   "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
   "paymentMethod": zod.string().nullish(),
@@ -1485,6 +1566,9 @@ export const RemoveVendorManualPaymentParams = zod.object({
   "id": zod.coerce.number().min(1)
 })
 
+export const removeVendorManualPaymentResponseDiscountPercentMin = 0;
+export const removeVendorManualPaymentResponseDiscountPercentMax = 100;
+
 export const removeVendorManualPaymentResponseSpecialAgreementSettlementVersionMin = 0;
 
 
@@ -1506,6 +1590,10 @@ export const RemoveVendorManualPaymentResponse = zod.object({
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
+  "discountPercent": zod.number().min(removeVendorManualPaymentResponseDiscountPercentMin).max(removeVendorManualPaymentResponseDiscountPercentMax),
+  "discountReason": zod.string().nullable(),
+  "originalAmount": zod.number().nullable(),
+  "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
   "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
   "paymentMethod": zod.string().nullish(),
@@ -1566,6 +1654,9 @@ export const UpdateVendorCategoryBody = zod.object({
   "reason": zod.string().min(updateVendorCategoryBodyReasonMin).max(updateVendorCategoryBodyReasonMax)
 })
 
+export const updateVendorCategoryResponseVendorDiscountPercentMin = 0;
+export const updateVendorCategoryResponseVendorDiscountPercentMax = 100;
+
 export const updateVendorCategoryResponseVendorSpecialAgreementSettlementVersionMin = 0;
 
 
@@ -1588,6 +1679,10 @@ export const UpdateVendorCategoryResponse = zod.object({
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
+  "discountPercent": zod.number().min(updateVendorCategoryResponseVendorDiscountPercentMin).max(updateVendorCategoryResponseVendorDiscountPercentMax),
+  "discountReason": zod.string().nullable(),
+  "originalAmount": zod.number().nullable(),
+  "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
   "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
   "paymentMethod": zod.string().nullish(),
@@ -1643,6 +1738,96 @@ export const UpdateVendorCategoryResponse = zod.object({
 
 
 /**
+ * @summary Set or clear an unpaid vendor discount
+ */
+export const UpdateVendorDiscountParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateVendorDiscountBodyDiscountPercentMin = 0;
+export const updateVendorDiscountBodyDiscountPercentMax = 100;
+
+export const updateVendorDiscountBodyDiscountReasonMax = 2000;
+
+
+
+export const UpdateVendorDiscountBody = zod.object({
+  "discountPercent": zod.number().min(updateVendorDiscountBodyDiscountPercentMin).max(updateVendorDiscountBodyDiscountPercentMax),
+  "discountReason": zod.string().max(updateVendorDiscountBodyDiscountReasonMax).nullish()
+})
+
+export const updateVendorDiscountResponseDiscountPercentMin = 0;
+export const updateVendorDiscountResponseDiscountPercentMax = 100;
+
+export const updateVendorDiscountResponseSpecialAgreementSettlementVersionMin = 0;
+
+
+
+export const UpdateVendorDiscountResponse = zod.object({
+  "id": zod.number(),
+  "yearId": zod.number(),
+  "name": zod.string(),
+  "businessName": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string(),
+  "vendorType": zod.string(),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'payment_pending', 'payment_processing', 'paid', 'final_approved']),
+  "statusNeedsRepair": zod.boolean().optional(),
+  "timestampImpliedStatus": zod.string().nullish(),
+  "applicationData": zod.record(zod.string(), zod.unknown()),
+  "agreementSigned": zod.boolean().optional(),
+  "agreementSignedName": zod.string().nullish(),
+  "spotNumber": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "reviewNote": zod.string().nullish(),
+  "discountPercent": zod.number().min(updateVendorDiscountResponseDiscountPercentMin).max(updateVendorDiscountResponseDiscountPercentMax),
+  "discountReason": zod.string().nullable(),
+  "originalAmount": zod.number().nullable(),
+  "amountDue": zod.number().nullable(),
+  "paidAt": zod.string().nullish(),
+  "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "hasStripePayment": zod.boolean().optional(),
+  "stripePaymentAmount": zod.number().nullish(),
+  "stripePaidAt": zod.string().nullish(),
+  "manualPaymentAmount": zod.number().nullish(),
+  "manualPaymentReceivedDate": zod.string().nullish(),
+  "manualPaymentReference": zod.string().nullish(),
+  "manualPaymentRecordedAt": zod.string().nullish(),
+  "manualPaymentRecordedBy": zod.string().nullish(),
+  "manualPaymentPreviousStatus": zod.string().nullish(),
+  "paymentFailedAt": zod.string().nullish(),
+  "paymentFailureReason": zod.string().nullish(),
+  "settledAmount": zod.number().nullish(),
+  "pendingManualAdjustment": zod.number().nullish(),
+  "pendingAdjustmentTargetAmount": zod.number().nullish(),
+  "specialAgreementOperationType": zod.string().nullish(),
+  "specialAgreementRevenueSharePercentage": zod.number().nullish(),
+  "specialAgreementInternalNotes": zod.string().nullish(),
+  "specialAgreementDayOfContactName": zod.string().nullish(),
+  "specialAgreementDayOfContactPhone": zod.string().nullish(),
+  "specialAgreementBackupContactName": zod.string().nullish(),
+  "specialAgreementBackupContactPhone": zod.string().nullish(),
+  "specialAgreementSignedDate": zod.string().nullish(),
+  "specialAgreementSignedAt": zod.string().nullish(),
+  "specialAgreementGrossSales": zod.number().nullish(),
+  "specialAgreementDeductions": zod.number().nullish(),
+  "specialAgreementDeductionsNotes": zod.string().nullish(),
+  "specialAgreementNetProfit": zod.number().nullish(),
+  "specialAgreementAmountOwed": zod.number().nullish(),
+  "specialAgreementAmountPaid": zod.number().nullish(),
+  "specialAgreementPaidDate": zod.string().nullish(),
+  "specialAgreementOutstandingBalance": zod.number().nullish(),
+  "specialAgreementSettlementStatus": zod.enum(['awaiting_figures', 'calculated', 'paid']).optional(),
+  "specialAgreementSettlementNotes": zod.string().nullish(),
+  "specialAgreementSettlementVersion": zod.number().min(updateVendorDiscountResponseSpecialAgreementSettlementVersionMin).optional(),
+  "approvedAt": zod.string().nullish(),
+  "finalApprovedAt": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
  * @summary Correct staff-editable vendor contact and business details without sending email
  */
 export const UpdateVendorDetailsParams = zod.object({
@@ -1678,6 +1863,9 @@ export const UpdateVendorDetailsBody = zod.object({
   "businessDescription": zod.string().max(updateVendorDetailsBodyBusinessDescriptionMax).nullable()
 })
 
+export const updateVendorDetailsResponseDiscountPercentMin = 0;
+export const updateVendorDetailsResponseDiscountPercentMax = 100;
+
 export const updateVendorDetailsResponseSpecialAgreementSettlementVersionMin = 0;
 
 
@@ -1699,6 +1887,10 @@ export const UpdateVendorDetailsResponse = zod.object({
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
+  "discountPercent": zod.number().min(updateVendorDetailsResponseDiscountPercentMin).max(updateVendorDetailsResponseDiscountPercentMax),
+  "discountReason": zod.string().nullable(),
+  "originalAmount": zod.number().nullable(),
+  "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
   "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
   "paymentMethod": zod.string().nullish(),
@@ -1749,6 +1941,9 @@ export const ReconcileVendorStatusFromTimestampsParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const reconcileVendorStatusFromTimestampsResponseDiscountPercentMin = 0;
+export const reconcileVendorStatusFromTimestampsResponseDiscountPercentMax = 100;
+
 export const reconcileVendorStatusFromTimestampsResponseSpecialAgreementSettlementVersionMin = 0;
 
 
@@ -1770,6 +1965,10 @@ export const ReconcileVendorStatusFromTimestampsResponse = zod.object({
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
+  "discountPercent": zod.number().min(reconcileVendorStatusFromTimestampsResponseDiscountPercentMin).max(reconcileVendorStatusFromTimestampsResponseDiscountPercentMax),
+  "discountReason": zod.string().nullable(),
+  "originalAmount": zod.number().nullable(),
+  "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
   "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
   "paymentMethod": zod.string().nullish(),
@@ -1820,6 +2019,9 @@ export const SettleVendorCategoryAdjustmentParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const settleVendorCategoryAdjustmentResponseDiscountPercentMin = 0;
+export const settleVendorCategoryAdjustmentResponseDiscountPercentMax = 100;
+
 export const settleVendorCategoryAdjustmentResponseSpecialAgreementSettlementVersionMin = 0;
 
 
@@ -1841,6 +2043,10 @@ export const SettleVendorCategoryAdjustmentResponse = zod.object({
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
+  "discountPercent": zod.number().min(settleVendorCategoryAdjustmentResponseDiscountPercentMin).max(settleVendorCategoryAdjustmentResponseDiscountPercentMax),
+  "discountReason": zod.string().nullable(),
+  "originalAmount": zod.number().nullable(),
+  "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
   "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
   "paymentMethod": zod.string().nullish(),
@@ -1891,6 +2097,9 @@ export const FinalApproveVendorParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const finalApproveVendorResponseDiscountPercentMin = 0;
+export const finalApproveVendorResponseDiscountPercentMax = 100;
+
 export const finalApproveVendorResponseSpecialAgreementSettlementVersionMin = 0;
 
 
@@ -1912,6 +2121,10 @@ export const FinalApproveVendorResponse = zod.object({
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
+  "discountPercent": zod.number().min(finalApproveVendorResponseDiscountPercentMin).max(finalApproveVendorResponseDiscountPercentMax),
+  "discountReason": zod.string().nullable(),
+  "originalAmount": zod.number().nullable(),
+  "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
   "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
   "paymentMethod": zod.string().nullish(),
@@ -1967,6 +2180,9 @@ export const AssignVendorSpotBody = zod.object({
   "location": zod.string()
 })
 
+export const assignVendorSpotResponseDiscountPercentMin = 0;
+export const assignVendorSpotResponseDiscountPercentMax = 100;
+
 export const assignVendorSpotResponseSpecialAgreementSettlementVersionMin = 0;
 
 
@@ -1988,6 +2204,10 @@ export const AssignVendorSpotResponse = zod.object({
   "spotNumber": zod.string().nullish(),
   "location": zod.string().nullish(),
   "reviewNote": zod.string().nullish(),
+  "discountPercent": zod.number().min(assignVendorSpotResponseDiscountPercentMin).max(assignVendorSpotResponseDiscountPercentMax),
+  "discountReason": zod.string().nullable(),
+  "originalAmount": zod.number().nullable(),
+  "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
   "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
   "paymentMethod": zod.string().nullish(),

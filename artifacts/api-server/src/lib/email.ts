@@ -376,13 +376,19 @@ export async function sendVendorCategoryAdjustedEmail(params: {
   name: string;
   vendorType: string;
   amountDue: number;
+  originalAmount: number;
+  discountPercent: number;
   boothDimensions: string;
   reason: string;
   festivalName: string;
 }) {
-  const { to, name, vendorType, amountDue, boothDimensions, reason, festivalName } = params;
+  const { to, name, vendorType, amountDue, originalAmount, discountPercent, boothDimensions, reason, festivalName } = params;
   const categoryLabel = VENDOR_LABELS[vendorType] ?? vendorType;
   const amountDisplay = amountDue.toLocaleString("en-US", { style: "currency", currency: "USD" });
+  const originalAmountDisplay = originalAmount.toLocaleString("en-US", { style: "currency", currency: "USD" });
+  const amountDueDisplay = discountPercent > 0
+    ? `${amountDisplay} — ${discountPercent}% discount applied, original ${originalAmountDisplay}`
+    : amountDisplay;
   const subject = `Vendor Category Updated — ${festivalName}`;
   const html = `
     <div style="${BASE_STYLE}">
@@ -392,7 +398,7 @@ export async function sendVendorCategoryAdjustedEmail(params: {
       ${DIVIDER}
       ${field("New category", escapeHtml(categoryLabel))}
       ${field("Booth dimensions", escapeHtml(boothDimensions))}
-      ${field("New amount due", amountDisplay)}
+      ${field("New amount due", amountDueDisplay)}
       ${DIVIDER}
       <h3 style="color: #1a2744; margin: 0 0 8px;">Reason for this change</h3>
       <p>${escapeHtml(reason)}</p>

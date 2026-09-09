@@ -106,6 +106,7 @@ export default function VendorsPage() {
                   <TableRow>
                     <TableHead>Business Name</TableHead>
                     <TableHead>Contact</TableHead>
+                    <TableHead>Amount Due</TableHead>
                     <TableHead>Payment</TableHead>
                     <TableHead>Applied On</TableHead>
                     <TableHead>Status</TableHead>
@@ -129,6 +130,22 @@ export default function VendorsPage() {
                       <TableCell>
                         <div className="text-sm">{vendor.email}</div>
                         <div className="text-xs text-muted-foreground">{vendor.phone}</div>
+                      </TableCell>
+                      <TableCell>
+                        {vendor.amountDue == null ? (
+                          <span className="text-sm text-muted-foreground">No booth fee</span>
+                        ) : (
+                          <div>
+                            <div className="text-sm font-medium text-foreground">
+                              {vendor.amountDue.toLocaleString("en-US", { style: "currency", currency: "USD" })}
+                            </div>
+                            {vendor.discountPercent > 0 && vendor.originalAmount != null && (
+                              <div className="text-xs text-emerald-700">
+                                {vendor.discountPercent}% discount · original {vendor.originalAmount.toLocaleString("en-US", { style: "currency", currency: "USD" })}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="text-sm text-foreground">

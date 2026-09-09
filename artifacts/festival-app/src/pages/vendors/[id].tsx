@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react"
+import { useUser } from "@clerk/react"
 import { useLocation, useParams } from "wouter"
-import { useGetVendor, useGetSettings, useReviewVendor, useUpdateVendorCategory, useSettleVendorCategoryAdjustment, useFinalApproveVendor, useAssignVendorSpot, getGetVendorQueryKey, getGetSettingsQueryKey, getGetSpecialAgreementSettlementSummaryQueryKey, useDeleteVendor, useResendVendorConfirmation, useUpdateSpecialAgreementSettlement, useUpdateVendorDetails, useRecordVendorManualPayment, useRemoveVendorManualPayment, useReconcileVendorStatusFromTimestamps } from "@workspace/api-client-react"
+import { useGetVendor, useGetSettings, useReviewVendor, useUpdateVendorCategory, useUpdateVendorDiscount, useSettleVendorCategoryAdjustment, useFinalApproveVendor, useAssignVendorSpot, getGetVendorQueryKey, getGetSettingsQueryKey, getGetSpecialAgreementSettlementSummaryQueryKey, useDeleteVendor, useResendVendorConfirmation, useUpdateSpecialAgreementSettlement, useUpdateVendorDetails, useRecordVendorManualPayment, useRemoveVendorManualPayment, useReconcileVendorStatusFromTimestamps, useListStaff } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -125,14 +126,18 @@ export default function VendorDetailPage() {
   const [, setLocation] = useLocation()
   const queryClient = useQueryClient()
   const { toast } = useToast()
+  const { user } = useUser()
 
   const { data: vendor, isLoading } = useGetVendor(id, { query: { enabled: !!id, queryKey: getGetVendorQueryKey(id) } })
+  const { data: staffMembers } = useListStaff()
+  const isAdmin = staffMembers?.some(member => member.clerkUserId === user?.id && member.role === "admin") ?? false
   const { data: settings } = useGetSettings(
     { yearId: vendor?.yearId },
     { query: { enabled: !!vendor?.yearId, queryKey: getGetSettingsQueryKey({ yearId: vendor?.yearId }) } }
   )
   const reviewMutation = useReviewVendor({ mutation: { mutationKey: ["reviewVendor", id] } })
   const categoryMutation = useUpdateVendorCategory({ mutation: { mutationKey: ["updateVendorCategory", id] } })
+  const discountMutation = useUpdateVendorDiscount({ mutation: { mutationKey: ["updateVendorDiscount", id] } })
   const settleAdjustmentMutation = useSettleVendorCategoryAdjustment({ mutation: { mutationKey: ["settleVendorCategoryAdjustment", id] } })
   const finalApproveMutation = useFinalApproveVendor({ mutation: { mutationKey: ["finalApproveVendor", id] } })
   const assignSpotMutation = useAssignVendorSpot({ mutation: { mutationKey: ["assignSpotVendor", id] } })
@@ -150,6 +155,7 @@ export default function VendorDetailPage() {
   const [isReviewOpen, setIsReviewOpen] = useState(false)
   const [isRejectOpen, setIsRejectOpen] = useState(false)
   const [isCategoryOpen, setIsCategoryOpen] = useState(false)
+  const [isDiscountOpen, setIsDiscountOpen] = useState(false)
   const [isSpotOpen, setIsSpotOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
@@ -157,6 +163,8 @@ export default function VendorDetailPage() {
   const [isRemovePaymentOpen, setIsRemovePaymentOpen] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState("")
   const [categoryReason, setCategoryReason] = useState("")
+  const [discountPercent, setDiscountPercent] = useState("0")
+  const [discountReason, setDiscountReason] = useState("")
   const [settlementVendorId, setSettlementVendorId] = useState<number | null>(null)
   const [settlementForm, setSettlementForm] = useState({
     grossSales: "",
@@ -266,6 +274,50 @@ export default function VendorDetailPage() {
         },
         onError: () => toast({ title: "Failed to update vendor category", variant: "destructive" })
       }
+    )
+  }
+
+  const openDiscountDialog = (open: boolean) => {
+    setIsDiscountOpen(open)
+    if (open && vendor) {
+      setDiscountPercent(String(vendor.discountPercent))
+      setDiscountReason(vendor.discountReason ?? "")
+    }
+  }
+
+  const handleDiscountChange = () => {
+    const parsedPercent = Number(discountPercent)
+    if (!Number.isInteger(parsedPercent) || parsedPercent < 0 || parsedPercent > 100) {
+      toast({ title: "Enter a whole-number discount from 0 to 100", variant: "destructive" })
+      return
+    }
+    discountMutation.mutate(
+      {
+        id,
+        data: {
+          discountPercent: parsedPercent,
+          discountReason: discountReason.trim() || null,
+        },
+      },
+      {
+        onSuccess: (updated) => {
+          queryClient.setQueryData(getGetVendorQueryKey(id), updated)
+          queryClient.invalidateQueries({ queryKey: ["vendors"] })
+          queryClient.invalidateQueries({ queryKey: ["paginatedActivity"] })
+          setIsDiscountOpen(false)
+          toast({ title: parsedPercent > 0 ? "Vendor discount updated" : "Vendor discount removed" })
+        },
+        onError: (error) => {
+          const responseMessage = typeof error === "object" && error && "error" in error
+            ? String((error as { error: unknown }).error)
+            : error instanceof Error ? error.message : null
+          toast({
+            title: "Discount was not changed",
+            description: responseMessage ?? "Payment may already have been received or may be processing. Refresh and try again.",
+            variant: "destructive",
+          })
+        },
+      },
     )
   }
 
@@ -452,15 +504,16 @@ export default function VendorDetailPage() {
   const spaceSizes = SPACE_SIZES[vendor.vendorType]
   const spaces = str("spacesRequested")
   const isDoubleSpace = spaces === "double"
-  const currentAmount = isDoubleSpace ? fee * 2 : fee
+  const currentAmount = vendor.amountDue ?? 0
   const selectedFee = feeForCategory(selectedCategory)
-  const selectedAmount = isDoubleSpace ? selectedFee * 2 : selectedFee
+  const selectedOriginalAmountCents = Math.round(selectedFee * 100) * (isDoubleSpace ? 2 : 1)
+  const selectedAmount = Math.round(selectedOriginalAmountCents * (100 - vendor.discountPercent) / 100) / 100
   const selectedSpaceDimensions = selectedCategory
     ? SPACE_SIZES[selectedCategory]?.[isDoubleSpace ? "double" : "single"]
     : null
   const spaceDim = spaces === "double" ? spaceSizes?.double : spaceSizes?.single
   const spaceLabel = spaces
-    ? `${spaces === "double" ? "Double" : "Single"} — ${spaceDim} · $${currentAmount.toLocaleString()}`
+    ? `${spaces === "double" ? "Double" : "Single"} — ${spaceDim} · ${formatCurrency(currentAmount)}`
     : null
 
   const cookingEquipment = Array.isArray(ad.cookingEquipment)
@@ -645,6 +698,64 @@ export default function VendorDetailPage() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>}
+
+            {isAdmin && !isSpecialAgreement && (
+              <Dialog open={isDiscountOpen} onOpenChange={openDiscountDialog}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+                    disabled={Boolean(vendor.paidAt || vendor.stripePaidAt || vendor.manualPaymentRecordedAt || vendor.status === "payment_processing")}
+                    title={vendor.paidAt || vendor.stripePaidAt || vendor.manualPaymentRecordedAt
+                      ? "Discounts cannot be changed after payment is received."
+                      : vendor.status === "payment_processing"
+                        ? "Discounts cannot be changed while payment is processing."
+                        : undefined}
+                  >
+                    <DollarSign className="w-4 h-4 mr-2" />
+                    {vendor.discountPercent > 0 ? "Edit Discount" : "Add Discount"}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Vendor discount</DialogTitle>
+                    <DialogDescription>
+                      Apply a percentage after the category fee and space multiplier. Saving invalidates any open Stripe Checkout so the vendor can only pay the new amount.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="discount-percent">Discount percentage</Label>
+                      <Input
+                        id="discount-percent"
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={1}
+                        value={discountPercent}
+                        onChange={(event) => setDiscountPercent(event.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="discount-reason">Reason (optional)</Label>
+                      <Textarea
+                        id="discount-reason"
+                        value={discountReason}
+                        onChange={(event) => setDiscountReason(event.target.value)}
+                        placeholder="Why is RCCS applying this discount?"
+                        rows={4}
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsDiscountOpen(false)}>Cancel</Button>
+                    <Button onClick={handleDiscountChange} disabled={discountMutation.isPending}>
+                      {discountMutation.isPending ? "Saving…" : "Save Discount"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
 
             {!isSpecialAgreement && vendor.pendingManualAdjustment != null && (
               <Button
@@ -1062,10 +1173,17 @@ export default function VendorDetailPage() {
                   <span className="text-sm font-medium">Amount Due</span>
                   <div className="text-right">
                     <span className="text-sm font-semibold text-foreground">
-                      ${currentAmount.toLocaleString()}
+                      {formatCurrency(currentAmount)}
                     </span>
-                    {isDoubleSpace && (
-                      <p className="text-xs text-muted-foreground">2 × ${fee.toLocaleString()}</p>
+                    {vendor.discountPercent > 0 && vendor.originalAmount != null ? (
+                      <p className="text-xs text-emerald-700">
+                        {vendor.discountPercent}% discount applied, original {formatCurrency(vendor.originalAmount)}
+                      </p>
+                    ) : isDoubleSpace && (
+                      <p className="text-xs text-muted-foreground">2 × {formatCurrency(fee)}</p>
+                    )}
+                    {vendor.discountPercent > 0 && vendor.discountReason && (
+                      <p className="mt-1 max-w-56 text-xs text-muted-foreground">Reason: {vendor.discountReason}</p>
                     )}
                   </div>
                 </div>

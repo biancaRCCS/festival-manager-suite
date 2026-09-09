@@ -383,7 +383,7 @@ paths:
           name: type
           schema:
             type: string
-            enum: [new_application, approved, rejected, paid, final_approved, assigned, category_changed, category_adjustment_settled, details_updated, special_agreement_created, special_agreement_signed, special_agreement_settlement_updated, manual_payment_recorded, manual_payment_removed, deleted]
+            enum: [new_application, approved, rejected, paid, final_approved, assigned, category_changed, discount_changed, category_adjustment_settled, details_updated, special_agreement_created, special_agreement_signed, special_agreement_settlement_updated, manual_payment_recorded, manual_payment_removed, deleted]
         - in: query
           name: entityType
           schema:
@@ -760,6 +760,41 @@ paths:
           description: Invalid update
         "404":
           description: Not found
+
+  /vendors/{id}/discount:
+    patch:
+      operationId: updateVendorDiscount
+      tags: [vendors]
+      summary: Set or clear an unpaid vendor discount
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VendorDiscountUpdate"
+      responses:
+        "200":
+          description: Updated vendor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vendor"
+        "400":
+          description: Invalid discount
+        "403":
+          description: Admin access required
+        "404":
+          description: Not found
+        "409":
+          description: Discount cannot be changed after payment or while payment is processing
 
   /vendors/{id}/details:
     patch:
@@ -1753,7 +1788,7 @@ components:
 
     Vendor:
       type: object
-      required: [id, yearId, name, businessName, email, phone, vendorType, status, applicationData, createdAt]
+      required: [id, yearId, name, businessName, email, phone, vendorType, status, applicationData, discountPercent, discountReason, originalAmount, amountDue, createdAt]
       properties:
         id:
           type: integer
@@ -1789,6 +1824,16 @@ components:
           type: ["string", "null"]
         reviewNote:
           type: ["string", "null"]
+        discountPercent:
+          type: integer
+          minimum: 0
+          maximum: 100
+        discountReason:
+          type: ["string", "null"]
+        originalAmount:
+          type: ["number", "null"]
+        amountDue:
+          type: ["number", "null"]
         paidAt:
           type: ["string", "null"]
         paymentSource:
@@ -2107,7 +2152,7 @@ components:
           type: integer
         type:
           type: string
-          enum: [new_application, approved, rejected, paid, final_approved, assigned, category_changed, category_adjustment_settled, details_updated, special_agreement_created, special_agreement_signed, manual_payment_recorded, manual_payment_removed, deleted]
+          enum: [new_application, approved, rejected, paid, final_approved, assigned, category_changed, discount_changed, category_adjustment_settled, details_updated, special_agreement_created, special_agreement_signed, manual_payment_recorded, manual_payment_removed, deleted]
         message:
           type: string
         entityType:
@@ -2280,6 +2325,14 @@ components:
           type: ["number", "null"]
         spacesRequested:
           type: ["string", "null"]
+        discountPercent:
+          type: integer
+          minimum: 0
+          maximum: 100
+        originalAmount:
+          type: ["number", "null"]
+        amountDue:
+          type: ["number", "null"]
         sponsorshipAmount:
           type: ["number", "null"]
         inKindValue:
@@ -2603,6 +2656,19 @@ components:
         reason:
           type: string
           minLength: 3
+          maxLength: 2000
+
+    VendorDiscountUpdate:
+      type: object
+      additionalProperties: false
+      required: [discountPercent]
+      properties:
+        discountPercent:
+          type: integer
+          minimum: 0
+          maximum: 100
+        discountReason:
+          type: ["string", "null"]
           maxLength: 2000
 
     VendorDetailsUpdate:

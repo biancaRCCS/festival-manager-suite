@@ -2,7 +2,7 @@
 - [DB schema rebuild after new tables](db-schema-rebuild.md) — after adding new schema files to lib/db, must run pnpm run typecheck:libs (tsc --build) before api-server typecheck succeeds.
 - [Vendor category + sponsor tier model](category-tier-model.md) — 4 vendor categories (major_food/specialty_food/retail/nonprofit) replaced the old 5; sponsor tiers now have min+max price ranges; see this file for key names and amounts.
 - [Durable code execution limits](durable-code-execution-limits.md) — use fixed, cleaned-up test fixtures when durable sandbox runtime IDs are unavailable.
-- [Vendor payment reconciliation](vendor-payment-reconciliation.md) — category changes must invalidate stale Checkout state and preserve an explicit settled baseline.
+- [Vendor payment reconciliation](vendor-payment-reconciliation.md) — all vendor price changes must use cents, invalidate stale Checkout state, and preserve the settled baseline.
 - [OpenAPI format codegen](openapi-url-format-codegen.md) — avoid `format: uri` and `format: email` until generated Zod helpers match the installed runtime.
 - [Dashboard decorative layers](dashboard-decorative-layers.md) — keep visual overlays out of normal layout flow or they can displace and clip card content.
 - [Deployment startup readiness](deployment-startup-readiness.md) — bind the API listener before non-fatal external-service setup so rollout health probes do not see avoidable downtime.

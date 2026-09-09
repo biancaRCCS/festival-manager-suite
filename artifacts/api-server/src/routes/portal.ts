@@ -4,12 +4,58 @@ import { and, eq, ne } from "drizzle-orm";
 import { SignPortalAgreementBody, SubmitSpecialAgreementBody, SubmitSponsorDetailsBody } from "@workspace/api-zod";
 import { logger } from "../lib/logger";
 import { sendSponsorDetailsSubmittedNotification, sendSpecialAgreementSignedNotification } from "../lib/email";
+import { calculateVendorPricing, isVendorCategory } from "../lib/vendorPricing";
 
 const router: IRouter = Router();
 
 // ---------------------------------------------------------------------------
 // Shared helper — build the PortalInfo JSON for a sponsor row
 // ---------------------------------------------------------------------------
+function buildVendorPortalInfo(
+  vendor: typeof vendorsTable.$inferSelect,
+  year: { eventName: string; eventDate: string } | undefined,
+  settings: typeof festivalSettingsTable.$inferSelect | undefined,
+) {
+  const appData = (vendor.applicationData ?? {}) as Record<string, unknown>;
+  const spacesRequested = typeof appData.spacesRequested === "string" ? appData.spacesRequested : null;
+  const pricing = isVendorCategory(vendor.vendorType)
+    ? calculateVendorPricing(vendor.vendorType, vendor.applicationData, settings, vendor.discountPercent)
+    : null;
+  return {
+    type: "vendor" as const,
+    id: vendor.id,
+    name: vendor.name,
+    businessName: vendor.businessName,
+    orgName: null,
+    status: vendor.status,
+    agreementSigned: vendor.agreementSigned,
+    spotNumber: vendor.spotNumber ?? null,
+    location: vendor.location ?? null,
+    festivalYear: year?.eventName ?? "",
+    eventDate: settings?.festivalDate ?? year?.eventDate ?? "",
+    tier: null,
+    isInKind: false,
+    inKindDescription: null,
+    vendorType: vendor.vendorType,
+    spacesRequested,
+    discountPercent: vendor.discountPercent,
+    originalAmount: pricing?.originalAmount ?? null,
+    amountDue: pricing?.amountDue ?? null,
+    boothOrNameOnly: null,
+    inKindValue: null,
+    paymentDeadline: settings?.documentDeadline ?? null,
+    vendorPriceMajorFood: settings ? parseFloat(settings.vendorPriceMajorFood) : null,
+    vendorPriceSpecialtyFood: settings ? parseFloat(settings.vendorPriceSpecialtyFood) : null,
+    vendorPriceRetail: settings ? parseFloat(settings.vendorPriceRetail) : null,
+    vendorPriceNonprofit: settings ? parseFloat(settings.vendorPriceNonprofit) : null,
+    sponsorPriceBronze: null,
+    sponsorPriceSilver: null,
+    sponsorPriceGold: null,
+    sponsorPricePlatinum: null,
+    sponsorPriceDiamond: null,
+  };
+}
+
 function buildSponsorPortalInfo(
   sponsor: typeof sponsorsTable.$inferSelect,
   year: { eventName: string; eventDate: string } | undefined,
@@ -101,38 +147,7 @@ router.get("/portal/:token", async (req, res): Promise<void> => {
       res.json(buildSpecialAgreementPortalInfo(vendor, years[0], settingsRows[0]));
       return;
     }
-    const appData = (vendor.applicationData ?? {}) as Record<string, unknown>;
-    const spacesRequested = typeof appData.spacesRequested === "string" ? appData.spacesRequested : null;
-    res.json({
-      type: "vendor",
-      id: vendor.id,
-      name: vendor.name,
-      businessName: vendor.businessName,
-      orgName: null,
-      status: vendor.status,
-      agreementSigned: vendor.agreementSigned,
-      spotNumber: vendor.spotNumber ?? null,
-      location: vendor.location ?? null,
-      festivalYear: years[0]?.eventName ?? "",
-      eventDate: settingsRows[0]?.festivalDate ?? years[0]?.eventDate ?? "",
-      tier: null,
-      isInKind: false,
-      inKindDescription: null,
-      vendorType: vendor.vendorType,
-      spacesRequested,
-      boothOrNameOnly: null,
-      inKindValue: null,
-      paymentDeadline: settingsRows[0]?.documentDeadline ?? null,
-      vendorPriceMajorFood:    settingsRows[0] ? parseFloat(settingsRows[0].vendorPriceMajorFood)    : null,
-      vendorPriceSpecialtyFood: settingsRows[0] ? parseFloat(settingsRows[0].vendorPriceSpecialtyFood) : null,
-      vendorPriceRetail:       settingsRows[0] ? parseFloat(settingsRows[0].vendorPriceRetail)       : null,
-      vendorPriceNonprofit:    settingsRows[0] ? parseFloat(settingsRows[0].vendorPriceNonprofit)    : null,
-      sponsorPriceBronze: null,
-      sponsorPriceSilver: null,
-      sponsorPriceGold: null,
-      sponsorPricePlatinum: null,
-      sponsorPriceDiamond: null,
-    });
+    res.json(buildVendorPortalInfo(vendor, years[0], settingsRows[0]));
     return;
   }
 
@@ -317,38 +332,7 @@ router.post("/portal/:token/sign-agreement", async (req, res): Promise<void> => 
     const updated = updatedVendors[0];
     const years = await db.select().from(festivalYearsTable).where(eq(festivalYearsTable.id, updated.yearId)).limit(1);
     const settingsRows = await db.select().from(festivalSettingsTable).where(eq(festivalSettingsTable.yearId, updated.yearId)).limit(1);
-    const updatedAppData = (updated.applicationData ?? {}) as Record<string, unknown>;
-    const updatedSpacesRequested = typeof updatedAppData.spacesRequested === "string" ? updatedAppData.spacesRequested : null;
-    res.json({
-      type: "vendor",
-      id: updated.id,
-      name: updated.name,
-      businessName: updated.businessName,
-      orgName: null,
-      status: updated.status,
-      agreementSigned: updated.agreementSigned,
-      spotNumber: updated.spotNumber ?? null,
-      location: updated.location ?? null,
-      festivalYear: years[0]?.eventName ?? "",
-      eventDate: settingsRows[0]?.festivalDate ?? years[0]?.eventDate ?? "",
-      tier: null,
-      isInKind: false,
-      inKindDescription: null,
-      vendorType: updated.vendorType,
-      spacesRequested: updatedSpacesRequested,
-      boothOrNameOnly: null,
-      inKindValue: null,
-      paymentDeadline: settingsRows[0]?.documentDeadline ?? null,
-      vendorPriceMajorFood:    settingsRows[0] ? parseFloat(settingsRows[0].vendorPriceMajorFood)    : null,
-      vendorPriceSpecialtyFood: settingsRows[0] ? parseFloat(settingsRows[0].vendorPriceSpecialtyFood) : null,
-      vendorPriceRetail:       settingsRows[0] ? parseFloat(settingsRows[0].vendorPriceRetail)       : null,
-      vendorPriceNonprofit:    settingsRows[0] ? parseFloat(settingsRows[0].vendorPriceNonprofit)    : null,
-      sponsorPriceBronze: null,
-      sponsorPriceSilver: null,
-      sponsorPriceGold: null,
-      sponsorPricePlatinum: null,
-      sponsorPriceDiamond: null,
-    });
+    res.json(buildVendorPortalInfo(updated, years[0], settingsRows[0]));
     return;
   }
 

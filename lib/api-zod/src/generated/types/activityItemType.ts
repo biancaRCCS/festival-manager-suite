@@ -17,6 +17,7 @@ export const ActivityItemType = {
   final_approved: 'final_approved',
   assigned: 'assigned',
   category_changed: 'category_changed',
+  discount_changed: 'discount_changed',
   category_adjustment_settled: 'category_adjustment_settled',
   details_updated: 'details_updated',
   special_agreement_created: 'special_agreement_created',

@@ -4,6 +4,7 @@ import { eq, and, isNull } from "drizzle-orm";
 import { getUncachableStripeClient } from "../lib/stripeClient";
 import { sendContributionReceipt, sendSponsorPaymentReceiptEmail, sendNewApplicationNotification, TIER_LABELS } from "../lib/email";
 import { logger } from "../lib/logger";
+import { calculateVendorPricing, isVendorCategory } from "../lib/vendorPricing";
 
 /**
  * Creates a Stripe Checkout session for vendor portal payment.
@@ -47,57 +48,93 @@ export async function createCheckoutSession(params: {
       status: vendorsTable.status,
       stripeSessionId: vendorsTable.stripeSessionId,
       pricingRevision: vendorsTable.pricingRevision,
+      discountPercent: vendorsTable.discountPercent,
     })
     .from(vendorsTable)
     .where(eq(vendorsTable.id, entity.id))
     .limit(1);
-  if (vendorRow?.status === "payment_pending" && vendorRow.stripeSessionId) {
-    const existingSession = await stripe.checkout.sessions.retrieve(vendorRow.stripeSessionId);
-    if (existingSession.status === "open" && existingSession.url) {
-      return existingSession.url;
-    }
-  }
-  if (!vendorRow || vendorRow.status !== "approved") {
+  if (!vendorRow || !["approved", "payment_pending"].includes(vendorRow.status)) {
     throw new Error(
-      `[stripe] Cannot create checkout for vendor ${entity.id}: status is '${vendorRow?.status ?? "missing"}', expected 'approved'`,
+      `[stripe] Cannot create checkout for vendor ${entity.id}: status is '${vendorRow?.status ?? "missing"}', expected 'approved' or 'payment_pending'`,
     );
   }
   const vendorType = vendorRow.vendorType;
-  const vendorPricingRevision = vendorRow.pricingRevision;
-  const vendorPriceMap: Record<string, string> = {
-    major_food:    settingsRow?.vendorPriceMajorFood    ?? "2000",
-    specialty_food: settingsRow?.vendorPriceSpecialtyFood ?? "600",
-    retail:        settingsRow?.vendorPriceRetail        ?? "300",
-    nonprofit:     settingsRow?.vendorPriceNonprofit     ?? "150",
-  };
-  const basePrice = parseFloat(vendorPriceMap[vendorType] ?? "300");
-
-  // Read spacesRequested from applicationData; treat missing/unknown as single
-  const appData = (vendorRow?.applicationData ?? {}) as Record<string, unknown>;
-  const spacesRequested = typeof appData.spacesRequested === "string" ? appData.spacesRequested : null;
-  if (spacesRequested === null) {
-    console.warn(`[stripe] spacesRequested missing for vendor ${entity.id} — treating as single`);
+  if (!isVendorCategory(vendorType)) {
+    throw new Error(`[stripe] Cannot create checkout for vendor ${entity.id}: unsupported category '${vendorType}'`);
   }
-  const isDouble = spacesRequested === "double";
-  const multiplier = isDouble ? 2 : 1;
-  const price = basePrice * multiplier;
+  const vendorPricingRevision = vendorRow.pricingRevision;
+  const pricing = calculateVendorPricing(
+    vendorType,
+    vendorRow.applicationData,
+    settingsRow,
+    vendorRow.discountPercent,
+  );
+
+  if (vendorRow.status === "payment_pending") {
+    if (!vendorRow.stripeSessionId) {
+      throw new Error(`[stripe] Cannot resume checkout for vendor ${entity.id}: no Checkout session is attached`);
+    }
+    let existingSession = await stripe.checkout.sessions.retrieve(vendorRow.stripeSessionId);
+    if (existingSession.payment_status === "paid" || existingSession.payment_status === "no_payment_required") {
+      throw new Error(`[stripe] Cannot create checkout for vendor ${entity.id}: payment is already complete`);
+    }
+    const sessionMatchesPricing =
+      existingSession.metadata?.pricingRevision === String(vendorPricingRevision)
+      && existingSession.metadata?.amountDueCents === String(pricing.amountDueCents)
+      && existingSession.currency === "usd"
+      && existingSession.amount_total === pricing.amountDueCents;
+    if (existingSession.status === "open" && existingSession.url && sessionMatchesPricing) {
+      return existingSession.url;
+    }
+    if (existingSession.status === "open") {
+      try {
+        existingSession = await stripe.checkout.sessions.expire(vendorRow.stripeSessionId);
+      } catch {
+        existingSession = await stripe.checkout.sessions.retrieve(vendorRow.stripeSessionId);
+      }
+    }
+    if (existingSession.payment_status === "paid" || existingSession.payment_status === "no_payment_required") {
+      throw new Error(`[stripe] Cannot create checkout for vendor ${entity.id}: payment completed while pricing was refreshed`);
+    }
+    if (existingSession.status !== "expired") {
+      throw new Error(`[stripe] Cannot create checkout for vendor ${entity.id}: payment is processing`);
+    }
+    const [resetVendor] = await db.update(vendorsTable)
+      .set({ stripeSessionId: null, status: "approved" })
+      .where(and(
+        eq(vendorsTable.id, entity.id),
+        eq(vendorsTable.status, "payment_pending"),
+        eq(vendorsTable.stripeSessionId, vendorRow.stripeSessionId),
+        eq(vendorsTable.pricingRevision, vendorPricingRevision),
+      ))
+      .returning({ id: vendorsTable.id });
+    if (!resetVendor) {
+      throw new Error(`[stripe] Vendor ${entity.id} changed while its Checkout pricing was refreshed`);
+    }
+  }
+  if ((vendorRow.applicationData as Record<string, unknown> | null)?.spacesRequested == null) {
+    logger.warn({ vendorId: entity.id }, "spacesRequested missing for vendor; treating as single");
+  }
 
   const typeLabel = vendorTypeLabels[vendorType] ?? vendorType;
-  const lineItemDescription = isDouble
-    ? `${typeLabel} — double space (2 × $${basePrice.toLocaleString()})`
-    : `${typeLabel} — single space · $${basePrice.toLocaleString()}`;
+  const originalDescription = pricing.isDoubleSpace
+    ? `${typeLabel} — double space (2 × $${pricing.unitAmount.toFixed(2)})`
+    : `${typeLabel} — single space · $${pricing.unitAmount.toFixed(2)}`;
+  const lineItemDescription = pricing.discountPercent > 0
+    ? `${originalDescription} — ${pricing.discountPercent}% discount, $${pricing.amountDue.toFixed(2)} due`
+    : originalDescription;
 
   const domain = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost";
   const successUrl = `https://${domain}/portal/${token}/success`;
   const cancelUrl  = `https://${domain}/portal/${token}`;
 
   const session = await stripe.checkout.sessions.create({
-    payment_method_types: ["card"],
+    ...(pricing.amountDueCents > 0 ? { payment_method_types: ["card"] as const } : {}),
     line_items: [
       {
         price_data: {
           currency: "usd",
-          unit_amount: Math.round(price * 100),
+          unit_amount: pricing.amountDueCents,
           product_data: {
             name: lineItemDescription,
             description: `${entity.name} — ${year?.eventName ?? "Romanian Festival"}`,
@@ -114,6 +151,9 @@ export async function createCheckoutSession(params: {
       entityType: "vendor",
       entityId: entity.id.toString(),
       pricingRevision: String(vendorPricingRevision),
+      discountPercent: String(pricing.discountPercent),
+      originalAmountCents: String(pricing.originalAmountCents),
+      amountDueCents: String(pricing.amountDueCents),
     },
   });
 
@@ -132,7 +172,7 @@ export async function createCheckoutSession(params: {
   if (!attachedVendor) {
     await stripe.checkout.sessions.expire(session.id);
     throw new Error(
-      `[stripe] Vendor ${entity.id} changed category or payment state before Checkout could be attached; expired stale Checkout.`,
+      `[stripe] Vendor ${entity.id} changed category, discount, or payment state before Checkout could be attached; expired stale Checkout.`,
     );
   }
 
@@ -425,7 +465,7 @@ export async function handleCheckoutComplete(
       return;
     }
 
-    if (session.payment_status !== "paid") {
+    if (session.payment_status !== "paid" && session.payment_status !== "no_payment_required") {
       // Async payment method still settling. Only transition out of the
       // pre-payment status so this stays idempotent against webhook retries.
       const [updated] = await db

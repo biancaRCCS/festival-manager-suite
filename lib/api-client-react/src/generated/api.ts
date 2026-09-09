@@ -68,6 +68,7 @@ import type {
   VendorCategoryUpdate,
   VendorCategoryUpdateResult,
   VendorDetailsUpdate,
+  VendorDiscountUpdate,
   Volunteer,
   VolunteerApplicationInput,
   VolunteerDetailsUpdate,
@@ -2577,6 +2578,78 @@ export const useUpdateVendorCategory = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getUpdateVendorCategoryMutationOptions(options));
+    }
+
+export const getUpdateVendorDiscountUrl = (id: number,) => {
+
+
+
+
+  return `/api/vendors/${id}/discount`
+}
+
+/**
+ * @summary Set or clear an unpaid vendor discount
+ */
+export const updateVendorDiscount = async (id: number,
+    vendorDiscountUpdate: VendorDiscountUpdate, options?: RequestInit): Promise<Vendor> => {
+
+  return customFetch<Vendor>(getUpdateVendorDiscountUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(vendorDiscountUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateVendorDiscountMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateVendorDiscount>>, TError,{id: number;data: BodyType<VendorDiscountUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateVendorDiscount>>, TError,{id: number;data: BodyType<VendorDiscountUpdate>}, TContext> => {
+
+const mutationKey = ['updateVendorDiscount'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateVendorDiscount>>, {id: number;data: BodyType<VendorDiscountUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateVendorDiscount(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateVendorDiscountMutationResult = NonNullable<Awaited<ReturnType<typeof updateVendorDiscount>>>
+    export type UpdateVendorDiscountMutationBody = BodyType<VendorDiscountUpdate>
+    export type UpdateVendorDiscountMutationError = ErrorType<void>
+
+    /**
+ * @summary Set or clear an unpaid vendor discount
+ */
+export const useUpdateVendorDiscount = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateVendorDiscount>>, TError,{id: number;data: BodyType<VendorDiscountUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateVendorDiscount>>,
+        TError,
+        {id: number;data: BodyType<VendorDiscountUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateVendorDiscountMutationOptions(options));
     }
 
 export const getUpdateVendorDetailsUrl = (id: number,) => {

@@ -84,6 +84,7 @@ export * from './vendorCategoryUpdateResultPaymentAdjustment';
 export * from './vendorCategoryUpdateResultPaymentAdjustmentDirection';
 export * from './vendorCategoryUpdateVendorType';
 export * from './vendorDetailsUpdate';
+export * from './vendorDiscountUpdate';
 export * from './vendorPaymentSource';
 export * from './vendorSpecialAgreementSettlementStatus';
 export * from './vendorStatus';

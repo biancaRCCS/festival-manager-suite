@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, vendorsTable, festivalYearsTable, festivalSettingsTable, activityLogTable } from "@workspace/db";
 import { eq, and, desc, sql, isNull, isNotNull } from "drizzle-orm";
-import { requireStaff } from "../lib/auth";
+import { requireAdmin, requireStaff } from "../lib/auth";
 import {
   GetVendorParams,
   ListVendorsQueryParams,
@@ -25,6 +25,8 @@ import {
   RecordVendorManualPaymentParams,
   RecordVendorManualPaymentBody,
   RemoveVendorManualPaymentParams,
+  UpdateVendorDiscountParams,
+  UpdateVendorDiscountBody,
 } from "@workspace/api-zod";
 import { randomBytes } from "crypto";
 import {
@@ -38,6 +40,7 @@ import {
 } from "../lib/email";
 import { getUncachableStripeClient } from "../lib/stripeClient";
 import { deriveSpecialAgreementSettlement } from "../lib/specialAgreementSettlement";
+import { calculateVendorPricing, isVendorCategory } from "../lib/vendorPricing";
 import {
   addDetailChange,
   applicationText,
@@ -77,10 +80,19 @@ function vendorNeedsStatusRepair(vendor: typeof vendorsTable.$inferSelect): bool
   );
 }
 
-function formatVendor(v: typeof vendorsTable.$inferSelect) {
+async function formatVendor(
+  v: typeof vendorsTable.$inferSelect,
+  settings?: typeof festivalSettingsTable.$inferSelect,
+) {
   const settlement = deriveSpecialAgreementSettlement(v);
   const hasStripePayment = Boolean(v.stripePaidAt || (v.stripeSessionId && v.paidAt));
   const timestampImpliedStatus = getVendorTimestampImpliedStatus(v);
+  const pricingSettings = isVendorCategory(v.vendorType)
+    ? settings ?? (await db.select().from(festivalSettingsTable).where(eq(festivalSettingsTable.yearId, v.yearId)).limit(1))[0]
+    : undefined;
+  const pricing = isVendorCategory(v.vendorType)
+    ? calculateVendorPricing(v.vendorType, v.applicationData, pricingSettings, v.discountPercent)
+    : null;
   return {
     id: v.id,
     yearId: v.yearId,
@@ -98,6 +110,10 @@ function formatVendor(v: typeof vendorsTable.$inferSelect) {
     spotNumber: v.spotNumber ?? null,
     location: v.location ?? null,
     reviewNote: v.reviewNote ?? null,
+    discountPercent: v.discountPercent,
+    discountReason: v.discountReason ?? null,
+    originalAmount: pricing?.originalAmount ?? null,
+    amountDue: pricing?.amountDue ?? null,
     paidAt: v.paidAt ? v.paidAt.toISOString() : null,
     paymentSource: v.manualPaymentRecordedAt ? "manual" : (hasStripePayment ? "stripe" : null),
     paymentMethod: v.manualPaymentRecordedAt ? ({ cash: "Cash", check: "Check", bank_transfer: "Bank transfer", other: "Other" }[v.manualPaymentMethod ?? ""] ?? null) : (hasStripePayment ? "Stripe" : null),
@@ -145,20 +161,6 @@ function formatVendor(v: typeof vendorsTable.$inferSelect) {
   };
 }
 
-const VENDOR_CATEGORY_DEFAULT_PRICES = {
-  major_food: 2000,
-  specialty_food: 600,
-  retail: 300,
-  nonprofit: 150,
-} as const;
-
-const VENDOR_CATEGORY_PRICE_FIELDS = {
-  major_food: "vendorPriceMajorFood",
-  specialty_food: "vendorPriceSpecialtyFood",
-  retail: "vendorPriceRetail",
-  nonprofit: "vendorPriceNonprofit",
-} as const;
-
 const MAX_SETTLEMENT_AMOUNT = 99_999_999.99;
 
 function isWholeCents(value: number | null): boolean {
@@ -180,37 +182,6 @@ function manualPaymentDate(value: Date): string | null {
   return received > tomorrow ? null : text;
 }
 
-const VENDOR_BOOTH_DIMENSIONS = {
-  major_food: { single: "10′×20′", double: "20′×20′" },
-  specialty_food: { single: "10′×10′", double: "10′×20′" },
-  retail: { single: "10′×10′", double: "10′×20′" },
-  nonprofit: { single: "10′×10′", double: "10′×20′" },
-} as const;
-
-type VendorCategory = keyof typeof VENDOR_CATEGORY_DEFAULT_PRICES;
-
-function isVendorCategory(value: string): value is VendorCategory {
-  return value in VENDOR_CATEGORY_DEFAULT_PRICES;
-}
-
-function getVendorCategoryPricing(
-  vendorType: VendorCategory,
-  applicationData: unknown,
-  settings: typeof festivalSettingsTable.$inferSelect | undefined,
-) {
-  const spacesRequested = typeof (applicationData as Record<string, unknown> | null)?.spacesRequested === "string"
-    ? (applicationData as Record<string, unknown>).spacesRequested
-    : null;
-  const isDoubleSpace = spacesRequested === "double";
-  const configuredPrice = settings ? Number(settings[VENDOR_CATEGORY_PRICE_FIELDS[vendorType]]) : NaN;
-  const unitPrice = Number.isFinite(configuredPrice) ? configuredPrice : VENDOR_CATEGORY_DEFAULT_PRICES[vendorType];
-
-  return {
-    amount: unitPrice * (isDoubleSpace ? 2 : 1),
-    boothDimensions: VENDOR_BOOTH_DIMENSIONS[vendorType][isDoubleSpace ? "double" : "single"],
-  };
-}
-
 router.get("/vendors", requireStaff, async (req, res): Promise<void> => {
   const queryParsed = ListVendorsQueryParams.safeParse(req.query);
   const yearId = queryParsed.success ? queryParsed.data.yearId : undefined;
@@ -225,7 +196,9 @@ router.get("/vendors", requireStaff, async (req, res): Promise<void> => {
     ? await db.select().from(vendorsTable).where(and(...conditions)).orderBy(desc(vendorsTable.createdAt))
     : await db.select().from(vendorsTable).orderBy(desc(vendorsTable.createdAt));
 
-  res.json(rows.map(formatVendor));
+  const settingsRows = await db.select().from(festivalSettingsTable);
+  const settingsByYear = new Map(settingsRows.map((settings) => [settings.yearId, settings]));
+  res.json(await Promise.all(rows.map((vendor) => formatVendor(vendor, settingsByYear.get(vendor.yearId)))));
 });
 
 router.get("/special-agreements", requireStaff, async (req, res): Promise<void> => {
@@ -236,7 +209,7 @@ router.get("/special-agreements", requireStaff, async (req, res): Promise<void> 
   const rows = await db.select().from(vendorsTable)
     .where(and(...conditions))
     .orderBy(desc(vendorsTable.createdAt));
-  res.json(rows.map(formatVendor));
+  res.json(await Promise.all(rows.map((vendor) => formatVendor(vendor))));
 });
 
 router.get("/special-agreements/settlement-summary", requireStaff, async (req, res): Promise<void> => {
@@ -357,7 +330,7 @@ router.post("/special-agreements", requireStaff, async (req, res): Promise<void>
     });
   }
 
-  res.status(201).json(formatVendor(created));
+  res.status(201).json(await formatVendor(created));
 });
 
 router.get("/vendors/:id", requireStaff, async (req, res): Promise<void> => {
@@ -371,7 +344,7 @@ router.get("/vendors/:id", requireStaff, async (req, res): Promise<void> => {
     res.status(404).json({ error: "Vendor not found" });
     return;
   }
-  res.json(formatVendor(vendor));
+  res.json(await formatVendor(vendor));
 });
 
 router.patch("/vendors/:id/reconcile-status-from-timestamps", requireStaff, async (req, res): Promise<void> => {
@@ -393,7 +366,7 @@ router.patch("/vendors/:id/reconcile-status-from-timestamps", requireStaff, asyn
     return;
   }
   if (!vendorNeedsStatusRepair(vendor)) {
-    res.json(formatVendor(vendor));
+    res.json(await formatVendor(vendor));
     return;
   }
 
@@ -414,7 +387,7 @@ router.patch("/vendors/:id/reconcile-status-from-timestamps", requireStaff, asyn
     performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
   });
 
-  res.json(formatVendor(updated));
+  res.json(await formatVendor(updated));
 });
 
 router.patch("/vendors/:id/details", requireStaff, async (req, res): Promise<void> => {
@@ -494,7 +467,7 @@ router.patch("/vendors/:id/details", requireStaff, async (req, res): Promise<voi
     res.status(404).json({ error: "Vendor not found" });
     return;
   }
-  res.json(UpdateVendorDetailsResponse.parse(formatVendor(updated)));
+  res.json(UpdateVendorDetailsResponse.parse(await formatVendor(updated)));
 });
 
 router.patch("/vendors/:id/special-agreement-settlement", requireStaff, async (req, res): Promise<void> => {
@@ -591,7 +564,7 @@ router.patch("/vendors/:id/special-agreement-settlement", requireStaff, async (r
     performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
   });
 
-  res.json(UpdateSpecialAgreementSettlementResponse.parse(formatVendor(updated)));
+  res.json(UpdateSpecialAgreementSettlementResponse.parse(await formatVendor(updated)));
 });
 
 router.patch("/vendors/:id/review", requireStaff, async (req, res): Promise<void> => {
@@ -671,7 +644,7 @@ router.patch("/vendors/:id/review", requireStaff, async (req, res): Promise<void
     });
   }
 
-  res.json(formatVendor(updated));
+  res.json(await formatVendor(updated));
 });
 
 router.post("/vendors/:id/manual-payment", requireStaff, async (req, res): Promise<void> => {
@@ -705,7 +678,7 @@ router.post("/vendors/:id/manual-payment", requireStaff, async (req, res): Promi
   });
   if (!updated) { res.status(409).json({ error: "This vendor changed while recording payment. Refresh and try again." }); return; }
   if (body.data.sendConfirmationEmail) void sendManualPaymentConfirmationEmail({ to: updated.email, name: updated.name, entityType: "vendor", amount: body.data.amount, method: body.data.method, reference, receivedDate });
-  res.json(formatVendor(updated));
+  res.json(await formatVendor(updated));
 });
 
 router.delete("/vendors/:id/manual-payment", requireStaff, async (req, res): Promise<void> => {
@@ -734,7 +707,103 @@ router.delete("/vendors/:id/manual-payment", requireStaff, async (req, res): Pro
     return saved;
   });
   if (!updated) { res.status(409).json({ error: "This vendor payment changed while removing it. Refresh and try again." }); return; }
-  res.json(formatVendor(updated));
+  res.json(await formatVendor(updated));
+});
+
+router.patch("/vendors/:id/discount", requireStaff, requireAdmin, async (req, res): Promise<void> => {
+  const paramsParsed = UpdateVendorDiscountParams.safeParse(req.params);
+  const bodyParsed = UpdateVendorDiscountBody.safeParse(req.body);
+  if (!paramsParsed.success || !bodyParsed.success || !Number.isInteger(bodyParsed.data.discountPercent)) {
+    res.status(400).json({ error: "Discount must be a whole-number percentage from 0 to 100." });
+    return;
+  }
+
+  const [vendor] = await db.select().from(vendorsTable).where(eq(vendorsTable.id, paramsParsed.data.id)).limit(1);
+  if (!vendor) {
+    res.status(404).json({ error: "Vendor not found" });
+    return;
+  }
+  if (vendor.vendorType === "special_agreement") {
+    res.status(409).json({ error: "Special Agreement Vendors do not have a booth fee to discount." });
+    return;
+  }
+  if (["paid", "final_approved"].includes(vendor.status) || vendor.paidAt || vendor.stripePaidAt || vendor.manualPaymentRecordedAt) {
+    res.status(409).json({ error: "This discount cannot be changed because payment has already been received." });
+    return;
+  }
+  if (vendor.status === "payment_processing") {
+    res.status(409).json({ error: "This discount cannot be changed while the vendor's payment is processing." });
+    return;
+  }
+
+  const discountPercent = bodyParsed.data.discountPercent;
+  const discountReason = discountPercent > 0 ? bodyParsed.data.discountReason?.trim() || null : null;
+  if (vendor.discountPercent === discountPercent && (vendor.discountReason ?? null) === discountReason) {
+    res.status(400).json({ error: "Enter a different percentage or reason to change this vendor's discount." });
+    return;
+  }
+
+  let invalidateCheckout = false;
+  if (vendor.stripeSessionId) {
+    try {
+      const stripe = await getUncachableStripeClient();
+      let session = await stripe.checkout.sessions.retrieve(vendor.stripeSessionId);
+      if (session.status === "open" && session.payment_status === "unpaid") {
+        try {
+          session = await stripe.checkout.sessions.expire(vendor.stripeSessionId);
+        } catch {
+          session = await stripe.checkout.sessions.retrieve(vendor.stripeSessionId);
+        }
+      }
+      if (session.payment_status === "paid" || session.payment_status === "no_payment_required") {
+        res.status(409).json({ error: "This discount cannot be changed because payment has already been received." });
+        return;
+      }
+      if (session.status !== "expired") {
+        res.status(409).json({ error: "This discount cannot be changed while the vendor's payment is processing." });
+        return;
+      }
+      invalidateCheckout = true;
+    } catch {
+      res.status(409).json({ error: "RCCS could not verify or invalidate this vendor's Stripe Checkout. The discount was not changed." });
+      return;
+    }
+  }
+
+  const actor = (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null;
+  const [updated] = await db.update(vendorsTable)
+    .set({
+      discountPercent,
+      discountReason,
+      pricingRevision: sql`${vendorsTable.pricingRevision} + 1`,
+      ...(invalidateCheckout ? {
+        stripeSessionId: null,
+        status: vendor.status === "payment_pending" ? "approved" : vendor.status,
+      } : {}),
+    })
+    .where(and(
+      eq(vendorsTable.id, vendor.id),
+      eq(vendorsTable.pricingRevision, vendor.pricingRevision),
+      eq(vendorsTable.status, vendor.status),
+      isNull(vendorsTable.paidAt),
+      isNull(vendorsTable.stripePaidAt),
+      isNull(vendorsTable.manualPaymentRecordedAt),
+    ))
+    .returning();
+  if (!updated) {
+    res.status(409).json({ error: "This vendor's pricing or payment state changed. The discount was not changed; refresh and try again." });
+    return;
+  }
+
+  await db.insert(activityLogTable).values({
+    type: "discount_changed",
+    message: `Vendor ${updated.name} (${updated.businessName}) discount changed by ${actor ?? "staff"} from ${vendor.discountPercent}% to ${discountPercent}%. Reason: ${discountReason ?? "No reason provided"}`,
+    entityType: "vendor",
+    entityId: updated.id,
+    performedBy: actor,
+  });
+
+  res.json(await formatVendor(updated));
 });
 
 router.patch("/vendors/:id/category", requireStaff, async (req, res): Promise<void> => {
@@ -767,9 +836,9 @@ router.patch("/vendors/:id/category", requireStaff, async (req, res): Promise<vo
     .from(festivalSettingsTable)
     .where(eq(festivalSettingsTable.yearId, vendor.yearId))
     .limit(1);
-  const newPricing = getVendorCategoryPricing(newVendorType, vendor.applicationData, settings);
+  const newPricing = calculateVendorPricing(newVendorType, vendor.applicationData, settings, vendor.discountPercent);
   const oldPricing = isVendorCategory(previousVendorType)
-    ? getVendorCategoryPricing(previousVendorType, vendor.applicationData, settings)
+    ? calculateVendorPricing(previousVendorType, vendor.applicationData, settings, vendor.discountPercent)
     : null;
 
   if (vendor.pendingAdjustmentTargetAmount !== null) {
@@ -791,7 +860,7 @@ router.patch("/vendors/:id/category", requireStaff, async (req, res): Promise<vo
       const stripe = await getUncachableStripeClient();
       let session = await stripe.checkout.sessions.retrieve(vendor.stripeSessionId);
 
-      if (session.payment_status !== "paid" && !isPaid && session.status === "open") {
+      if (session.payment_status !== "paid" && session.payment_status !== "no_payment_required" && !isPaid && session.status === "open") {
         try {
           session = await stripe.checkout.sessions.expire(vendor.stripeSessionId);
         } catch {
@@ -801,7 +870,7 @@ router.patch("/vendors/:id/category", requireStaff, async (req, res): Promise<vo
         }
       }
 
-      if (session.payment_status === "paid" && session.amount_total !== null) {
+      if ((session.payment_status === "paid" || session.payment_status === "no_payment_required") && session.amount_total !== null) {
         isPaid = true;
         settledAmount ??= session.amount_total / 100;
       } else if (!isPaid) {
@@ -822,7 +891,7 @@ router.patch("/vendors/:id/category", requireStaff, async (req, res): Promise<vo
     return;
   }
 
-  const difference = settledAmount === null ? 0 : newPricing.amount - settledAmount;
+  const difference = settledAmount === null ? 0 : newPricing.amountDue - settledAmount;
   const updates: Record<string, unknown> = {
     vendorType: newVendorType,
     pricingRevision: sql`${vendorsTable.pricingRevision} + 1`,
@@ -833,7 +902,7 @@ router.patch("/vendors/:id/category", requireStaff, async (req, res): Promise<vo
     updates.settledAmount = settledAmount!.toFixed(2);
     if (difference !== 0) {
       updates.pendingManualAdjustment = difference.toFixed(2);
-      updates.pendingAdjustmentTargetAmount = newPricing.amount.toFixed(2);
+      updates.pendingAdjustmentTargetAmount = newPricing.amountDue.toFixed(2);
     }
   } else if (invalidateCheckout) {
     updates.stripeSessionId = null;
@@ -842,10 +911,14 @@ router.patch("/vendors/:id/category", requireStaff, async (req, res): Promise<vo
 
   const [updated] = await db.update(vendorsTable)
     .set(updates)
-    .where(eq(vendorsTable.id, id))
+    .where(and(
+      eq(vendorsTable.id, id),
+      eq(vendorsTable.pricingRevision, vendor.pricingRevision),
+      eq(vendorsTable.status, vendor.status),
+    ))
     .returning();
   if (!updated) {
-    res.status(404).json({ error: "Vendor not found" });
+    res.status(409).json({ error: "This vendor's pricing or payment state changed. The category was not changed; refresh and try again." });
     return;
   }
 
@@ -863,7 +936,7 @@ router.patch("/vendors/:id/category", requireStaff, async (req, res): Promise<vo
     performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
   });
 
-  const oldAmount = settledAmount ?? oldPricing?.amount ?? null;
+  const oldAmount = settledAmount ?? oldPricing?.amountDue ?? null;
   const paymentAdjustment = {
     isPaid,
     direction: difference > 0 ? "collect" : difference < 0 ? "refund" : "none",
@@ -879,7 +952,9 @@ router.patch("/vendors/:id/category", requireStaff, async (req, res): Promise<vo
       to: updated.email,
       name: updated.name,
       vendorType: newVendorType,
-      amountDue: newPricing.amount,
+      amountDue: newPricing.amountDue,
+      originalAmount: newPricing.originalAmount,
+      discountPercent: newPricing.discountPercent,
       boothDimensions: newPricing.boothDimensions,
       reason,
       festivalName: year?.eventName ?? "Romanian Festival",
@@ -887,11 +962,11 @@ router.patch("/vendors/:id/category", requireStaff, async (req, res): Promise<vo
   }
 
   res.json({
-    vendor: formatVendor(updated),
+    vendor: await formatVendor(updated, settings),
     previousVendorType,
     newVendorType,
     oldAmount,
-    newAmount: newPricing.amount,
+    newAmount: newPricing.amountDue,
     boothDimensions: newPricing.boothDimensions,
     paymentAdjustment,
   });
@@ -931,7 +1006,7 @@ router.patch("/vendors/:id/settle-category-adjustment", requireStaff, async (req
     performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
   });
 
-  res.json(formatVendor(updated));
+  res.json(await formatVendor(updated));
 });
 
 router.patch("/vendors/:id/final-approve", requireStaff, async (req, res): Promise<void> => {
@@ -964,7 +1039,7 @@ router.patch("/vendors/:id/final-approve", requireStaff, async (req, res): Promi
     performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
   });
 
-  res.json(formatVendor(updated));
+  res.json(await formatVendor(updated));
 });
 
 router.patch("/vendors/:id/assign", requireStaff, async (req, res): Promise<void> => {
@@ -993,7 +1068,7 @@ router.patch("/vendors/:id/assign", requireStaff, async (req, res): Promise<void
     performedBy: (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null,
   });
 
-  res.json(formatVendor(updated));
+  res.json(await formatVendor(updated));
 });
 
 router.post("/vendors/:id/resend-confirmation", requireStaff, async (req, res): Promise<void> => {
