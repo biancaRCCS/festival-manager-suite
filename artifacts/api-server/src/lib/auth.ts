@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { getAuth, clerkClient } from "@clerk/express";
 import { db, staffTable } from "@workspace/db";
-import { eq, isNull, and } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   const auth = getAuth(req);
@@ -25,8 +25,9 @@ export async function requireStaff(req: Request, res: Response, next: NextFuncti
   // Check staff table for this Clerk user
   let staffMembers = await db.select().from(staffTable).where(eq(staffTable.clerkUserId, userId));
 
-  // If not found by Clerk ID, fetch their email from Clerk and try to link an
-  // existing email-only invitation row (created when an admin adds them by email).
+  // If not found by Clerk ID, fetch their email from Clerk and link the matching
+  // staff row. Clerk user IDs can change between instances or after an account is
+  // recreated, while the staff member's email remains the stable identity.
   if (staffMembers.length === 0) {
     let clerkEmail: string | null = null;
     try {
@@ -42,9 +43,9 @@ export async function requireStaff(req: Request, res: Response, next: NextFuncti
       const emailMatch = await db
         .select()
         .from(staffTable)
-        .where(and(eq(staffTable.email, clerkEmail), isNull(staffTable.clerkUserId)));
+        .where(sql`lower(${staffTable.email}) = lower(${clerkEmail})`);
       if (emailMatch.length > 0) {
-        // Link their Clerk ID so future lookups are instant
+        // Link or refresh their Clerk ID so future lookups are instant.
         const updated = await db
           .update(staffTable)
           .set({ clerkUserId: userId })

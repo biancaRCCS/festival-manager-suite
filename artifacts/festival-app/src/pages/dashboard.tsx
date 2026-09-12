@@ -29,7 +29,7 @@ function calculateDaysUntilFestival(festivalDate: string | null | undefined): nu
 
 export default function DashboardPage() {
   const { data: currentYear, isLoading: yearLoading } = useGetCurrentYear()
-  const { data: summary, isLoading: summaryLoading } = useGetDashboardSummary({
+  const { data: summary, isLoading: summaryLoading, isError: summaryError } = useGetDashboardSummary({
     query: {
       enabled: !!currentYear,
       queryKey: ["dashboardSummary"],
@@ -85,6 +85,19 @@ export default function DashboardPage() {
               <p className="text-muted-foreground font-medium">Loading summary...</p>
             </div>
           </div>
+        ) : summaryError ? (
+          <Card className="border-destructive/40 border-2 bg-destructive/5 shadow-none">
+            <CardContent className="flex flex-col items-center justify-center h-64 text-center">
+              <AlertTriangle className="w-12 h-12 text-destructive mb-4 opacity-70" />
+              <p className="text-xl font-medium text-foreground mb-2">Dashboard Access Failed</p>
+              <p className="text-muted-foreground mb-2">
+                Your signed-in account could not load the staff dashboard.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Refresh the page. If this continues, ask an administrator to confirm your staff email.
+              </p>
+            </CardContent>
+          </Card>
         ) : !summary ? (
           <Card className="border-dashed border-2 bg-transparent shadow-none">
             <CardContent className="flex flex-col items-center justify-center h-64 text-center">
