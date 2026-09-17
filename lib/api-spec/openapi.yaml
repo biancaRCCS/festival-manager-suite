@@ -383,7 +383,7 @@ paths:
           name: type
           schema:
             type: string
-            enum: [new_application, approved, rejected, paid, final_approved, assigned, category_changed, discount_changed, category_adjustment_settled, details_updated, special_agreement_created, special_agreement_signed, special_agreement_settlement_updated, manual_payment_recorded, manual_payment_removed, deleted]
+            enum: [new_application, approved, rejected, paid, final_approved, assigned, category_changed, discount_changed, payment_reminder_sent, category_adjustment_settled, details_updated, special_agreement_created, special_agreement_signed, special_agreement_settlement_updated, manual_payment_recorded, manual_payment_removed, deleted]
         - in: query
           name: entityType
           schema:
@@ -943,6 +943,35 @@ paths:
           description: Email queued
         "404":
           description: Not found
+
+  /vendors/{id}/payment-reminder:
+    post:
+      operationId: sendVendorPaymentReminder
+      tags: [vendors]
+      summary: Send an unpaid vendor a payment reminder
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Vendor with updated reminder tracking
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vendor"
+        "403":
+          description: Admin access required
+        "404":
+          description: Vendor not found
+        "409":
+          description: Vendor payment is not pending
+        "503":
+          description: Email could not be delivered
 
   # ─── SPONSORS ────────────────────────────────────────────
   /sponsors:
@@ -1571,7 +1600,7 @@ components:
 
     FestivalSettings:
       type: object
-      required: [id, yearId, vendorTypeLabelMajorFood, vendorTypeLabelSpecialtyFood, vendorTypeLabelRetail, vendorTypeLabelNonprofit, vendorPriceMajorFood, vendorPriceSpecialtyFood, vendorPriceRetail, vendorPriceNonprofit, vendorSpotLimitMajorFood, vendorSpotLimitSpecialtyFood, vendorSpotLimitRetail, vendorSpotLimitNonprofit, sponsorPriceBronze, sponsorPriceSilver, sponsorPriceGold, sponsorPricePlatinum, sponsorPriceDiamond, sponsorPriceMaxBronze, sponsorPriceMaxSilver, sponsorPriceMaxGold, sponsorPriceMaxPlatinum, sponsorSpotLimitBronze, sponsorSpotLimitSilver, sponsorSpotLimitGold, sponsorSpotLimitPlatinum, sponsorSpotLimitDiamond, vendorFormQuestions, sponsorFormQuestions, volunteerFormQuestions]
+      required: [id, yearId, vendorTypeLabelMajorFood, vendorTypeLabelSpecialtyFood, vendorTypeLabelRetail, vendorTypeLabelNonprofit, vendorPriceMajorFood, vendorPriceSpecialtyFood, vendorPriceRetail, vendorPriceNonprofit, vendorSpotLimitMajorFood, vendorSpotLimitSpecialtyFood, vendorSpotLimitRetail, vendorSpotLimitNonprofit, sponsorPriceBronze, sponsorPriceSilver, sponsorPriceGold, sponsorPricePlatinum, sponsorPriceDiamond, sponsorPriceMaxBronze, sponsorPriceMaxSilver, sponsorPriceMaxGold, sponsorPriceMaxPlatinum, sponsorSpotLimitBronze, sponsorSpotLimitSilver, sponsorSpotLimitGold, sponsorSpotLimitPlatinum, sponsorSpotLimitDiamond, festivalHours, festivalLocation, vendorFormQuestions, sponsorFormQuestions, volunteerFormQuestions]
       properties:
         id:
           type: integer
@@ -1636,6 +1665,10 @@ components:
         # Dates & operational settings
         festivalDate:
           type: ["string", "null"]
+        festivalHours:
+          type: string
+        festivalLocation:
+          type: string
         applicationDeadline:
           type: ["string", "null"]
         documentDeadline:
@@ -1732,6 +1765,12 @@ components:
         # Dates & operational settings
         festivalDate:
           type: ["string", "null"]
+        festivalHours:
+          type: string
+          minLength: 1
+        festivalLocation:
+          type: string
+          minLength: 1
         applicationDeadline:
           type: ["string", "null"]
         documentDeadline:
@@ -1788,7 +1827,7 @@ components:
 
     Vendor:
       type: object
-      required: [id, yearId, name, businessName, email, phone, vendorType, status, applicationData, discountPercent, discountReason, originalAmount, amountDue, createdAt]
+      required: [id, yearId, name, businessName, email, phone, vendorType, status, applicationData, discountPercent, discountReason, lastPaymentReminderSentAt, lastPaymentReminderSentBy, originalAmount, amountDue, createdAt]
       properties:
         id:
           type: integer
@@ -1829,6 +1868,10 @@ components:
           minimum: 0
           maximum: 100
         discountReason:
+          type: ["string", "null"]
+        lastPaymentReminderSentAt:
+          type: ["string", "null"]
+        lastPaymentReminderSentBy:
           type: ["string", "null"]
         originalAmount:
           type: ["number", "null"]
@@ -2152,7 +2195,7 @@ components:
           type: integer
         type:
           type: string
-          enum: [new_application, approved, rejected, paid, final_approved, assigned, category_changed, discount_changed, category_adjustment_settled, details_updated, special_agreement_created, special_agreement_signed, manual_payment_recorded, manual_payment_removed, deleted]
+          enum: [new_application, approved, rejected, paid, final_approved, assigned, category_changed, discount_changed, payment_reminder_sent, category_adjustment_settled, details_updated, special_agreement_created, special_agreement_signed, manual_payment_recorded, manual_payment_removed, deleted]
         message:
           type: string
         entityType:

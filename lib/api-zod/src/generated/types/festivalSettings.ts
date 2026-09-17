@@ -40,6 +40,8 @@ export interface FestivalSettings {
   sponsorSpotLimitDiamond: number;
   /** @nullable */
   festivalDate?: string | null;
+  festivalHours: string;
+  festivalLocation: string;
   /** @nullable */
   applicationDeadline?: string | null;
   /** @nullable */

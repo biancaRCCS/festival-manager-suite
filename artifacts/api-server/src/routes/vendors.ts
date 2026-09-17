@@ -27,12 +27,14 @@ import {
   RemoveVendorManualPaymentParams,
   UpdateVendorDiscountParams,
   UpdateVendorDiscountBody,
+  SendVendorPaymentReminderParams,
 } from "@workspace/api-zod";
 import { randomBytes } from "crypto";
 import {
   sendApplicantConfirmation,
   sendVendorCategoryAdjustedEmail,
   sendVendorPortalInviteEmail,
+  sendVendorPaymentReminderEmail,
   sendSpecialAgreementPortalInviteEmail,
   sendSpecialAgreementCreatedNotification,
   sendManualPaymentConfirmationEmail,
@@ -112,6 +114,8 @@ async function formatVendor(
     reviewNote: v.reviewNote ?? null,
     discountPercent: v.discountPercent,
     discountReason: v.discountReason ?? null,
+    lastPaymentReminderSentAt: v.lastPaymentReminderSentAt?.toISOString() ?? null,
+    lastPaymentReminderSentBy: v.lastPaymentReminderSentBy ?? null,
     originalAmount: pricing?.originalAmount ?? null,
     amountDue: pricing?.amountDue ?? null,
     paidAt: v.paidAt ? v.paidAt.toISOString() : null,
@@ -1101,6 +1105,102 @@ router.post("/vendors/:id/resend-confirmation", requireStaff, async (req, res): 
   });
 
   res.status(204).send();
+});
+
+router.post("/vendors/:id/payment-reminder", requireStaff, requireAdmin, async (req, res): Promise<void> => {
+  const parsed = SendVendorPaymentReminderParams.safeParse(req.params);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid ID" });
+    return;
+  }
+
+  const configuredBaseUrl = process.env.APP_BASE_URL?.trim()
+    || process.env.REPLIT_DOMAINS?.split(",")[0]?.trim();
+  if (!configuredBaseUrl) {
+    res.status(500).json({ error: "The application URL is not configured, so the payment reminder could not be sent." });
+    return;
+  }
+  const baseUrl = (/^https?:\/\//i.test(configuredBaseUrl) ? configuredBaseUrl : `https://${configuredBaseUrl}`).replace(/\/+$/, "");
+  const actor = (req as any).staffMember?.name?.trim() || (req as any).clerkUserId || null;
+
+  const result = await db.transaction(async (tx) => {
+    const [vendor] = await tx
+      .select()
+      .from(vendorsTable)
+      .where(eq(vendorsTable.id, parsed.data.id))
+      .limit(1)
+      .for("update");
+    if (!vendor) return { status: 404 as const, error: "Vendor not found" };
+    if (vendor.vendorType === "special_agreement") {
+      return { status: 409 as const, error: "Payment reminders do not apply to Special Agreement Vendors." };
+    }
+    if (
+      !["approved", "payment_pending"].includes(vendor.status)
+      || vendor.paidAt
+      || vendor.stripePaidAt
+      || vendor.manualPaymentRecordedAt
+    ) {
+      return { status: 409 as const, error: "A payment reminder can only be sent while this vendor's booth payment is pending." };
+    }
+    if (!vendor.portalToken || !isVendorCategory(vendor.vendorType)) {
+      return { status: 409 as const, error: "This vendor does not have an active payment portal." };
+    }
+
+    const [settings] = await tx
+      .select()
+      .from(festivalSettingsTable)
+      .where(eq(festivalSettingsTable.yearId, vendor.yearId))
+      .limit(1);
+    if (!settings?.festivalDate) {
+      return { status: 409 as const, error: "Set the festival date in Settings before sending a payment reminder." };
+    }
+    const pricing = calculateVendorPricing(vendor.vendorType, vendor.applicationData, settings, vendor.discountPercent);
+    if (pricing.amountDueCents <= 0) {
+      return { status: 409 as const, error: "This vendor has no payment amount due." };
+    }
+    const categoryLabelFields = {
+      major_food: "vendorTypeLabelMajorFood",
+      specialty_food: "vendorTypeLabelSpecialtyFood",
+      retail: "vendorTypeLabelRetail",
+      nonprofit: "vendorTypeLabelNonprofit",
+    } as const;
+    const sent = await sendVendorPaymentReminderEmail({
+      to: vendor.email,
+      contactName: vendor.name,
+      businessName: vendor.businessName,
+      amountDue: pricing.amountDue,
+      categoryLabel: settings[categoryLabelFields[vendor.vendorType]],
+      boothDimensions: pricing.boothDimensions,
+      portalUrl: `${baseUrl}/portal/${vendor.portalToken}`,
+      festivalDate: settings.festivalDate,
+      festivalHours: settings.festivalHours,
+      festivalLocation: settings.festivalLocation,
+    });
+    if (!sent) {
+      return { status: 503 as const, error: "The payment reminder could not be delivered. Check the email configuration and activity log." };
+    }
+
+    const sentAt = new Date();
+    const [updated] = await tx
+      .update(vendorsTable)
+      .set({ lastPaymentReminderSentAt: sentAt, lastPaymentReminderSentBy: actor })
+      .where(eq(vendorsTable.id, vendor.id))
+      .returning();
+    await tx.insert(activityLogTable).values({
+      type: "payment_reminder_sent",
+      message: `Payment reminder sent to vendor ${vendor.name} (${vendor.businessName}) by ${actor ?? "staff"}`,
+      entityType: "vendor",
+      entityId: vendor.id,
+      performedBy: actor,
+    });
+    return { status: 200 as const, vendor: updated };
+  });
+
+  if ("error" in result) {
+    res.status(result.status).json({ error: result.error });
+    return;
+  }
+  res.json(await formatVendor(result.vendor));
 });
 
 router.delete("/vendors/:id", requireStaff, async (req, res): Promise<void> => {

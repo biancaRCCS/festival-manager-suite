@@ -229,6 +229,22 @@ export default function SettingsPage() {
                     />
                   </div>
                   <div className="space-y-2">
+                    <Label>Festival Hours</Label>
+                    <Input
+                      value={localSettings.festivalHours ?? ""}
+                      onChange={e => set("festivalHours", e.target.value)}
+                      placeholder="12:00 PM – 9:00 PM"
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Festival Location</Label>
+                    <Input
+                      value={localSettings.festivalLocation ?? ""}
+                      onChange={e => set("festivalLocation", e.target.value)}
+                      placeholder="Vernon Street Town Square, Downtown Roseville"
+                    />
+                  </div>
+                  <div className="space-y-2">
                     <Label>Application Deadline</Label>
                     <Input
                       type="date"

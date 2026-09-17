@@ -55,6 +55,8 @@ function formatSettings(s: typeof festivalSettingsTable.$inferSelect) {
 
     // Dates & operational settings
     festivalDate:        s.festivalDate ?? null,
+    festivalHours:       s.festivalHours,
+    festivalLocation:    s.festivalLocation,
     applicationDeadline: s.applicationDeadline ?? null,
     documentDeadline:    s.documentDeadline ?? null,
     paymentWindowDays:   s.paymentWindowDays,
@@ -93,6 +95,8 @@ router.get("/settings", requireStaff, async (req, res): Promise<void> => {
     const [created] = await db.insert(festivalSettingsTable).values({
       yearId,
       festivalDate:        "2026-09-26",
+      festivalHours:       "12:00 PM – 9:00 PM",
+      festivalLocation:    "Vernon Street Town Square, Downtown Roseville",
       applicationDeadline: "2026-09-10",
       documentDeadline:    "2026-09-18",
       paymentWindowDays:   7,
@@ -164,6 +168,8 @@ router.patch("/settings", requireStaff, async (req, res): Promise<void> => {
 
   // Dates & operational settings (all nullable)
   if ("festivalDate"        in d) updates.festivalDate        = d.festivalDate        ?? null;
+  if (typeof d.festivalHours === "string" && d.festivalHours.trim()) updates.festivalHours = d.festivalHours.trim();
+  if (typeof d.festivalLocation === "string" && d.festivalLocation.trim()) updates.festivalLocation = d.festivalLocation.trim();
   if ("applicationDeadline" in d) updates.applicationDeadline = d.applicationDeadline ?? null;
   if ("documentDeadline"    in d) updates.documentDeadline    = d.documentDeadline    ?? null;
   if (d.paymentWindowDays   != null) updates.paymentWindowDays = d.paymentWindowDays;

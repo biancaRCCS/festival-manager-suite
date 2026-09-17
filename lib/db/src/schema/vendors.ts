@@ -44,6 +44,8 @@ export const vendorsTable = pgTable("vendors", {
   pendingAdjustmentTargetAmount: numeric("pending_adjustment_target_amount", { precision: 10, scale: 2 }),
   discountPercent: integer("discount_percent").notNull().default(0),
   discountReason: text("discount_reason"),
+  lastPaymentReminderSentAt: timestamp("last_payment_reminder_sent_at", { withTimezone: true }),
+  lastPaymentReminderSentBy: text("last_payment_reminder_sent_by"),
   // Incremented whenever a category recalculates a vendor's amount due. A
   // category or discount change. A Checkout is attached only if this remains
   // unchanged while Stripe creates it.

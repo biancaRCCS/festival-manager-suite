@@ -1,10 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
-import { db, activityLogTable, contributionsTable, festivalYearsTable, sponsorsTable, vendorsTable } from "@workspace/db";
-import { eq, inArray } from "drizzle-orm";
+import { db, activityLogTable, contributionsTable, festivalSettingsTable, festivalYearsTable, sponsorsTable, vendorsTable } from "@workspace/db";
+import { and, eq, inArray } from "drizzle-orm";
 import { handleCheckoutComplete } from "../routes/stripe";
 
-const { manualEmailSpy } = vi.hoisted(() => ({ manualEmailSpy: vi.fn().mockResolvedValue(undefined) }));
+const { manualEmailSpy, reminderEmailSpy } = vi.hoisted(() => ({
+  manualEmailSpy: vi.fn().mockResolvedValue(undefined),
+  reminderEmailSpy: vi.fn().mockResolvedValue(true),
+}));
 vi.mock("../lib/auth", () => ({
   requireStaff: (req: any, _res: any, next: () => void) => {
     req.clerkUserId = "manual-test-clerk";
@@ -16,6 +19,7 @@ vi.mock("../lib/auth", () => ({
 vi.mock("../lib/email", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../lib/email")>()),
   sendManualPaymentConfirmationEmail: manualEmailSpy,
+  sendVendorPaymentReminderEmail: reminderEmailSpy,
 }));
 import app from "../app";
 
@@ -26,6 +30,12 @@ const payment = { method: "check", amount: 125.25, receivedDate: "2025-06-01", r
 beforeAll(async () => {
   const [year] = await db.insert(festivalYearsTable).values({ year: 2096, eventName: "Manual payment test", eventDate: "2096-08-01", isActive: false }).returning();
   yearId = year!.id;
+  await db.insert(festivalSettingsTable).values({
+    yearId,
+    festivalDate: "2096-08-01",
+    festivalHours: "1:00 PM – 8:00 PM",
+    festivalLocation: "Configured Test Square",
+  });
 });
 afterAll(async () => {
   const ids = [...vendorIds, ...sponsorIds, ...contributionIds];
@@ -33,6 +43,7 @@ afterAll(async () => {
   if (contributionIds.length) await db.delete(contributionsTable).where(inArray(contributionsTable.id, contributionIds));
   if (sponsorIds.length) await db.delete(sponsorsTable).where(inArray(sponsorsTable.id, sponsorIds));
   if (vendorIds.length) await db.delete(vendorsTable).where(inArray(vendorsTable.id, vendorIds));
+  await db.delete(festivalSettingsTable).where(eq(festivalSettingsTable.yearId, yearId));
   await db.delete(festivalYearsTable).where(eq(festivalYearsTable.id, yearId));
 });
 async function vendor(values: Partial<typeof vendorsTable.$inferInsert> = {}) {
@@ -45,6 +56,44 @@ async function sponsor(values: Partial<typeof sponsorsTable.$inferInsert> = {}) 
 }
 
 describe("manual payments", () => {
+  it("sends and tracks a discounted vendor payment reminder, and rejects non-payable vendors", async () => {
+    const row = await vendor({
+      vendorType: "specialty_food",
+      status: "payment_pending",
+      portalToken: "payment-reminder-token",
+      applicationData: { spacesRequested: "double" },
+      discountPercent: 25,
+    });
+    const response = await request(app).post(`/api/vendors/${row.id}/payment-reminder`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.lastPaymentReminderSentAt).toBeTruthy();
+    expect(response.body.lastPaymentReminderSentBy).toBe("Manual Payment Staff");
+    expect(reminderEmailSpy).toHaveBeenCalledWith(expect.objectContaining({
+      to: row.email,
+      contactName: row.name,
+      businessName: row.businessName,
+      amountDue: 900,
+      categoryLabel: "Specialty Food & Beverage Vendor",
+      boothDimensions: "10′×20′",
+      festivalDate: "2096-08-01",
+      festivalHours: "1:00 PM – 8:00 PM",
+      festivalLocation: "Configured Test Square",
+    }));
+    const [log] = await db.select().from(activityLogTable).where(and(
+      eq(activityLogTable.entityId, row.id),
+      eq(activityLogTable.type, "payment_reminder_sent"),
+    ));
+    expect(log).toMatchObject({ performedBy: "Manual Payment Staff" });
+
+    const paid = await vendor({ status: "paid", paidAt: new Date() });
+    expect((await request(app).post(`/api/vendors/${paid.id}/payment-reminder`)).status).toBe(409);
+    const processing = await vendor({ status: "payment_processing" });
+    expect((await request(app).post(`/api/vendors/${processing.id}/payment-reminder`)).status).toBe(409);
+    const special = await vendor({ vendorType: "special_agreement", status: "approved" });
+    expect((await request(app).post(`/api/vendors/${special.id}/payment-reminder`)).status).toBe(409);
+  });
+
   it("returns required in-kind fields for vendor and special-agreement portal responses", async () => {
     const standardVendor = await vendor({ portalToken: "portal-contract-vendor" });
     const specialVendor = await vendor({ portalToken: "portal-contract-special", vendorType: "special_agreement" });

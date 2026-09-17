@@ -18,6 +18,7 @@ export const ActivityItemType = {
   assigned: 'assigned',
   category_changed: 'category_changed',
   discount_changed: 'discount_changed',
+  payment_reminder_sent: 'payment_reminder_sent',
   category_adjustment_settled: 'category_adjustment_settled',
   details_updated: 'details_updated',
   special_agreement_created: 'special_agreement_created',

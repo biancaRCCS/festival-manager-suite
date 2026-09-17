@@ -17,6 +17,7 @@ import {
   sendSponsorPaymentReceiptEmail,
   sendTestEmail,
   sendVendorCategoryAdjustedEmail,
+  sendVendorPaymentReminderEmail,
   sendVendorPortalInviteEmail,
 } from "../lib/email";
 
@@ -145,6 +146,37 @@ describe("shared email layout", () => {
     expect(email.html).toContain("Specialty Food &amp; Beverage Vendor");
     expect(email.html).toContain("$900.00 — 25% discount applied, original $1,200.00");
     expect(email.html).toContain("The submitted menu is a specialty food booth.");
+    expectSharedLayout(email.html);
+  });
+
+  it("uses the requested reminder copy, discounted amount, portal button, and configured event details", async () => {
+    const sent = await sendVendorPaymentReminderEmail({
+      to: "vendor@example.com",
+      contactName: "Maria Ionescu",
+      businessName: "Ionescu Bakery",
+      amountDue: 450,
+      categoryLabel: "Specialty Food & Beverage Vendor",
+      boothDimensions: "10′×10′",
+      portalUrl: "https://festival.example.test/portal/payment-token",
+      festivalDate: "2026-09-26",
+      festivalHours: "12:00 PM – 9:00 PM",
+      festivalLocation: "Vernon Street Town Square, Downtown Roseville",
+    });
+
+    expect(sent).toBe(true);
+    expect(resendSendSpy).toHaveBeenCalledOnce();
+    const email = resendSendSpy.mock.calls[0][0] as { subject: string; html: string };
+    expect(email.subject).toBe("Payment reminder — Romanian Festival 2026");
+    expect(email.html).toContain("Hi Maria Ionescu,");
+    expect(email.html).toContain("Ionescu Bakery");
+    expect(email.html).toContain("$450.00");
+    expect(email.html).toContain("Specialty Food &amp; Beverage Vendor · 10′×10′");
+    expect(email.html).toContain('href="https://festival.example.test/portal/payment-token"');
+    expect(email.html).toContain("Complete your payment");
+    expect(email.html).toContain("Saturday, September 26, 2026 · 12:00 PM – 9:00 PM");
+    expect(email.html).toContain("Vernon Street Town Square, Downtown Roseville");
+    expect(email.html).not.toContain("insurance");
+    expect(email.html).not.toContain("documents");
     expectSharedLayout(email.html);
   });
 

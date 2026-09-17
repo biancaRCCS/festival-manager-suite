@@ -30,6 +30,7 @@ import {
   User,
   FileSignature,
   PencilLine,
+  Mail,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -43,6 +44,7 @@ const TYPE_LABELS: Record<string, string> = {
   assigned:        "Assigned",
   category_changed: "Category Changed",
   discount_changed: "Discount Changed",
+  payment_reminder_sent: "Payment Reminder Sent",
   category_adjustment_settled: "Category Adjustment Handled",
   details_updated: "Details Updated",
   special_agreement_created: "Special Agreement Created",
@@ -70,6 +72,7 @@ function typeIcon(type: string) {
     case "assigned":        return <Briefcase    className="w-4 h-4 text-violet-500" />
     case "category_changed": return <ClipboardList className="w-4 h-4 text-amber-600" />
     case "discount_changed": return <DollarSign className="w-4 h-4 text-emerald-600" />
+    case "payment_reminder_sent": return <Mail className="w-4 h-4 text-amber-700" />
     case "category_adjustment_settled": return <DollarSign className="w-4 h-4 text-amber-700" />
     case "details_updated": return <PencilLine className="w-4 h-4 text-sky-600" />
     case "special_agreement_created": return <FileSignature className="w-4 h-4 text-violet-600" />
@@ -223,6 +226,7 @@ export default function ActivityPage() {
                   <SelectItem value="assigned">Assigned</SelectItem>
                   <SelectItem value="category_changed">Category changed</SelectItem>
                   <SelectItem value="discount_changed">Discount changed</SelectItem>
+                  <SelectItem value="payment_reminder_sent">Payment reminder sent</SelectItem>
                   <SelectItem value="category_adjustment_settled">Category adjustment handled</SelectItem>
                   <SelectItem value="details_updated">Details updated</SelectItem>
                   <SelectItem value="manual_payment_recorded">Manual payment recorded</SelectItem>

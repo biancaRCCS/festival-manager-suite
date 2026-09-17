@@ -45,6 +45,8 @@ export const festivalSettingsTable = pgTable("festival_settings", {
 
   // ── Dates & operational settings ──────────────────────────────────────────
   festivalDate:        date("festival_date",        { mode: "string" }),
+  festivalHours:       text("festival_hours").notNull().default("12:00 PM – 9:00 PM"),
+  festivalLocation:    text("festival_location").notNull().default("Vernon Street Town Square, Downtown Roseville"),
   applicationDeadline: date("application_deadline", { mode: "string" }),
   documentDeadline:    date("document_deadline",    { mode: "string" }),
   paymentWindowDays:   integer("payment_window_days").notNull().default(7),

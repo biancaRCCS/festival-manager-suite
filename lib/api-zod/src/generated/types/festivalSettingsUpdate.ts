@@ -38,6 +38,10 @@ export interface FestivalSettingsUpdate {
   sponsorSpotLimitDiamond?: number;
   /** @nullable */
   festivalDate?: string | null;
+  /** @minLength 1 */
+  festivalHours?: string;
+  /** @minLength 1 */
+  festivalLocation?: string;
   /** @nullable */
   applicationDeadline?: string | null;
   /** @nullable */

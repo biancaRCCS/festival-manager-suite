@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react"
 import { useUser } from "@clerk/react"
 import { useLocation, useParams } from "wouter"
-import { useGetVendor, useGetSettings, useReviewVendor, useUpdateVendorCategory, useUpdateVendorDiscount, useSettleVendorCategoryAdjustment, useFinalApproveVendor, useAssignVendorSpot, getGetVendorQueryKey, getGetSettingsQueryKey, getGetSpecialAgreementSettlementSummaryQueryKey, useDeleteVendor, useResendVendorConfirmation, useUpdateSpecialAgreementSettlement, useUpdateVendorDetails, useRecordVendorManualPayment, useRemoveVendorManualPayment, useReconcileVendorStatusFromTimestamps, useListStaff } from "@workspace/api-client-react"
+import { useGetVendor, useGetSettings, useReviewVendor, useUpdateVendorCategory, useUpdateVendorDiscount, useSettleVendorCategoryAdjustment, useFinalApproveVendor, useAssignVendorSpot, getGetVendorQueryKey, getGetSettingsQueryKey, getGetSpecialAgreementSettlementSummaryQueryKey, useDeleteVendor, useResendVendorConfirmation, useSendVendorPaymentReminder, useUpdateSpecialAgreementSettlement, useUpdateVendorDetails, useRecordVendorManualPayment, useRemoveVendorManualPayment, useReconcileVendorStatusFromTimestamps, useListStaff } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -143,6 +143,7 @@ export default function VendorDetailPage() {
   const assignSpotMutation = useAssignVendorSpot({ mutation: { mutationKey: ["assignSpotVendor", id] } })
   const deleteMutation = useDeleteVendor()
   const resendMutation = useResendVendorConfirmation()
+  const paymentReminderMutation = useSendVendorPaymentReminder({ mutation: { mutationKey: ["sendVendorPaymentReminder", id] } })
   const settlementMutation = useUpdateSpecialAgreementSettlement({ mutation: { mutationKey: ["updateSpecialAgreementSettlement", id] } })
   const detailsMutation = useUpdateVendorDetails({ mutation: { mutationKey: ["updateVendorDetails", id] } })
   const recordPaymentMutation = useRecordVendorManualPayment({ mutation: { mutationKey: ["recordVendorManualPayment", id] } })
@@ -384,6 +385,21 @@ export default function VendorDetailPage() {
     )
   }
 
+  const handleSendPaymentReminder = () => {
+    paymentReminderMutation.mutate(
+      { id },
+      {
+        onSuccess: (updated) => {
+          queryClient.setQueryData(getGetVendorQueryKey(id), updated)
+          queryClient.invalidateQueries({ queryKey: ["paginatedActivity"] })
+          queryClient.invalidateQueries({ queryKey: ["recentActivity"] })
+          toast({ title: "Payment reminder sent" })
+        },
+        onError: () => toast({ title: "Payment reminder was not sent", description: "Confirm the vendor is still awaiting payment and email is configured.", variant: "destructive" }),
+      }
+    )
+  }
+
   const handleRecordPayment = (data: ManualPaymentInput) => {
     recordPaymentMutation.mutate(
       { id, data },
@@ -505,6 +521,13 @@ export default function VendorDetailPage() {
   const spaces = str("spacesRequested")
   const isDoubleSpace = spaces === "double"
   const currentAmount = vendor.amountDue ?? 0
+  const canSendPaymentReminder = isAdmin
+    && !isSpecialAgreement
+    && ["approved", "payment_pending"].includes(vendor.status)
+    && !vendor.paidAt
+    && !hasStripePayment
+    && !hasManualPayment
+    && currentAmount > 0
   const selectedFee = feeForCategory(selectedCategory)
   const selectedOriginalAmountCents = Math.round(selectedFee * 100) * (isDoubleSpace ? 2 : 1)
   const selectedAmount = Math.round(selectedOriginalAmountCents * (100 - vendor.discountPercent) / 100) / 100
@@ -755,6 +778,18 @@ export default function VendorDetailPage() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+            )}
+
+            {canSendPaymentReminder && (
+              <Button
+                variant="outline"
+                className="border-amber-300 text-amber-900 hover:bg-amber-50"
+                onClick={handleSendPaymentReminder}
+                disabled={paymentReminderMutation.isPending}
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                {paymentReminderMutation.isPending ? "Sending…" : "Send Payment Reminder"}
+              </Button>
             )}
 
             {!isSpecialAgreement && vendor.pendingManualAdjustment != null && (
@@ -1205,6 +1240,23 @@ export default function VendorDetailPage() {
                     <Badge variant="secondary">Pending</Badge>
                   }
                 </div>
+                {vendor.lastPaymentReminderSentAt && (
+                  <div className="flex items-start justify-between gap-4">
+                    <span className="text-sm font-medium">Last payment reminder</span>
+                    <div className="text-right text-sm">
+                      <p>{new Date(vendor.lastPaymentReminderSentAt).toLocaleString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}</p>
+                      {vendor.lastPaymentReminderSentBy && (
+                        <p className="text-xs text-muted-foreground">Sent by {vendor.lastPaymentReminderSentBy}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
                 {(paymentReconciliation?.paymentAdjustment.isPaid || vendor.pendingManualAdjustment != null) && (
                   <div role="alert" className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
                     <p className="font-semibold">Manual payment reconciliation</p>

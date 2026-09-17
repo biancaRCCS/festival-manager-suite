@@ -3080,6 +3080,77 @@ export const useResendVendorConfirmation = <TError = ErrorType<void>,
       return useMutation(getResendVendorConfirmationMutationOptions(options));
     }
 
+export const getSendVendorPaymentReminderUrl = (id: number,) => {
+
+
+
+
+  return `/api/vendors/${id}/payment-reminder`
+}
+
+/**
+ * @summary Send an unpaid vendor a payment reminder
+ */
+export const sendVendorPaymentReminder = async (id: number, options?: RequestInit): Promise<Vendor> => {
+
+  return customFetch<Vendor>(getSendVendorPaymentReminderUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getSendVendorPaymentReminderMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendVendorPaymentReminder>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendVendorPaymentReminder>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['sendVendorPaymentReminder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendVendorPaymentReminder>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  sendVendorPaymentReminder(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SendVendorPaymentReminderMutationResult = NonNullable<Awaited<ReturnType<typeof sendVendorPaymentReminder>>>
+
+    export type SendVendorPaymentReminderMutationError = ErrorType<void>
+
+    /**
+ * @summary Send an unpaid vendor a payment reminder
+ */
+export const useSendVendorPaymentReminder = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendVendorPaymentReminder>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof sendVendorPaymentReminder>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getSendVendorPaymentReminderMutationOptions(options));
+    }
+
 export const getListSponsorsUrl = (params?: ListSponsorsParams,) => {
   const normalizedParams = new URLSearchParams();
 

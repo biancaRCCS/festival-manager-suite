@@ -604,14 +604,14 @@ export const getRecentActivityQueryLimitMax = 100;
 export const GetRecentActivityQueryParams = zod.object({
   "page": zod.coerce.number().min(1).default(getRecentActivityQueryPageDefault),
   "limit": zod.coerce.number().min(1).max(getRecentActivityQueryLimitMax).default(getRecentActivityQueryLimitDefault),
-  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'category_changed', 'discount_changed', 'category_adjustment_settled', 'details_updated', 'special_agreement_created', 'special_agreement_signed', 'special_agreement_settlement_updated', 'manual_payment_recorded', 'manual_payment_removed', 'deleted']).optional(),
+  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'category_changed', 'discount_changed', 'payment_reminder_sent', 'category_adjustment_settled', 'details_updated', 'special_agreement_created', 'special_agreement_signed', 'special_agreement_settlement_updated', 'manual_payment_recorded', 'manual_payment_removed', 'deleted']).optional(),
   "entityType": zod.enum(['vendor', 'sponsor', 'volunteer', 'contribution']).optional()
 })
 
 export const GetRecentActivityResponse = zod.object({
   "items": zod.array(zod.object({
   "id": zod.number(),
-  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'category_changed', 'discount_changed', 'category_adjustment_settled', 'details_updated', 'special_agreement_created', 'special_agreement_signed', 'manual_payment_recorded', 'manual_payment_removed', 'deleted']),
+  "type": zod.enum(['new_application', 'approved', 'rejected', 'paid', 'final_approved', 'assigned', 'category_changed', 'discount_changed', 'payment_reminder_sent', 'category_adjustment_settled', 'details_updated', 'special_agreement_created', 'special_agreement_signed', 'manual_payment_recorded', 'manual_payment_removed', 'deleted']),
   "message": zod.string(),
   "entityType": zod.enum(['vendor', 'sponsor', 'volunteer', 'contribution']),
   "entityId": zod.number().optional(),
@@ -723,6 +723,8 @@ export const GetSettingsResponse = zod.object({
   "sponsorSpotLimitPlatinum": zod.number(),
   "sponsorSpotLimitDiamond": zod.number(),
   "festivalDate": zod.string().nullish(),
+  "festivalHours": zod.string(),
+  "festivalLocation": zod.string(),
   "applicationDeadline": zod.string().nullish(),
   "documentDeadline": zod.string().nullish(),
   "paymentWindowDays": zod.number().optional(),
@@ -763,6 +765,10 @@ export const GetSettingsResponse = zod.object({
 /**
  * @summary Update settings
  */
+
+
+
+
 export const UpdateSettingsBody = zod.object({
   "vendorTypeLabelMajorFood": zod.string().optional(),
   "vendorTypeLabelSpecialtyFood": zod.string().optional(),
@@ -792,6 +798,8 @@ export const UpdateSettingsBody = zod.object({
   "sponsorSpotLimitPlatinum": zod.number().optional(),
   "sponsorSpotLimitDiamond": zod.number().optional(),
   "festivalDate": zod.string().nullish(),
+  "festivalHours": zod.string().min(1).optional(),
+  "festivalLocation": zod.string().min(1).optional(),
   "applicationDeadline": zod.string().nullish(),
   "documentDeadline": zod.string().nullish(),
   "paymentWindowDays": zod.number().optional(),
@@ -859,6 +867,8 @@ export const UpdateSettingsResponse = zod.object({
   "sponsorSpotLimitPlatinum": zod.number(),
   "sponsorSpotLimitDiamond": zod.number(),
   "festivalDate": zod.string().nullish(),
+  "festivalHours": zod.string(),
+  "festivalLocation": zod.string(),
   "applicationDeadline": zod.string().nullish(),
   "documentDeadline": zod.string().nullish(),
   "paymentWindowDays": zod.number().optional(),
@@ -930,6 +940,8 @@ export const ListVendorsResponseItem = zod.object({
   "reviewNote": zod.string().nullish(),
   "discountPercent": zod.number().min(listVendorsResponseDiscountPercentMin).max(listVendorsResponseDiscountPercentMax),
   "discountReason": zod.string().nullable(),
+  "lastPaymentReminderSentAt": zod.string().nullable(),
+  "lastPaymentReminderSentBy": zod.string().nullable(),
   "originalAmount": zod.number().nullable(),
   "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
@@ -1009,6 +1021,8 @@ export const ListSpecialAgreementVendorsResponseItem = zod.object({
   "reviewNote": zod.string().nullish(),
   "discountPercent": zod.number().min(listSpecialAgreementVendorsResponseDiscountPercentMin).max(listSpecialAgreementVendorsResponseDiscountPercentMax),
   "discountReason": zod.string().nullable(),
+  "lastPaymentReminderSentAt": zod.string().nullable(),
+  "lastPaymentReminderSentBy": zod.string().nullable(),
   "originalAmount": zod.number().nullable(),
   "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
@@ -1104,6 +1118,8 @@ export const CreateSpecialAgreementVendorResponse = zod.object({
   "reviewNote": zod.string().nullish(),
   "discountPercent": zod.number().min(createSpecialAgreementVendorResponseDiscountPercentMin).max(createSpecialAgreementVendorResponseDiscountPercentMax),
   "discountReason": zod.string().nullable(),
+  "lastPaymentReminderSentAt": zod.string().nullable(),
+  "lastPaymentReminderSentBy": zod.string().nullable(),
   "originalAmount": zod.number().nullable(),
   "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
@@ -1218,6 +1234,8 @@ export const GetVendorResponse = zod.object({
   "reviewNote": zod.string().nullish(),
   "discountPercent": zod.number().min(getVendorResponseDiscountPercentMin).max(getVendorResponseDiscountPercentMax),
   "discountReason": zod.string().nullable(),
+  "lastPaymentReminderSentAt": zod.string().nullable(),
+  "lastPaymentReminderSentBy": zod.string().nullable(),
   "originalAmount": zod.number().nullable(),
   "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
@@ -1330,6 +1348,8 @@ export const UpdateSpecialAgreementSettlementResponse = zod.object({
   "reviewNote": zod.string().nullish(),
   "discountPercent": zod.number().min(updateSpecialAgreementSettlementResponseDiscountPercentMin).max(updateSpecialAgreementSettlementResponseDiscountPercentMax),
   "discountReason": zod.string().nullable(),
+  "lastPaymentReminderSentAt": zod.string().nullable(),
+  "lastPaymentReminderSentBy": zod.string().nullable(),
   "originalAmount": zod.number().nullable(),
   "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
@@ -1413,6 +1433,8 @@ export const ReviewVendorResponse = zod.object({
   "reviewNote": zod.string().nullish(),
   "discountPercent": zod.number().min(reviewVendorResponseDiscountPercentMin).max(reviewVendorResponseDiscountPercentMax),
   "discountReason": zod.string().nullable(),
+  "lastPaymentReminderSentAt": zod.string().nullable(),
+  "lastPaymentReminderSentBy": zod.string().nullable(),
   "originalAmount": zod.number().nullable(),
   "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
@@ -1511,6 +1533,8 @@ export const RecordVendorManualPaymentResponse = zod.object({
   "reviewNote": zod.string().nullish(),
   "discountPercent": zod.number().min(recordVendorManualPaymentResponseDiscountPercentMin).max(recordVendorManualPaymentResponseDiscountPercentMax),
   "discountReason": zod.string().nullable(),
+  "lastPaymentReminderSentAt": zod.string().nullable(),
+  "lastPaymentReminderSentBy": zod.string().nullable(),
   "originalAmount": zod.number().nullable(),
   "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
@@ -1592,6 +1616,8 @@ export const RemoveVendorManualPaymentResponse = zod.object({
   "reviewNote": zod.string().nullish(),
   "discountPercent": zod.number().min(removeVendorManualPaymentResponseDiscountPercentMin).max(removeVendorManualPaymentResponseDiscountPercentMax),
   "discountReason": zod.string().nullable(),
+  "lastPaymentReminderSentAt": zod.string().nullable(),
+  "lastPaymentReminderSentBy": zod.string().nullable(),
   "originalAmount": zod.number().nullable(),
   "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
@@ -1681,6 +1707,8 @@ export const UpdateVendorCategoryResponse = zod.object({
   "reviewNote": zod.string().nullish(),
   "discountPercent": zod.number().min(updateVendorCategoryResponseVendorDiscountPercentMin).max(updateVendorCategoryResponseVendorDiscountPercentMax),
   "discountReason": zod.string().nullable(),
+  "lastPaymentReminderSentAt": zod.string().nullable(),
+  "lastPaymentReminderSentBy": zod.string().nullable(),
   "originalAmount": zod.number().nullable(),
   "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
@@ -1782,6 +1810,8 @@ export const UpdateVendorDiscountResponse = zod.object({
   "reviewNote": zod.string().nullish(),
   "discountPercent": zod.number().min(updateVendorDiscountResponseDiscountPercentMin).max(updateVendorDiscountResponseDiscountPercentMax),
   "discountReason": zod.string().nullable(),
+  "lastPaymentReminderSentAt": zod.string().nullable(),
+  "lastPaymentReminderSentBy": zod.string().nullable(),
   "originalAmount": zod.number().nullable(),
   "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
@@ -1889,6 +1919,8 @@ export const UpdateVendorDetailsResponse = zod.object({
   "reviewNote": zod.string().nullish(),
   "discountPercent": zod.number().min(updateVendorDetailsResponseDiscountPercentMin).max(updateVendorDetailsResponseDiscountPercentMax),
   "discountReason": zod.string().nullable(),
+  "lastPaymentReminderSentAt": zod.string().nullable(),
+  "lastPaymentReminderSentBy": zod.string().nullable(),
   "originalAmount": zod.number().nullable(),
   "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
@@ -1967,6 +1999,8 @@ export const ReconcileVendorStatusFromTimestampsResponse = zod.object({
   "reviewNote": zod.string().nullish(),
   "discountPercent": zod.number().min(reconcileVendorStatusFromTimestampsResponseDiscountPercentMin).max(reconcileVendorStatusFromTimestampsResponseDiscountPercentMax),
   "discountReason": zod.string().nullable(),
+  "lastPaymentReminderSentAt": zod.string().nullable(),
+  "lastPaymentReminderSentBy": zod.string().nullable(),
   "originalAmount": zod.number().nullable(),
   "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
@@ -2045,6 +2079,8 @@ export const SettleVendorCategoryAdjustmentResponse = zod.object({
   "reviewNote": zod.string().nullish(),
   "discountPercent": zod.number().min(settleVendorCategoryAdjustmentResponseDiscountPercentMin).max(settleVendorCategoryAdjustmentResponseDiscountPercentMax),
   "discountReason": zod.string().nullable(),
+  "lastPaymentReminderSentAt": zod.string().nullable(),
+  "lastPaymentReminderSentBy": zod.string().nullable(),
   "originalAmount": zod.number().nullable(),
   "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
@@ -2123,6 +2159,8 @@ export const FinalApproveVendorResponse = zod.object({
   "reviewNote": zod.string().nullish(),
   "discountPercent": zod.number().min(finalApproveVendorResponseDiscountPercentMin).max(finalApproveVendorResponseDiscountPercentMax),
   "discountReason": zod.string().nullable(),
+  "lastPaymentReminderSentAt": zod.string().nullable(),
+  "lastPaymentReminderSentBy": zod.string().nullable(),
   "originalAmount": zod.number().nullable(),
   "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
@@ -2206,6 +2244,8 @@ export const AssignVendorSpotResponse = zod.object({
   "reviewNote": zod.string().nullish(),
   "discountPercent": zod.number().min(assignVendorSpotResponseDiscountPercentMin).max(assignVendorSpotResponseDiscountPercentMax),
   "discountReason": zod.string().nullable(),
+  "lastPaymentReminderSentAt": zod.string().nullable(),
+  "lastPaymentReminderSentBy": zod.string().nullable(),
   "originalAmount": zod.number().nullable(),
   "amountDue": zod.number().nullable(),
   "paidAt": zod.string().nullish(),
@@ -2259,6 +2299,86 @@ export const ResendVendorConfirmationParams = zod.object({
 })
 
 export const ResendVendorConfirmationResponse = zod.void()
+
+
+/**
+ * @summary Send an unpaid vendor a payment reminder
+ */
+export const SendVendorPaymentReminderParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const sendVendorPaymentReminderResponseDiscountPercentMin = 0;
+export const sendVendorPaymentReminderResponseDiscountPercentMax = 100;
+
+export const sendVendorPaymentReminderResponseSpecialAgreementSettlementVersionMin = 0;
+
+
+
+export const SendVendorPaymentReminderResponse = zod.object({
+  "id": zod.number(),
+  "yearId": zod.number(),
+  "name": zod.string(),
+  "businessName": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string(),
+  "vendorType": zod.string(),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'payment_pending', 'payment_processing', 'paid', 'final_approved']),
+  "statusNeedsRepair": zod.boolean().optional(),
+  "timestampImpliedStatus": zod.string().nullish(),
+  "applicationData": zod.record(zod.string(), zod.unknown()),
+  "agreementSigned": zod.boolean().optional(),
+  "agreementSignedName": zod.string().nullish(),
+  "spotNumber": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "reviewNote": zod.string().nullish(),
+  "discountPercent": zod.number().min(sendVendorPaymentReminderResponseDiscountPercentMin).max(sendVendorPaymentReminderResponseDiscountPercentMax),
+  "discountReason": zod.string().nullable(),
+  "lastPaymentReminderSentAt": zod.string().nullable(),
+  "lastPaymentReminderSentBy": zod.string().nullable(),
+  "originalAmount": zod.number().nullable(),
+  "amountDue": zod.number().nullable(),
+  "paidAt": zod.string().nullish(),
+  "paymentSource": zod.union([zod.literal('stripe'),zod.literal('manual'),zod.literal(null)]).nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "hasStripePayment": zod.boolean().optional(),
+  "stripePaymentAmount": zod.number().nullish(),
+  "stripePaidAt": zod.string().nullish(),
+  "manualPaymentAmount": zod.number().nullish(),
+  "manualPaymentReceivedDate": zod.string().nullish(),
+  "manualPaymentReference": zod.string().nullish(),
+  "manualPaymentRecordedAt": zod.string().nullish(),
+  "manualPaymentRecordedBy": zod.string().nullish(),
+  "manualPaymentPreviousStatus": zod.string().nullish(),
+  "paymentFailedAt": zod.string().nullish(),
+  "paymentFailureReason": zod.string().nullish(),
+  "settledAmount": zod.number().nullish(),
+  "pendingManualAdjustment": zod.number().nullish(),
+  "pendingAdjustmentTargetAmount": zod.number().nullish(),
+  "specialAgreementOperationType": zod.string().nullish(),
+  "specialAgreementRevenueSharePercentage": zod.number().nullish(),
+  "specialAgreementInternalNotes": zod.string().nullish(),
+  "specialAgreementDayOfContactName": zod.string().nullish(),
+  "specialAgreementDayOfContactPhone": zod.string().nullish(),
+  "specialAgreementBackupContactName": zod.string().nullish(),
+  "specialAgreementBackupContactPhone": zod.string().nullish(),
+  "specialAgreementSignedDate": zod.string().nullish(),
+  "specialAgreementSignedAt": zod.string().nullish(),
+  "specialAgreementGrossSales": zod.number().nullish(),
+  "specialAgreementDeductions": zod.number().nullish(),
+  "specialAgreementDeductionsNotes": zod.string().nullish(),
+  "specialAgreementNetProfit": zod.number().nullish(),
+  "specialAgreementAmountOwed": zod.number().nullish(),
+  "specialAgreementAmountPaid": zod.number().nullish(),
+  "specialAgreementPaidDate": zod.string().nullish(),
+  "specialAgreementOutstandingBalance": zod.number().nullish(),
+  "specialAgreementSettlementStatus": zod.enum(['awaiting_figures', 'calculated', 'paid']).optional(),
+  "specialAgreementSettlementNotes": zod.string().nullish(),
+  "specialAgreementSettlementVersion": zod.number().min(sendVendorPaymentReminderResponseSpecialAgreementSettlementVersionMin).optional(),
+  "approvedAt": zod.string().nullish(),
+  "finalApprovedAt": zod.string().nullish(),
+  "createdAt": zod.string()
+})
 
 
 /**

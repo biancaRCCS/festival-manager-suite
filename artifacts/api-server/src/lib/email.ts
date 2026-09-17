@@ -116,12 +116,12 @@ function wrapEmail(bodyHtml: string, footer: EmailFooter = "supporter"): string 
 // Shared send helper — fire-and-forget, never throws.
 // On failure the error is written to activity_log so admins can see it.
 // ---------------------------------------------------------------------------
-async function send(to: string, subject: string, html: string, footer: EmailFooter = "supporter"): Promise<void> {
+async function send(to: string, subject: string, html: string, footer: EmailFooter = "supporter"): Promise<boolean> {
   try {
     const resend = getResendClient();
     if (!resend) {
       logger.info({ to, subject }, "Email would be sent (no RESEND_API_KEY configured)");
-      return;
+      return false;
     }
     const replyTo = validReplyTo();
     const { error } = await resend.emails.send({
@@ -133,6 +133,7 @@ async function send(to: string, subject: string, html: string, footer: EmailFoot
     });
     if (error) throw new Error(error.message);
     logger.info({ to, subject }, "Email sent");
+    return true;
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err);
     logger.error({ err, to, subject }, "Failed to send email");
@@ -147,6 +148,7 @@ async function send(to: string, subject: string, html: string, footer: EmailFoot
     } catch (logErr) {
       logger.error({ logErr }, "Failed to record email failure in activity log");
     }
+    return false;
   }
 }
 
@@ -294,6 +296,57 @@ export async function sendVendorPortalInviteEmail(params: {
       <p>We look forward to having you at the festival!</p>
     </div>`;
   await send(to, subject, html);
+}
+
+export async function sendVendorPaymentReminderEmail(params: {
+  to: string;
+  contactName: string;
+  businessName: string;
+  amountDue: number;
+  categoryLabel: string;
+  boothDimensions: string;
+  portalUrl: string;
+  festivalDate: string;
+  festivalHours: string;
+  festivalLocation: string;
+}): Promise<boolean> {
+  const {
+    to,
+    contactName,
+    businessName,
+    amountDue,
+    categoryLabel,
+    boothDimensions,
+    portalUrl,
+    festivalDate,
+    festivalHours,
+    festivalLocation,
+  } = params;
+  const formattedDate = new Date(`${festivalDate}T12:00:00.000Z`).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+  const amount = amountDue.toLocaleString("en-US", { style: "currency", currency: "USD" });
+  const html = `
+    <div style="${BASE_STYLE}">
+      <p>Hi ${escapeHtml(contactName)},</p>
+      <p>Thank you for applying to be part of the 2026 Romanian Festival. Your application for <strong>${escapeHtml(businessName)}</strong> has been approved — we just haven't received your booth payment yet.</p>
+      ${DIVIDER}
+      ${field("Amount due", amount)}
+      <p style="${VALUE_STYLE}">${escapeHtml(categoryLabel)} · ${escapeHtml(boothDimensions)}</p>
+      <p>
+        <a href="${escapeHtml(portalUrl)}" style="display: inline-block; background: #8b1a1a; color: white; padding: 12px 24px; text-decoration: none; font-size: 16px;">
+          Complete your payment
+        </a>
+      </p>
+      <p>Your space is being held, but it isn't confirmed until payment is received. Once it is, you'll get your confirmation, and we'll be in touch with load-in details closer to the day.</p>
+      <p><strong>${escapeHtml(formattedDate)} · ${escapeHtml(festivalHours)}</strong><br>${escapeHtml(festivalLocation)}</p>
+      <p>If you have any questions, or if anything has changed on your end, just reply to this email — we'd much rather hear from you than guess.</p>
+    </div>`;
+  return send(to, "Payment reminder — Romanian Festival 2026", html);
 }
 
 // ---------------------------------------------------------------------------

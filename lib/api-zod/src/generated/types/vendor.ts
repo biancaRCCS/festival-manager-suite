@@ -40,6 +40,10 @@ export interface Vendor {
   /** @nullable */
   discountReason: string | null;
   /** @nullable */
+  lastPaymentReminderSentAt: string | null;
+  /** @nullable */
+  lastPaymentReminderSentBy: string | null;
+  /** @nullable */
   originalAmount: number | null;
   /** @nullable */
   amountDue: number | null;

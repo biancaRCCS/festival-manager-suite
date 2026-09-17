@@ -85,6 +85,8 @@ export interface FestivalSettings {
   sponsorSpotLimitDiamond: number;
   /** @nullable */
   festivalDate?: string | null;
+  festivalHours: string;
+  festivalLocation: string;
   /** @nullable */
   applicationDeadline?: string | null;
   /** @nullable */
@@ -139,6 +141,10 @@ export interface FestivalSettingsUpdate {
   sponsorSpotLimitDiamond?: number;
   /** @nullable */
   festivalDate?: string | null;
+  /** @minLength 1 */
+  festivalHours?: string;
+  /** @minLength 1 */
+  festivalLocation?: string;
   /** @nullable */
   applicationDeadline?: string | null;
   /** @nullable */
@@ -226,6 +232,10 @@ export interface Vendor {
   discountPercent: number;
   /** @nullable */
   discountReason: string | null;
+  /** @nullable */
+  lastPaymentReminderSentAt: string | null;
+  /** @nullable */
+  lastPaymentReminderSentBy: string | null;
   /** @nullable */
   originalAmount: number | null;
   /** @nullable */
@@ -522,6 +532,7 @@ export const ActivityItemType = {
   assigned: 'assigned',
   category_changed: 'category_changed',
   discount_changed: 'discount_changed',
+  payment_reminder_sent: 'payment_reminder_sent',
   category_adjustment_settled: 'category_adjustment_settled',
   details_updated: 'details_updated',
   special_agreement_created: 'special_agreement_created',
@@ -1212,6 +1223,7 @@ export const GetRecentActivityType = {
   assigned: 'assigned',
   category_changed: 'category_changed',
   discount_changed: 'discount_changed',
+  payment_reminder_sent: 'payment_reminder_sent',
   category_adjustment_settled: 'category_adjustment_settled',
   details_updated: 'details_updated',
   special_agreement_created: 'special_agreement_created',
