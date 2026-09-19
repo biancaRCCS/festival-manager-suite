@@ -286,7 +286,7 @@ function LandingPage() {
             <p className="mt-5 text-muted-foreground text-base max-w-xl">
               Applications are open for this year's festival. Vendor and sponsor
               applications are due{" "}
-              <span className="font-semibold text-foreground">September 10, 2026</span>.
+              <span className="font-semibold text-foreground">September 24, 2026</span>.
               Choose your participation type below.
             </p>
           </div>
