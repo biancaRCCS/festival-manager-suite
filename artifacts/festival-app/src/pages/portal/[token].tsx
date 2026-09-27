@@ -691,7 +691,7 @@ export default function PortalPage() {
                         vendors@romaniancenter.org
                       </a>{" "}
                       for use in festival marketing and signage. To be included in printed materials,
-                      logos must be received by <strong>Monday, August 31, 2026</strong>.
+                      logos must be received before artwork is finalized.
                     </p>
                   </div>
                 </div>

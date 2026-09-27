@@ -264,7 +264,7 @@ router.get("/public/form-questions", async (req, res): Promise<void> => {
   ];
 
   if (type === "vendor") {
-    res.json({ questions: s.vendorFormQuestions, applicationDeadline: deadline, vendorTypes, styleGuidelinesUrl: s.styleGuidelinesUrl ?? null });
+    res.json({ questions: s.vendorFormQuestions, applicationDeadline: deadline, documentDeadline: s.documentDeadline ?? null, vendorTypes, styleGuidelinesUrl: s.styleGuidelinesUrl ?? null });
   } else if (type === "sponsor") {
     const sponsorTiers = [
       { key: "bronze",   label: "Bronze",   min: parseFloat(s.sponsorPriceBronze ?? "750"),    max: s.sponsorPriceMaxBronze   != null ? parseFloat(s.sponsorPriceMaxBronze)   : 1499, spotLimit: s.sponsorSpotLimitBronze   ?? 10 },

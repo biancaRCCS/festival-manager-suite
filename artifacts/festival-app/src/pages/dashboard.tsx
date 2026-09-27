@@ -117,7 +117,7 @@ export default function DashboardPage() {
                 <CardContent className="p-8 flex items-center justify-between">
                   <div>
                     <h2 className="text-sm font-medium text-primary uppercase tracking-wider mb-1">
-                      Countdown to the 2026 Romanian Festival
+                      Countdown to the {summary.festivalDate?.slice(0, 4) ?? currentYear?.year} Romanian Festival
                     </h2>
 
                     {summary.festivalDate ? (

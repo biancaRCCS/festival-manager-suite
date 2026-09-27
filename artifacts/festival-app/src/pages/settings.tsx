@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
-import { useGetCurrentYear, useGetSettings, useUpdateSettings, getGetSettingsQueryKey } from "@workspace/api-client-react"
+import { useGetCurrentYear, useGetSettings, useUpdateSettings, useListFestivalYears, useCreateFestivalYear, useUpdateFestivalYear, useListStaff, getGetCurrentYearQueryKey, getGetSettingsQueryKey } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
+import { useUser } from "@clerk/react"
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -28,8 +29,14 @@ const SPONSOR_TIERS = ["Bronze", "Silver", "Gold", "Platinum", "Diamond"] as con
 export default function SettingsPage() {
   const queryClient = useQueryClient()
   const { toast } = useToast()
+  const { user } = useUser()
 
   const { data: currentYear } = useGetCurrentYear()
+  const { data: years } = useListFestivalYears()
+  const { data: staff } = useListStaff()
+  const isAdmin = staff?.some(member => member.clerkUserId === user?.id && member.role === "admin") ?? false
+  const createYear = useCreateFestivalYear()
+  const updateYear = useUpdateFestivalYear()
   const { data: settings, isLoading } = useGetSettings(
     { yearId: currentYear?.id },
     { query: { enabled: !!currentYear, queryKey: getGetSettingsQueryKey({ yearId: currentYear?.id }) } }
@@ -40,7 +47,7 @@ export default function SettingsPage() {
   updateMutateFnRef.current = updateMutation.mutate
 
   const [localSettings, setLocalSettings] = useState<Partial<FestivalSettings>>({})
-  const initialized = useRef(false)
+  const initializedYear = useRef<number | null>(null)
   const [isSendingTestEmail, setIsSendingTestEmail] = useState(false)
 
   // Email status (Resend)
@@ -85,11 +92,30 @@ export default function SettingsPage() {
   }, [toast])
 
   useEffect(() => {
-    if (settings && !initialized.current) {
+    if (settings && initializedYear.current !== settings.yearId) {
       setLocalSettings(settings)
-      initialized.current = true
+      initializedYear.current = settings.yearId
     }
   }, [settings])
+
+  const activate2027 = async () => {
+    try {
+      const existing = years?.find(year => year.year === 2027)
+      if (existing) {
+        await updateYear.mutateAsync({ id: existing.id, data: { eventDate: "2027-09-25", isActive: true } })
+      } else {
+        await createYear.mutateAsync({
+          data: { year: 2027, eventName: "Romanian Cultural Festival 2027", eventDate: "2027-09-25", isActive: true },
+        })
+      }
+      initializedYear.current = null
+      await queryClient.invalidateQueries({ queryKey: getGetCurrentYearQueryKey() })
+      await queryClient.invalidateQueries()
+      toast({ title: "2027 festival activated", description: "2026 applications and records remain in their original year." })
+    } catch {
+      toast({ title: "Could not activate 2027", variant: "destructive" })
+    }
+  }
 
   const set = (key: keyof FestivalSettings, value: unknown) =>
     setLocalSettings(prev => ({ ...prev, [key]: value }))
@@ -213,11 +239,25 @@ export default function SettingsPage() {
             {/* ── GENERAL TAB ─────────────────────────────────────────────── */}
             <TabsContent value="general" className="space-y-6">
 
+              {isAdmin && currentYear?.year !== 2027 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Start the 2027 festival</CardTitle>
+                    <CardDescription>Activate September 25, 2027 as a separate festival year. Existing 2026 applications and records will stay with 2026. Review the new year's fees, forms, and deadlines after activating.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button onClick={activate2027} disabled={createYear.isPending || updateYear.isPending || !years}>
+                      {createYear.isPending || updateYear.isPending ? "Activating…" : "Activate 2027"}
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Festival Dates & Settings */}
               <Card>
                 <CardHeader>
                   <CardTitle>Festival Dates &amp; Settings</CardTitle>
-                  <CardDescription>Key dates and operational settings for the 2026 festival.</CardDescription>
+                  <CardDescription>Key dates and operational settings for the {currentYear?.year ?? "current"} festival.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">

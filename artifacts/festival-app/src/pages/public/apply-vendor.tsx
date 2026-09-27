@@ -14,7 +14,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast"
 import { Loader2, ExternalLink } from "lucide-react"
 import { ApplicationDeadlineCountdown } from "@/components/application-deadline-countdown"
-import { GuideLinks } from "@/components/guide-links"
 
 // ---------------------------------------------------------------------------
 // Section 8 — Vendor category reference text
@@ -103,9 +102,9 @@ interface VendorType {
   booth: string
 }
 
-async function fetchFormConfig(): Promise<{ vendorTypes: VendorType[]; applicationDeadline: string | null; styleGuidelinesUrl: string | null }> {
+async function fetchFormConfig(): Promise<{ vendorTypes: VendorType[]; applicationDeadline: string | null; documentDeadline: string | null; styleGuidelinesUrl: string | null }> {
   const res = await fetch(`/api/public/form-questions?type=vendor`)
-  if (!res.ok) return { vendorTypes: [], applicationDeadline: null, styleGuidelinesUrl: null }
+  if (!res.ok) return { vendorTypes: [], applicationDeadline: null, documentDeadline: null, styleGuidelinesUrl: null }
   return res.json()
 }
 
@@ -388,8 +387,7 @@ export default function ApplyVendorPage() {
   const isLoading = yearLoading || configLoading
 
   return (
-    <PublicLayout title="Vendor Application" subtitle="Apply for a booth at the 2026 Romanian Festival — Saturday, 26 September 2026.">
-      <GuideLinks />
+    <PublicLayout title="Vendor Application" subtitle="Apply for a booth at the 2027 Romanian Festival — Saturday, September 25, 2027.">
       {config?.applicationDeadline && (
         <ApplicationDeadlineCountdown deadline={config.applicationDeadline} />
       )}
@@ -747,7 +745,9 @@ export default function ApplyVendorPage() {
                         <a href="mailto:vendors@romaniancenter.org" className="text-primary underline underline-offset-2">
                           vendors@romaniancenter.org
                         </a>{" "}
-                        by <strong>September 18, 2026</strong>.
+                        {config?.documentDeadline
+                          ? <> by <strong>{new Date(`${config.documentDeadline}T12:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</strong>.</>
+                          : " before the event."}
                       </p>
                       <a
                         href="https://www.placer.ca.gov/DocumentCenter/View/9479/Application-for-TFF-Food-Vendor-Authorization-PDF-Fillable-Form?bidId="
@@ -776,7 +776,9 @@ export default function ApplyVendorPage() {
                         <Label htmlFor="ein">Employer Identification Number (EIN)<RequiredStar /></Label>
                         <Input id="ein" className="max-w-sm" placeholder="XX-XXXXXXX" value={form.ein} onChange={e => set("ein", e.target.value)} />
                       </div>
-                      <FieldNote>Email a copy of your IRS Determination Letter to vendors@romaniancenter.org by 18 September 2026.</FieldNote>
+                      <FieldNote>Email a copy of your IRS Determination Letter to vendors@romaniancenter.org{config?.documentDeadline
+                        ? ` by ${new Date(`${config.documentDeadline}T12:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.`
+                        : " before the event."}</FieldNote>
                     </div>
                   )}
 
@@ -871,7 +873,9 @@ export default function ApplyVendorPage() {
                     <AckRow id="ack_foodCompliance" checked={form.ack_foodCompliance} onChange={v => set("ack_foodCompliance", v)}>
                       I understand that I am responsible for obtaining my own Placer County temporary food facility permit, and for emailing a copy to{" "}
                       <a href="mailto:vendors@romaniancenter.org" className="text-primary underline underline-offset-2">vendors@romaniancenter.org</a>{" "}
-                      by September 18, 2026.
+                      {config?.documentDeadline
+                        ? ` by ${new Date(`${config.documentDeadline}T12:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.`
+                        : " before the event."}
                     </AckRow>
                   )}
                   <AckRow id="ack_fireMarshal" checked={form.ack_fireMarshal} onChange={v => set("ack_fireMarshal", v)}>

@@ -58,7 +58,7 @@ const ACK_LABELS: Record<string, string> = {
   ack_cleanBooth:        "Responsible for a clean booth and removing all trash before leaving the event.",
   ack_notResponsible:    "RCCS is not responsible for lost, stolen, or damaged property.",
   ack_rccsRight:         "RCCS reserves the right to approve, deny, or reclassify any application.",
-  ack_documents:         "Required documents emailed to vendors@romaniancenter.org by 18 September 2026.",
+  ack_documents:         "Required documents emailed to vendors@romaniancenter.org before the event.",
   ack_styleGuidelines:   "Agreed to follow RCCS Romanian Festival style guidelines for signage, booth presentation, and promotional materials.",
 }
 
@@ -1092,7 +1092,7 @@ export default function VendorDetailPage() {
                 {isNonprofit && <Field label="Employer Identification Number (EIN)" value={str("ein")} />}
                 <Field
                   label="Document Acknowledgement"
-                  value={bool("ack_documents") ? "Acknowledged — will email documents by 18 Sep 2026" : "Not acknowledged"}
+                  value={bool("ack_documents") ? "Acknowledged — will email documents before the event" : "Not acknowledged"}
                 />
               </div>
 

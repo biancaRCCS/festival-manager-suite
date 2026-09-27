@@ -39,7 +39,6 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'wouter';
 import { CalendarDays, HandHeart, Store, MapPin, Clock } from 'lucide-react';
 import { ApplicationDeadlineCountdown } from '@/components/application-deadline-countdown';
-import { GuideLinks } from '@/components/guide-links';
 
 const clerkPubKey = publishableKeyFromHost(
   window.location.hostname,
@@ -213,7 +212,7 @@ function LandingPage() {
 
               {/* 4. Date, time, location */}
               <div className="mb-6 text-white/80 text-sm md:text-base leading-relaxed space-y-1">
-                <p>Saturday, September 26, 2026 · 12:00 PM – 9:00 PM · Free Admission</p>
+                <p>Saturday, September 25, 2027 · 12:00 PM – 9:00 PM · Free Admission</p>
                 <p>Vernon Street Town Square, Downtown Roseville, CA</p>
               </div>
 
@@ -284,14 +283,16 @@ function LandingPage() {
               Apply to Participate
             </h2>
             <p className="mt-5 text-muted-foreground text-base max-w-xl">
-              Applications are open for this year's festival. Vendor and sponsor
-              applications are due{" "}
-              <span className="font-semibold text-foreground">September 24, 2026</span>.
+              Apply to join the 2027 festival.{" "}
+              {deadline && (
+                <>Vendor and sponsor applications are due{" "}
+                  <span className="font-semibold text-foreground">
+                    {new Date(`${deadline}T12:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                  </span>.{" "}</>
+              )}
               Choose your participation type below.
             </p>
           </div>
-
-          <GuideLinks />
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Sponsors — navy */}

@@ -92,13 +92,16 @@ router.get("/settings", requireStaff, async (req, res): Promise<void> => {
 
   if (settings.length === 0) {
     // Auto-create default settings for this year
+    const [year] = await db.select().from(festivalYearsTable).where(eq(festivalYearsTable.id, yearId)).limit(1);
+    if (!year) {
+      res.status(404).json({ error: "Festival year not found" });
+      return;
+    }
     const [created] = await db.insert(festivalSettingsTable).values({
       yearId,
-      festivalDate:        "2026-09-26",
+      festivalDate:        year.eventDate,
       festivalHours:       "12:00 PM – 9:00 PM",
       festivalLocation:    "Vernon Street Town Square, Downtown Roseville",
-      applicationDeadline: "2026-09-10",
-      documentDeadline:    "2026-09-18",
       paymentWindowDays:   7,
       notificationEmail:   "vendors@romaniancenter.org",
       vendorFormQuestions:    [],

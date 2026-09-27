@@ -12,7 +12,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2, Check, Mail } from "lucide-react"
 import { ApplicationDeadlineCountdown } from "@/components/application-deadline-countdown"
-import { GuideLinks } from "@/components/guide-links"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -226,12 +225,12 @@ function BenefitsTable({ tiers }: { tiers: SponsorTier[] }) {
         Complimentary Hospitality includes one meal and one beverage per guest, based on sponsorship level. Diamond and Platinum sponsors also receive a private, tented VIP seating area with preferred stage viewing, reserved exclusively for their sponsor guests.
       </p>
 
-      {/* Production deadline note — verbatim from spec */}
+      {/* Avoid displaying a prior year's artwork deadline until the next one is confirmed. */}
       <p className="text-sm text-muted-foreground leading-relaxed">
         <span className="font-medium">*</span>{" "}
         Inclusion in printed or finalized promotional materials is subject to receipt of payment
-        and approved logo files by Monday, August 31, 2026. Sponsorships confirmed after this
-        deadline will receive remaining digital and on-site benefits where feasible.
+        and approved logo files before artwork is finalized. Sponsorships confirmed afterward
+        will receive remaining digital and on-site benefits where feasible.
       </p>
     </div>
   )
@@ -403,9 +402,8 @@ export default function ApplySponsorPage() {
   return (
     <PublicLayout
       title="Sponsor Application"
-      subtitle="Support the 2026 Romanian Festival — Saturday, 26 September 2026, Vernon Street Town Square, Roseville."
+      subtitle="Support the 2027 Romanian Festival — Saturday, September 25, 2027, Vernon Street Town Square, Roseville."
     >
-      <GuideLinks />
       {config?.applicationDeadline && (
         <ApplicationDeadlineCountdown deadline={config.applicationDeadline} />
       )}
