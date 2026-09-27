@@ -39,6 +39,7 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'wouter';
 import { CalendarDays, HandHeart, Store, MapPin, Clock } from 'lucide-react';
 import { ApplicationDeadlineCountdown } from '@/components/application-deadline-countdown';
+import { GuideLinks } from '@/components/guide-links';
 
 const clerkPubKey = publishableKeyFromHost(
   window.location.hostname,
@@ -293,6 +294,8 @@ function LandingPage() {
               Choose your participation type below.
             </p>
           </div>
+
+          <GuideLinks />
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Sponsors — navy */}

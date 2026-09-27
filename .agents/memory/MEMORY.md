@@ -9,4 +9,4 @@
 - [Stripe webhook environment isolation](stripe-webhook-environment-isolation.md) — development and production must not manage the same Stripe webhook endpoint.
 - [Overlapping payment ledgers](overlapping-payment-ledgers.md) — manual and Stripe payments coexist; reversals must preserve late settlements, exact prior workflow state, and actual cash totals.
 - [In-kind sponsor accounting](in-kind-sponsor-accounting.md) — in-kind sponsorships fulfill participation without becoming cash payments; invalidate checkout and report value separately.
-- [Annual festival rollover](annual-festival-rollover.md) — create a separate active year; preserve prior-year records and do not reuse unconfirmed deadlines or guides.
+- [Annual festival rollover](annual-festival-rollover.md) — preserve prior-year records; don't invent deadlines; keep existing PDF guide links available until the user updates them.
