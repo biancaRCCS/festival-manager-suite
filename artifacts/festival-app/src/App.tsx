@@ -191,12 +191,7 @@ function LandingPage() {
                 className="w-full max-w-[520px] h-auto mb-4"
               />
 
-              {/* 2. Theme line */}
-              <p className="font-serif italic text-white/60 text-sm md:text-base mb-5 tracking-wide">
-                150 Years of Constantin Brâncuși: Tradition, Art, &amp; Romanian Spirit
-              </p>
-
-              {/* 3. Mobile dancers — flag ribbon behind this block only */}
+              {/* Mobile dancers — flag ribbon behind this block only */}
               <div className="relative md:hidden flex justify-center w-full mb-6">
                 <img
                   src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/festival-flag.png`}
@@ -211,13 +206,13 @@ function LandingPage() {
                 />
               </div>
 
-              {/* 4. Date, time, location */}
+              {/* Date, time, location */}
               <div className="mb-6 text-white/80 text-sm md:text-base leading-relaxed space-y-1">
                 <p>Saturday, September 25, 2027 · 12:00 PM – 9:00 PM · Free Admission</p>
                 <p>Vernon Street Town Square, Downtown Roseville, CA</p>
               </div>
 
-              {/* 5. Get Involved button */}
+              {/* Get Involved button */}
               <Button
                 className="bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-sm px-8 h-12 shadow-lg mb-8"
                 onClick={() => document.getElementById("apply-section")?.scrollIntoView({ behavior: "smooth" })}
@@ -225,7 +220,7 @@ function LandingPage() {
                 Get Involved
               </Button>
 
-              {/* 6. Tagline */}
+              {/* Tagline */}
               <p className="text-white/50 text-xs md:text-sm tracking-wide">
                 Preserving Culture. Strengthening Community. Connecting Generations.
               </p>
