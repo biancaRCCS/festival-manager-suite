@@ -72,7 +72,7 @@ export function ApplicationDeadlineCountdown({ deadline }: Props) {
           </span>
         </p>
 
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-4 gap-2 sm:gap-3">
           {[
             { label: "Days", value: timeLeft.days },
             { label: "Hours", value: timeLeft.hours },
@@ -81,12 +81,12 @@ export function ApplicationDeadlineCountdown({ deadline }: Props) {
           ].map(({ label, value }) => (
             <div
               key={label}
-              className={`flex flex-col items-center rounded border py-4 bg-white shadow-sm ${urgent ? "border-primary/20" : "border-secondary/20"}`}
+              className={`min-w-0 flex flex-col items-center rounded border py-4 bg-white shadow-sm ${urgent ? "border-primary/20" : "border-secondary/20"}`}
             >
-              <span className={`font-serif font-bold ${urgent ? "text-primary" : "text-secondary"} text-[62px]`}>
+              <span className={`w-full text-center font-serif font-bold tabular-nums leading-none text-[clamp(1.5rem,7vw,3.25rem)] ${urgent ? "text-primary" : "text-secondary"}`}>
                 {pad(value)}
               </span>
-              <span className="mt-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              <span className="mt-2 text-[9px] sm:text-[10px] font-bold uppercase tracking-wide sm:tracking-widest text-muted-foreground">
                 {label}
               </span>
             </div>
