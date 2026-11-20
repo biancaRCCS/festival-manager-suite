@@ -178,14 +178,14 @@ function LandingPage() {
           className="hidden md:block absolute top-0 left-[-12%] w-[124%] max-w-none h-auto z-0 pointer-events-none select-none"
         />
 
-        <div className="relative z-10 max-w-6xl mx-auto px-6 py-16 md:py-24 pt-[50px] pb-[50px]">
+        <div className="relative z-10 max-w-6xl mx-auto px-6 py-16 md:py-24 pt-[56px] pb-[56px]">
           <div className="flex flex-col md:flex-row md:items-center gap-10 md:gap-16">
 
             {/* Left column */}
             <div className="flex-1 min-w-0 flex flex-col items-center md:items-start text-center md:text-left">
 
               {/* 1. Wordmark image */}
-              <p className="w-full max-w-[520px] font-serif md:text-6xl font-medium tracking-wide mb-4 text-center text-background text-[90px]">
+              <p className="w-full max-w-[520px] font-serif md:text-6xl font-medium tracking-wide mb-4 text-center text-background text-[100px]">
                 2027
               </p>
               <img
