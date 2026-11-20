@@ -185,7 +185,7 @@ function LandingPage() {
             <div className="flex-1 min-w-0 flex flex-col items-center md:items-start text-center md:text-left">
 
               {/* 1. Wordmark image */}
-              <p className="w-full max-w-[520px] font-serif md:text-6xl font-medium tracking-wide mb-4 text-[100px] text-center text-background">
+              <p className="w-full max-w-[520px] font-serif md:text-6xl font-medium tracking-wide mb-4 text-center text-background text-[90px]">
                 2027
               </p>
               <img
