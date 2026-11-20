@@ -373,7 +373,7 @@ function LandingPage() {
           >
             Support the Festival
           </Link>
-          <p className="md:text-lg text-muted-foreground max-w-2xl mx-auto text-[22px] ml-[119px] mr-[119px] pl-[2px] pr-[2px]">
+          <p className="md:text-lg text-muted-foreground max-w-2xl mx-auto text-[22px] md:ml-[119px] md:mr-[119px] pl-[2px] pr-[2px]">
             Since 2001, this community has built something worth continuing. Contributions help us keep building
             this festival, and the events that follow.
           </p>
