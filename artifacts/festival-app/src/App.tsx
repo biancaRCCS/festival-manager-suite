@@ -178,14 +178,14 @@ function LandingPage() {
           className="hidden md:block absolute top-0 left-[-12%] w-[124%] max-w-none h-auto z-0 pointer-events-none select-none"
         />
 
-        <div className="relative z-10 max-w-6xl mx-auto px-6 py-16 md:py-24">
+        <div className="relative z-10 max-w-6xl mx-auto px-6 py-16 md:py-24 pt-[50px] pb-[50px]">
           <div className="flex flex-col md:flex-row md:items-center gap-10 md:gap-16">
 
             {/* Left column */}
             <div className="flex-1 min-w-0 flex flex-col items-center md:items-start text-center md:text-left">
 
               {/* 1. Wordmark image */}
-              <p className="w-full max-w-[520px] text-center font-serif text-5xl md:text-6xl font-medium leading-none tracking-wide mb-4">
+              <p className="w-full max-w-[520px] font-serif md:text-6xl font-medium tracking-wide mb-4 text-[100px] text-center text-background">
                 2027
               </p>
               <img
@@ -235,7 +235,7 @@ function LandingPage() {
               <img
                 src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/festival-dancers-v2.png`}
                 alt="Romanian folk dancers in traditional costume performing a circle dance"
-                className="w-full max-w-[420px] h-auto"
+                className="w-full max-w-[420px] h-auto mt-[0px] mb-[0px]"
               />
             </div>
 
@@ -243,11 +243,11 @@ function LandingPage() {
         </div>
       </section>
       {/* Cards section */}
-      <section className="bg-background">
-        <div className="max-w-6xl mx-auto px-6 pt-16 pb-6">
+      <section className="bg-background text-[18px]">
+        <div className="max-w-6xl mx-auto px-6 pt-16 pb-6 text-[18px]">
 
           <div className="mb-10 flex flex-col items-center">
-            <h2 className="font-serif text-3xl md:text-4xl font-bold text-secondary mb-4">
+            <h2 className="font-serif text-3xl md:text-4xl font-bold mb-4 text-chart-5">
               See the festival
             </h2>
               <video
@@ -270,7 +270,7 @@ function LandingPage() {
             <h2 className="font-serif text-3xl md:text-4xl font-bold text-secondary section-underline">
               Apply to Participate
             </h2>
-            <p className="mt-5 text-muted-foreground text-base max-w-xl">
+            <p className="mt-5 text-muted-foreground max-w-xl text-[18px]">
               Apply to join the 2027 festival.{" "}
               {deadline && (
                 <>Vendor and sponsor applications are due{" "}
@@ -292,7 +292,7 @@ function LandingPage() {
                 <div className="p-8">
                   <HandHeart className="w-9 h-9 text-secondary mb-5" />
                   <h3 className="font-serif font-bold text-secondary mb-2 text-[30px]">Sponsors</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
+                  <p className="text-muted-foreground text-[16px]">
                     Support the event and reach the Romanian community.
                   </p>
                   <div className="mt-5 text-secondary text-xs font-bold uppercase tracking-widest group-hover:underline">
@@ -309,7 +309,7 @@ function LandingPage() {
                 <div className="p-8">
                   <Store className="w-9 h-9 mb-5" style={{ color: "#C89A2A" }} />
                   <h3 className="font-serif font-bold text-secondary mb-2 text-[30px]">Vendors</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
+                  <p className="text-muted-foreground text-[16px]">
                     Book a booth to sell your goods and food at the festival.
                   </p>
                   <div className="mt-5 text-xs font-bold uppercase tracking-widest group-hover:underline" style={{ color: "#C89A2A" }}>
@@ -326,7 +326,7 @@ function LandingPage() {
                 <div className="p-8">
                   <CalendarDays className="w-9 h-9 text-primary mb-5" />
                   <h3 className="font-serif font-bold text-secondary mb-2 text-[30px]">Volunteers</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">Help us run the festival and make it 
+                  <p className="text-muted-foreground text-[16px]">Help us run the festival and make it 
                   a success.</p>
                   <div className="mt-5 text-primary text-xs font-bold uppercase tracking-widest group-hover:underline">
                     Apply Now →
@@ -337,7 +337,6 @@ function LandingPage() {
           </div>
         </div>
       </section>
-
       <section className="bg-background px-6 pt-4 pb-10">
         <div className="flex flex-col items-center">
           <video
@@ -350,7 +349,7 @@ function LandingPage() {
             preload="auto"
             className="w-full max-w-[360px] rounded-none"
           />
-          <p className="font-sans text-base text-muted-foreground mt-4">
+          <p className="font-sans text-muted-foreground mt-4 text-[20px]">
             <a
               href="https://www.instagram.com/reel/DcZ4wHmBrCn/?igsi=MzRlODBiNWFlZA=="
               target="_blank"
@@ -362,12 +361,11 @@ function LandingPage() {
           </p>
         </div>
       </section>
-
       {/* Support CTA Band */}
       <section className="bg-secondary/5 border-t border-border py-8 px-6">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="font-serif text-3xl md:text-4xl font-bold text-secondary mb-4">
-            25 Years and Counting
+            26 Years and Counting
           </h2>
           <Link
             href="/support"
@@ -375,12 +373,12 @@ function LandingPage() {
           >
             Support the Festival
           </Link>
-          <p className="text-base md:text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-            Since 2001, this community has built something worth continuing. Contributions help us keep building — this festival, and the events that follow.
+          <p className="md:text-lg text-muted-foreground max-w-2xl mx-auto text-[22px] ml-[119px] mr-[119px] pl-[2px] pr-[2px]">
+            Since 2001, this community has built something worth continuing. Contributions help us keep building
+            this festival, and the events that follow.
           </p>
         </div>
       </section>
-
       {/* Footer */}
       <footer className="bg-secondary text-white/60 text-xs text-center py-6 tracking-wide">
         <div className="flex justify-center mb-4">
