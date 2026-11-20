@@ -11,7 +11,7 @@ export function GuideLinks() {
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <a
-          href="/2026-romanian-festival-guide.pdf"
+          href="/2027-romanian-festival-join-us.pdf"
           target="_blank"
           rel="noopener"
           className="flex items-center gap-3 border border-secondary bg-secondary/5 px-5 py-4 text-secondary hover:bg-secondary/10 transition-colors rounded-none"
