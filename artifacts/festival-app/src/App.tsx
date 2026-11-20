@@ -247,26 +247,39 @@ function LandingPage() {
             <h2 className="font-serif text-3xl md:text-4xl font-bold text-secondary mb-4">
               See the festival
             </h2>
-            <video
-              src="/romanian-festival-2026.mp4"
-              autoPlay
-              muted
-              loop
-              playsInline
-              controls
-              preload="auto"
-              className="w-full max-w-[360px] rounded-none"
-            />
-            <p className="font-sans text-base text-muted-foreground mt-4">
-              <a
-                href="https://www.instagram.com/reel/DcZ4wHmBrCn/?igsi=MzRlODBiNWFlZA=="
-                target="_blank"
-                rel="noopener"
-                className="text-secondary hover:underline"
-              >
-                Watch on Instagram →
-              </a>
-            </p>
+            <div className="grid w-full grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.78fr)] items-center gap-8">
+              <div className="flex flex-col items-center min-w-0">
+                <video
+                  src="/romanian-festival-2026.mp4"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  controls
+                  preload="auto"
+                  className="w-full max-w-[360px] rounded-none"
+                />
+                <p className="font-sans text-base text-muted-foreground mt-4">
+                  <a
+                    href="https://www.instagram.com/reel/DcZ4wHmBrCn/?igsi=MzRlODBiNWFlZA=="
+                    target="_blank"
+                    rel="noopener"
+                    className="text-secondary hover:underline"
+                  >
+                    Watch on Instagram →
+                  </a>
+                </p>
+              </div>
+              <video
+                src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/api/storage/public-objects/festival-highlights-2026.mp4`}
+                poster={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/api/storage/public-objects/festival-highlights-2026.jpg`}
+                aria-label="Romanian Festival 2026 highlights"
+                controls
+                playsInline
+                preload="metadata"
+                className="w-full aspect-video rounded-none"
+              />
+            </div>
           </div>
 
           {/* Application deadline countdown — from settings */}

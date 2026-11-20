@@ -11,11 +11,13 @@ import volunteersRouter from "./volunteers";
 import staffRouter from "./staff";
 import exportRouter from "./exportRoutes";
 import contributionsRouter from "./contributions";
+import publicMediaRouter from "./publicMedia";
 
 const router = Router();
 
 router.use(healthRouter);
 router.use(publicRouter);
+router.use(publicMediaRouter);
 router.use(portalRouter);
 router.use(dashboardRouter);
 router.use(festivalYearsRouter);

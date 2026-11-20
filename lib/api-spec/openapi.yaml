@@ -33,6 +33,29 @@ tags:
   - name: contributions
     description: Public contributions and staff reporting
 paths:
+  /storage/public-objects/{fileName}:
+    get:
+      operationId: getFestivalPublicMedia
+      summary: Redirect to public festival media in App Storage
+      tags: [public]
+      parameters:
+        - name: fileName
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [festival-highlights-2026.mp4, festival-highlights-2026.jpg]
+      responses:
+        "302":
+          description: Temporary media URL with native video range and seeking support
+          headers:
+            Location:
+              schema:
+                type: string
+        "404":
+          description: Unknown public media file
+        "503":
+          description: Media storage unavailable
   /export/contributions:
     get:
       operationId: exportContributionsCsv

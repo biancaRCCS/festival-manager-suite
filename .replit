@@ -32,4 +32,4 @@ SMTP_PORT = "587"
 SMTP_SECURE = "false"
 
 [objectStorage]
-defaultBucketID = "replit-objstore-25d0580e-4757-4052-98e1-ab9497e01865"
+defaultBucketID = "replit-objstore-cbf3cd4d-68e1-4f9e-a742-ad456e7a8ab7"

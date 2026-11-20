@@ -9,6 +9,16 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Redirect to public festival media in App Storage
+ */
+export const GetFestivalPublicMediaParams = zod.object({
+  "fileName": zod.enum(['festival-highlights-2026.mp4', 'festival-highlights-2026.jpg'])
+})
+
+export const GetFestivalPublicMediaResponse = zod.void()
+
+
+/**
  * @summary Download all contribution records for the selected festival year
  */
 

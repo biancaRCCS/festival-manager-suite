@@ -104,6 +104,83 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
+export const getGetFestivalPublicMediaUrl = (fileName: 'festival-highlights-2026.mp4' | 'festival-highlights-2026.jpg',) => {
+
+
+
+
+  return `/api/storage/public-objects/${fileName}`
+}
+
+/**
+ * @summary Redirect to public festival media in App Storage
+ */
+export const getFestivalPublicMedia = async (fileName: 'festival-highlights-2026.mp4' | 'festival-highlights-2026.jpg', options?: RequestInit): Promise<unknown> => {
+
+  return customFetch<unknown>(getGetFestivalPublicMediaUrl(fileName),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFestivalPublicMediaQueryKey = (fileName: 'festival-highlights-2026.mp4' | 'festival-highlights-2026.jpg',) => {
+    return [
+    `/api/storage/public-objects/${fileName}`
+    ] as const;
+    }
+
+
+export const getGetFestivalPublicMediaQueryOptions = <TData = Awaited<ReturnType<typeof getFestivalPublicMedia>>, TError = ErrorType<void>>(fileName: 'festival-highlights-2026.mp4' | 'festival-highlights-2026.jpg', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFestivalPublicMedia>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFestivalPublicMediaQueryKey(fileName);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFestivalPublicMedia>>> = ({ signal }) => getFestivalPublicMedia(fileName, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: fileName !== null && fileName !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFestivalPublicMedia>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFestivalPublicMediaQueryResult = NonNullable<Awaited<ReturnType<typeof getFestivalPublicMedia>>>
+export type GetFestivalPublicMediaQueryError = ErrorType<void>
+
+
+/**
+ * @summary Redirect to public festival media in App Storage
+ */
+
+export function useGetFestivalPublicMedia<TData = Awaited<ReturnType<typeof getFestivalPublicMedia>>, TError = ErrorType<void>>(
+ fileName: 'festival-highlights-2026.mp4' | 'festival-highlights-2026.jpg', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFestivalPublicMedia>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFestivalPublicMediaQueryOptions(fileName,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getExportContributionsCsvUrl = (params: ExportContributionsCsvParams,) => {
   const normalizedParams = new URLSearchParams();
 
