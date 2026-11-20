@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ExternalLink, FileSignature } from "lucide-react"
+import { Download, ExternalLink, FileSignature } from "lucide-react"
 
 const formatCurrency = (value: number | null | undefined) =>
   value == null ? "—" : value.toLocaleString("en-US", { style: "currency", currency: "USD" })
@@ -62,9 +62,19 @@ export default function SpecialAgreementSettlementsPage() {
             </h1>
             <p className="text-muted-foreground">Track the money RCCS owes each Special Agreement Vendor after the festival.</p>
           </div>
-          <Link href="/special-agreements">
-            <Button variant="outline">Manage agreements</Button>
-          </Link>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="h-9"
+              disabled={!selectedYear}
+              onClick={() => window.open(`${import.meta.env.BASE_URL.replace(/\/$/, "")}/api/export/special-agreement-settlements?yearId=${selectedYearId}`)}
+            >
+              <Download className="w-4 h-4 mr-2" /> Export CSV
+            </Button>
+            <Link href="/special-agreements">
+              <Button variant="outline">Manage agreements</Button>
+            </Link>
+          </div>
         </div>
 
         <Card>

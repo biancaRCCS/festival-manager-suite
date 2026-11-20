@@ -33,6 +33,60 @@ tags:
   - name: contributions
     description: Public contributions and staff reporting
 paths:
+  /export/contributions:
+    get:
+      operationId: exportContributionsCsv
+      summary: Download all contribution records for the selected festival year
+      tags: [contributions]
+      parameters:
+        - name: yearId
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Contribution CSV including payment dates and statuses
+          content:
+            text/csv:
+              schema:
+                type: string
+        "400":
+          description: A valid festival year is required
+        "401":
+          description: Authentication required
+        "403":
+          description: Staff access required
+        "404":
+          description: Festival year not found
+  /export/special-agreement-settlements:
+    get:
+      operationId: exportSpecialAgreementSettlementsCsv
+      summary: Download settlement records for the selected festival year
+      tags: [vendors]
+      parameters:
+        - name: yearId
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Settlement CSV including calculated amounts, dates and statuses
+          content:
+            text/csv:
+              schema:
+                type: string
+        "400":
+          description: A valid festival year is required
+        "401":
+          description: Authentication required
+        "403":
+          description: Staff access required
+        "404":
+          description: Festival year not found
   /healthz:
     get:
       operationId: healthCheck

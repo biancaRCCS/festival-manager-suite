@@ -1186,6 +1186,20 @@ export interface StaffInvite {
   role: StaffInviteRole;
 }
 
+export type ExportContributionsCsvParams = {
+/**
+ * @minimum 1
+ */
+yearId: number;
+};
+
+export type ExportSpecialAgreementSettlementsCsvParams = {
+/**
+ * @minimum 1
+ */
+yearId: number;
+};
+
 export type GetDashboardFinancialsParams = {
 yearId?: number;
 };

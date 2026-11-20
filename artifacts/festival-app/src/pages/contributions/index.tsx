@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Search, Heart, Plus, Trash2 } from "lucide-react"
+import { Search, Heart, Plus, Trash2, Download } from "lucide-react"
 import { format } from "date-fns"
 import { useQueryClient } from "@tanstack/react-query"
 import { useToast } from "@/hooks/use-toast"
@@ -117,7 +117,15 @@ export default function ContributionsPage() {
             <h1 className="text-3xl font-serif text-secondary mb-2">Contributions</h1>
             <p className="text-muted-foreground">View completed public contributions and total support received.</p>
           </div>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-4">
+            <Button
+              variant="outline"
+              className="h-9"
+              disabled={!selectedYear}
+              onClick={() => window.open(`${import.meta.env.BASE_URL.replace(/\/$/, "")}/api/export/contributions?yearId=${selectedYearId}`)}
+            >
+              <Download className="w-4 h-4 mr-2" /> Export CSV
+            </Button>
             <div className="flex flex-col items-end">
               <span className="text-sm font-medium text-muted-foreground">Total Raised</span>
               <span className="text-2xl font-bold text-green-600">

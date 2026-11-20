@@ -19,6 +19,8 @@ export * from './contributionListResponse';
 export * from './contributionPaymentSource';
 export * from './contributionStatus';
 export * from './dashboardSummary';
+export * from './exportContributionsCsvParams';
+export * from './exportSpecialAgreementSettlementsCsvParams';
 export * from './exportSponsorsParams';
 export * from './exportVendorsParams';
 export * from './exportVolunteersParams';

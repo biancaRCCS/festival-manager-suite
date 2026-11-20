@@ -1,10 +1,53 @@
 import { Router, type IRouter } from "express";
-import { db, vendorsTable, sponsorsTable, volunteersTable, festivalYearsTable } from "@workspace/db";
+import { db, vendorsTable, sponsorsTable, volunteersTable, festivalYearsTable, contributionsTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { requireStaff } from "../lib/auth";
 import ExcelJS from "exceljs";
+import { ExportContributionsCsvQueryParams, ExportSpecialAgreementSettlementsCsvQueryParams } from "@workspace/api-zod";
+import { contributionsCsv, settlementsCsv } from "../lib/financialCsv";
 
 const router: IRouter = Router();
+
+router.get("/export/contributions", requireStaff, async (req, res): Promise<void> => {
+  const parsed = ExportContributionsCsvQueryParams.safeParse(req.query);
+  if (!parsed.success || !Number.isSafeInteger(parsed.data.yearId)) {
+    res.status(400).json({ error: "A valid festival year is required." });
+    return;
+  }
+  const { yearId } = parsed.data;
+  const [year] = await db.select().from(festivalYearsTable).where(eq(festivalYearsTable.id, yearId)).limit(1);
+  if (!year) {
+    res.status(404).json({ error: "Festival year not found." });
+    return;
+  }
+  const rows = await db.select().from(contributionsTable)
+    .where(eq(contributionsTable.yearId, yearId)).orderBy(desc(contributionsTable.createdAt));
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="contributions-${year.year}.csv"`);
+  res.setHeader("Cache-Control", "no-store");
+  res.send(contributionsCsv(rows, year.year));
+});
+
+router.get("/export/special-agreement-settlements", requireStaff, async (req, res): Promise<void> => {
+  const parsed = ExportSpecialAgreementSettlementsCsvQueryParams.safeParse(req.query);
+  if (!parsed.success || !Number.isSafeInteger(parsed.data.yearId)) {
+    res.status(400).json({ error: "A valid festival year is required." });
+    return;
+  }
+  const { yearId } = parsed.data;
+  const [year] = await db.select().from(festivalYearsTable).where(eq(festivalYearsTable.id, yearId)).limit(1);
+  if (!year) {
+    res.status(404).json({ error: "Festival year not found." });
+    return;
+  }
+  const rows = await db.select().from(vendorsTable)
+    .where(and(eq(vendorsTable.yearId, yearId), eq(vendorsTable.vendorType, "special_agreement")))
+    .orderBy(desc(vendorsTable.createdAt));
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="special-agreement-settlements-${year.year}.csv"`);
+  res.setHeader("Cache-Control", "no-store");
+  res.send(settlementsCsv(rows, year.year));
+});
 
 router.get("/export/vendors", requireStaff, async (req, res): Promise<void> => {
   const yearId = req.query.yearId ? parseInt(String(req.query.yearId), 10) : undefined;

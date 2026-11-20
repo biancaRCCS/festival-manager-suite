@@ -9,6 +9,32 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Download all contribution records for the selected festival year
+ */
+
+
+
+export const ExportContributionsCsvQueryParams = zod.object({
+  "yearId": zod.coerce.number().min(1)
+})
+
+export const ExportContributionsCsvResponse = zod.unknown()
+
+
+/**
+ * @summary Download settlement records for the selected festival year
+ */
+
+
+
+export const ExportSpecialAgreementSettlementsCsvQueryParams = zod.object({
+  "yearId": zod.coerce.number().min(1)
+})
+
+export const ExportSpecialAgreementSettlementsCsvResponse = zod.unknown()
+
+
+/**
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({

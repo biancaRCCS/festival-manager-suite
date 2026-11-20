@@ -27,6 +27,8 @@ import type {
   ContributionCheckoutInput,
   ContributionListResponse,
   DashboardSummary,
+  ExportContributionsCsvParams,
+  ExportSpecialAgreementSettlementsCsvParams,
   ExportSponsorsParams,
   ExportVendorsParams,
   ExportVolunteersParams,
@@ -101,6 +103,174 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getExportContributionsCsvUrl = (params: ExportContributionsCsvParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/export/contributions?${stringifiedParams}` : `/api/export/contributions`
+}
+
+/**
+ * @summary Download all contribution records for the selected festival year
+ */
+export const exportContributionsCsv = async (params: ExportContributionsCsvParams, options?: RequestInit): Promise<string> => {
+
+  return customFetch<string>(getExportContributionsCsvUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportContributionsCsvQueryKey = (params?: ExportContributionsCsvParams,) => {
+    return [
+    `/api/export/contributions`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getExportContributionsCsvQueryOptions = <TData = Awaited<ReturnType<typeof exportContributionsCsv>>, TError = ErrorType<void>>(params: ExportContributionsCsvParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportContributionsCsv>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportContributionsCsvQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportContributionsCsv>>> = ({ signal }) => exportContributionsCsv(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportContributionsCsv>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportContributionsCsvQueryResult = NonNullable<Awaited<ReturnType<typeof exportContributionsCsv>>>
+export type ExportContributionsCsvQueryError = ErrorType<void>
+
+
+/**
+ * @summary Download all contribution records for the selected festival year
+ */
+
+export function useExportContributionsCsv<TData = Awaited<ReturnType<typeof exportContributionsCsv>>, TError = ErrorType<void>>(
+ params: ExportContributionsCsvParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportContributionsCsv>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportContributionsCsvQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getExportSpecialAgreementSettlementsCsvUrl = (params: ExportSpecialAgreementSettlementsCsvParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/export/special-agreement-settlements?${stringifiedParams}` : `/api/export/special-agreement-settlements`
+}
+
+/**
+ * @summary Download settlement records for the selected festival year
+ */
+export const exportSpecialAgreementSettlementsCsv = async (params: ExportSpecialAgreementSettlementsCsvParams, options?: RequestInit): Promise<string> => {
+
+  return customFetch<string>(getExportSpecialAgreementSettlementsCsvUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportSpecialAgreementSettlementsCsvQueryKey = (params?: ExportSpecialAgreementSettlementsCsvParams,) => {
+    return [
+    `/api/export/special-agreement-settlements`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getExportSpecialAgreementSettlementsCsvQueryOptions = <TData = Awaited<ReturnType<typeof exportSpecialAgreementSettlementsCsv>>, TError = ErrorType<void>>(params: ExportSpecialAgreementSettlementsCsvParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportSpecialAgreementSettlementsCsv>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportSpecialAgreementSettlementsCsvQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportSpecialAgreementSettlementsCsv>>> = ({ signal }) => exportSpecialAgreementSettlementsCsv(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportSpecialAgreementSettlementsCsv>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportSpecialAgreementSettlementsCsvQueryResult = NonNullable<Awaited<ReturnType<typeof exportSpecialAgreementSettlementsCsv>>>
+export type ExportSpecialAgreementSettlementsCsvQueryError = ErrorType<void>
+
+
+/**
+ * @summary Download settlement records for the selected festival year
+ */
+
+export function useExportSpecialAgreementSettlementsCsv<TData = Awaited<ReturnType<typeof exportSpecialAgreementSettlementsCsv>>, TError = ErrorType<void>>(
+ params: ExportSpecialAgreementSettlementsCsvParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportSpecialAgreementSettlementsCsv>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportSpecialAgreementSettlementsCsvQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getHealthCheckUrl = () => {
 
