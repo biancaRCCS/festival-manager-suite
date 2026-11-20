@@ -208,7 +208,7 @@ function LandingPage() {
 
               {/* Date, time, location */}
               <div className="mb-6 text-white/80 text-sm md:text-base leading-relaxed space-y-1">
-                <p>Saturday, September 25, 2027 · 12:00 PM – 9:00 PM · Free Admission</p>
+                <p>Saturday, September 25, 2027 · 12:00 PM – 9:00 PM</p>
                 <p>Vernon Street Town Square, Downtown Roseville, CA</p>
               </div>
 

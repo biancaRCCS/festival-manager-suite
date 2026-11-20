@@ -1,5 +1,8 @@
 import { FileText } from "lucide-react"
 
+// Restore once the 2027 mobile guide is available.
+const SHOW_MOBILE_GUIDE = false
+
 export function GuideLinks() {
   return (
     <div className="mb-10">
@@ -23,7 +26,7 @@ export function GuideLinks() {
             </span>
           </span>
         </a>
-        <a
+        {SHOW_MOBILE_GUIDE && <a
           href="/2026-romanian-festival-guide-mobile.pdf"
           target="_blank"
           rel="noopener"
@@ -38,7 +41,7 @@ export function GuideLinks() {
               7 pages · designed for phones
             </span>
           </span>
-        </a>
+        </a>}
       </div>
     </div>
   )
