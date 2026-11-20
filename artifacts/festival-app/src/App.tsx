@@ -185,6 +185,9 @@ function LandingPage() {
             <div className="flex-1 min-w-0 flex flex-col items-center md:items-start text-center md:text-left">
 
               {/* 1. Wordmark image */}
+              <p className="w-full max-w-[520px] text-center font-serif text-5xl md:text-6xl font-medium leading-none tracking-wide mb-4">
+                2027
+              </p>
               <img
                 src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/festival-wordmark.png`}
                 alt="Romanian Festival — official event wordmark"
