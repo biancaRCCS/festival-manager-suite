@@ -11,3 +11,4 @@
 - [In-kind sponsor accounting](in-kind-sponsor-accounting.md) — in-kind sponsorships fulfill participation without becoming cash payments; invalidate checkout and report value separately.
 - [Annual festival rollover](annual-festival-rollover.md) — preserve prior-year records; don't invent deadlines; keep existing PDF guide links available until the user updates them.
 - [Workspace dependency verification](workspace-dependency-verification.md) — complete workspace linking before treating sibling-package type failures as source errors.
+- [PDF title metadata](pdf-title-metadata.md) — update both PDF and XMP titles; preserve XML namespaces and verify saved metadata plus unchanged pages.
